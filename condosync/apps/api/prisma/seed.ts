@@ -27,7 +27,7 @@ async function main() {
     where: { cnpj: '12345678000195' },
     update: {},
     create: {
-      name: 'Residencial Parque Verde',
+      name: 'Residencial Veredas do Bosque',
       cnpj: '12345678000195',
       address: 'Rua das Palmeiras, 500',
       city: 'São Paulo',
@@ -214,7 +214,7 @@ async function main() {
     data: {
       condominiumId: condominium.id,
       title: 'Bem-vindos ao CondoSync!',
-      content: 'O sistema de gestão do Residencial Parque Verde está ativo. Utilizem o aplicativo para comunicados, reservas e chamados.',
+      content: 'O sistema de gestão do Residencial Veredas do Bosque está ativo. Utilizem o aplicativo para comunicados, reservas e chamados.',
       authorId: syndic.id,
       isPinned: true,
       isOfficial: true,
