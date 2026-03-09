@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "condosync", "condosync", "{C5273A86-558E-60A4-FDB4-EB751FE8519D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "condosync-encomendas", "condosync\condosync-encomendas\condosync-encomendas.csproj", "{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6117FFAF-3A32-4EBD-D6C7-8A2026A69D2A} = {C5273A86-558E-60A4-FDB4-EB751FE8519D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9C71B95C-69C4-489E-9F9B-F9759C0B4016}
+	EndGlobalSection
+EndGlobal

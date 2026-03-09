@@ -5,8 +5,12 @@ import { Building2, Plus, Loader2, Users, Home } from 'lucide-react';
 
 export function CondominiumsPage() {
   const queryClient = useQueryClient();
+  const emptyForm = { name: '', address: '', city: '', state: '', zipCode: '', cnpj: '' };
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '' });
+  const [form, setForm] = useState({ ...emptyForm });
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ ...emptyForm });
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const { data: condominiums, isLoading } = useQuery({
     queryKey: ['condominiums'],
@@ -21,15 +25,43 @@ export function CondominiumsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['condominiums'] });
       setShowModal(false);
-      setForm({ name: '', address: '', city: '', state: '', cnpj: '' });
+      setForm({ ...emptyForm });
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm) => api.put(`/condominiums/${editTarget?.id}`, d),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setEditTarget(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/condominiums/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setDeleteTarget(null);
+    },
+  });
+
+  const openEdit = (c: any) => {
+    setEditForm({
+      name: c.name ?? '',
+      address: c.address ?? '',
+      city: c.city ?? '',
+      state: c.state ?? '',
+      zipCode: c.zipCode ?? '',
+      cnpj: c.cnpj ?? '',
+    });
+    setEditTarget(c);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Condomínios</h1>
+          <h1 className="text-2xl font-bold">Condomínios (Admin)</h1>
           <p className="text-muted-foreground">Gestão de todos os condomínios da plataforma</p>
         </div>
         <button
@@ -71,6 +103,20 @@ export function CondominiumsPage() {
                 <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {c._count?.condominiumUsers ?? 0} membros</span>
               </div>
               {c.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {c.cnpj}</p>}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => openEdit(c)}
+                  className="flex-1 px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 text-gray-700"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(c)}
+                  className="flex-1 px-3 py-1.5 text-xs border border-red-200 rounded-lg text-red-600 hover:bg-red-50"
+                >
+                  Excluir
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -115,6 +161,73 @@ export function CondominiumsPage() {
             {createMutation.isError && (
               <p className="text-sm text-red-600">Erro ao criar condomínio. Verifique os dados.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Condomínio</h2>
+            <div className="space-y-3">
+              {[
+                ['Nome *', 'name', 'text'],
+                ['Endereço', 'address', 'text'],
+                ['Cidade', 'city', 'text'],
+                ['Estado (UF)', 'state', 'text'],
+                ['CEP', 'zipCode', 'text'],
+                ['CNPJ', 'cnpj', 'text'],
+              ].map(([label, key, type]) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-sm font-medium">{label}</label>
+                  <input
+                    type={type}
+                    value={(editForm as any)[key]}
+                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateMutation.mutate(editForm)}
+                disabled={!editForm.name || updateMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Excluir Condomínio</h2>
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir o condomínio <span className="font-medium text-gray-900">{deleteTarget.name}</span>?
+              Esta ação só é permitida para condomínios sem unidades ou membros vinculados.
+            </p>
+            {deleteMutation.isError && (
+              <p className="text-sm text-red-600">Não foi possível excluir. Verifique se o condomínio não possui unidades ou membros vinculados.</p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
           </div>
         </div>
       )}

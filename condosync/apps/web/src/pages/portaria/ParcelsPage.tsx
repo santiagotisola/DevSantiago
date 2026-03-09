@@ -19,7 +19,10 @@ export function ParcelsPage() {
   const [showModal, setShowModal] = useState(false);
   const [pickupModal, setPickupModal] = useState<string | null>(null);
   const [pickupName, setPickupName] = useState('');
+  const [pickupResidentId, setPickupResidentId] = useState('');
   const [form, setForm] = useState({ unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '' });
+  const [unitSearch, setUnitSearch] = useState('');
+  const [selectedResidentId, setSelectedResidentId] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['parcels', selectedCondominiumId],
@@ -29,6 +32,21 @@ export function ParcelsPage() {
     },
     enabled: !!selectedCondominiumId,
   });
+
+  const { data: residents, isLoading: isLoadingResidents } = useQuery({
+    queryKey: ['residents', selectedCondominiumId],
+    queryFn: async () => {
+      const res = await api.get(`/residents/condominium/${selectedCondominiumId}`);
+      return res.data.data.residents;
+    },
+    enabled: !!selectedCondominiumId,
+  });
+
+  const filteredResidents = Array.isArray(residents)
+    ? residents.filter((r: any) =>
+        (r.unit?.identifier ?? '').toLowerCase().includes(unitSearch.toLowerCase())
+      )
+    : [];
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/parcels', d),
@@ -45,6 +63,7 @@ export function ParcelsPage() {
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
       setPickupModal(null);
       setPickupName('');
+      setPickupResidentId('');
     },
   });
 
@@ -54,6 +73,15 @@ export function ParcelsPage() {
   );
 
   const canRegister = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
+
+  const activeParcel = pickupModal ? (data?.parcels || []).find((p: any) => p.id === pickupModal) : null;
+  const activeUnitId = activeParcel?.unit?.id || activeParcel?.unitId || null;
+  const unitResidents = Array.isArray(residents)
+    ? residents.filter((r: any) => r.unit?.id === activeUnitId)
+    : [];
+  const pickupOptions = Array.isArray(residents)
+    ? (unitResidents.length > 0 ? unitResidents : residents)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -124,7 +152,11 @@ export function ParcelsPage() {
                       <td className="px-4 py-3 text-right">
                         {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
                           <button
-                            onClick={() => setPickupModal(p.id)}
+                            onClick={() => {
+                              setPickupModal(p.id);
+                              setPickupName('');
+                              setPickupResidentId('');
+                            }}
                             className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto"
                           >
                             <CheckCircle className="w-3 h-3" />
@@ -147,8 +179,50 @@ export function ParcelsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Registrar Encomenda</h2>
             <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Unidade</label>
+                  <input
+                    value={unitSearch}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setUnitSearch(value);
+                      setSelectedResidentId('');
+                      setForm({ ...form, unitId: '' });
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Número da unidade (ex: 101)"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Morador</label>
+                  <select
+                    value={selectedResidentId}
+                    onChange={(e) => {
+                      const residentId = e.target.value;
+                      setSelectedResidentId(residentId);
+                      const resident = filteredResidents.find((r: any) => r.id === residentId);
+                      if (resident?.unit?.id) {
+                        setForm({ ...form, unitId: resident.unit.id });
+                        setUnitSearch(resident.unit.identifier ?? '');
+                      }
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoadingResidents || filteredResidents.length === 0}
+                  >
+                    <option value="">{filteredResidents.length === 0 ? 'Nenhum morador para esta unidade' : 'Selecione...'}</option>
+                    {filteredResidents.map((r: any) => (
+                      r.unit && (
+                        <option key={r.id} value={r.id}>
+                          {r.user?.name}
+                        </option>
+                      )
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">Digite a unidade e selecione o morador correspondente.</p>
+                </div>
+              </div>
               {[
-                { key: 'unitId', label: 'ID da Unidade *', placeholder: 'UUID da unidade' },
                 { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
                 { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
                 { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },
@@ -184,6 +258,31 @@ export function ParcelsPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
             <h2 className="text-lg font-semibold">Confirmar Retirada</h2>
+            {pickupOptions.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Morador</label>
+                <select
+                  value={pickupResidentId}
+                  onChange={(e) => {
+                    const residentId = e.target.value;
+                    setPickupResidentId(residentId);
+                    const resident = pickupOptions.find((r: any) => r.id === residentId);
+                    if (resident?.user?.name) {
+                      setPickupName(resident.user.name);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione...</option>
+                  {pickupOptions.map((r: any) => (
+                    <option key={r.id} value={r.id}>
+                      {r.user?.name}{r.unit?.identifier ? ` - ${r.unit.identifier}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Moradores da unidade, ou de todo o condomínio quando a unidade não possui morador vinculado.</p>
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-sm font-medium">Nome de quem retirou *</label>
               <input
