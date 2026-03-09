@@ -1,0 +1,29 @@
+@{
+    ViewData["Title"] = "Lista de Encomendas";
+}
+
+<h1>Lista de Encomendas</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Descrição</th>
+            <th>Data de Registro</th>
+            <th>Morador</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var encomenda in Model)
+        {
+            <tr>
+                <td>@encomenda.Id</td>
+                <td>@encomenda.Descricao</td>
+                <td>@encomenda.DataRegistro.ToString("dd/MM/yyyy")</td>
+                <td>@encomenda.Morador.Nome</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-controller="Encomenda" asp-action="Registrar" class="btn btn-primary">Registrar Nova Encomenda</a>

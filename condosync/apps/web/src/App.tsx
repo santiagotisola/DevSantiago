@@ -1,0 +1,109 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from './components/ui/toaster';
+import { useAuthStore } from './store/authStore';
+
+// Layouts
+import { AuthLayout } from './components/layouts/AuthLayout';
+import { AppLayout } from './components/layouts/AppLayout';
+
+// Páginas de Autenticação
+import { LoginPage } from './pages/auth/LoginPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+
+// Páginas do Sistema
+import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { VisitorsPage } from './pages/portaria/VisitorsPage';
+import { ParcelsPage } from './pages/portaria/ParcelsPage';
+import { VehiclesPage } from './pages/portaria/VehiclesPage';
+import { ResidentsPage } from './pages/residents/ResidentsPage';
+import { UnitsPage } from './pages/units/UnitsPage';
+import { FinancePage } from './pages/finance/FinancePage';
+import { ChargesPage } from './pages/finance/ChargesPage';
+import { MaintenancePage } from './pages/maintenance/MaintenancePage';
+import { CommonAreasPage } from './pages/common-areas/CommonAreasPage';
+import { AnnouncementsPage } from './pages/communication/AnnouncementsPage';
+import { OccurrencesPage } from './pages/communication/OccurrencesPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { EmployeesPage } from './pages/employees/EmployeesPage';
+import { ServiceProvidersPage } from './pages/service-providers/ServiceProvidersPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { CondominiumsPage } from './pages/admin/CondominiumsPage';
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Rotas públicas */}
+        <Route
+          path="/login"
+          element={<PublicRoute><AuthLayout><LoginPage /></AuthLayout></PublicRoute>}
+        />
+        <Route
+          path="/forgot-password"
+          element={<PublicRoute><AuthLayout><ForgotPasswordPage /></AuthLayout></PublicRoute>}
+        />
+
+        {/* Rotas privadas */}
+        <Route
+          path="/"
+          element={<PrivateRoute><AppLayout /></PrivateRoute>}
+        >
+          <Route index element={<DashboardPage />} />
+
+          {/* Portaria */}
+          <Route path="portaria/visitantes" element={<VisitorsPage />} />
+          <Route path="portaria/encomendas" element={<ParcelsPage />} />
+          <Route path="portaria/veiculos" element={<VehiclesPage />} />
+
+          {/* Moradores */}
+          <Route path="moradores" element={<ResidentsPage />} />
+          <Route path="unidades" element={<UnitsPage />} />
+
+          {/* Financeiro */}
+          <Route path="financeiro" element={<FinancePage />} />
+          <Route path="financeiro/cobranças" element={<ChargesPage />} />
+
+          {/* Manutenção */}
+          <Route path="manutencao" element={<MaintenancePage />} />
+
+          {/* Áreas Comuns */}
+          <Route path="areas-comuns" element={<CommonAreasPage />} />
+
+          {/* Comunicação */}
+          <Route path="comunicacao/avisos" element={<AnnouncementsPage />} />
+          <Route path="comunicacao/ocorrencias" element={<OccurrencesPage />} />
+
+          {/* Relatórios */}
+          <Route path="relatorios" element={<ReportsPage />} />
+
+          {/* Funcionários e Prestadores */}
+          <Route path="funcionarios" element={<EmployeesPage />} />
+          <Route path="prestadores" element={<ServiceProvidersPage />} />
+
+          {/* Admin */}
+          <Route path="admin/condominios" element={<CondominiumsPage />} />
+
+          {/* Perfil e Configurações */}
+          <Route path="perfil" element={<ProfilePage />} />
+          <Route path="configuracoes" element={<SettingsPage />} />
+        </Route>
+
+        {/* Redirecionar rotas desconhecidas */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Toaster />
+    </BrowserRouter>
+  );
+}

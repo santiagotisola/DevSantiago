@@ -1,0 +1,67 @@
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: condosync-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: condosync
+      POSTGRES_PASSWORD: condosync123
+      POSTGRES_DB: condosync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U condosync -d condosync"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── API (Backend) ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: condosync-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3333
+      DATABASE_URL: postgresql://condosync:condosync123@postgres:5432/condosync?schema=public
+      JWT_SECRET: condosync-jwt-secret-change-in-production
+      JWT_REFRESH_SECRET: condosync-refresh-secret-change-in-production
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: http://localhost:80,http://localhost
+      BCRYPT_ROUNDS: "12"
+    ports:
+      - "3333:3333"
+    volumes:
+      - api_logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ─── Web (Frontend nginx) ─────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: condosync-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+  api_logs:

@@ -1,0 +1,163 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../store/authStore';
+import { api } from '../../services/api';
+import { Calendar, Plus, Loader2, MapPin, Clock } from 'lucide-react';
+import { formatDateTime, formatDate } from '../../lib/utils';
+
+const reservationStatusLabels: Record<string, { label: string; className: string }> = {
+  PENDING: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-700' },
+  APPROVED: { label: 'Aprovada', className: 'bg-green-100 text-green-700' },
+  CANCELLED: { label: 'Cancelada', className: 'bg-gray-100 text-gray-500' },
+  REJECTED: { label: 'Rejeitada', className: 'bg-red-100 text-red-700' },
+};
+
+export function CommonAreasPage() {
+  const { selectedCondominiumId, user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [selectedArea, setSelectedArea] = useState<any>(null);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [form, setForm] = useState({ startDate: '', endDate: '', notes: '' });
+  const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
+
+  const { data: areas, isLoading } = useQuery({
+    queryKey: ['common-areas', selectedCondominiumId],
+    queryFn: async () => { const res = await api.get(`/common-areas/condominium/${selectedCondominiumId}`); return res.data.data.areas; },
+    enabled: !!selectedCondominiumId,
+  });
+
+  const { data: reservations } = useQuery({
+    queryKey: ['reservations', selectedCondominiumId],
+    queryFn: async () => { const res = await api.get(`/common-areas/reservations/condominium/${selectedCondominiumId}`); return res.data.data.reservations; },
+    enabled: !!selectedCondominiumId,
+  });
+
+  const reserveMutation = useMutation({
+    mutationFn: (d: typeof form) => api.post('/common-areas/reservations', {
+      ...d,
+      commonAreaId: selectedArea?.id,
+      unitId: user?.unitId,
+      startDate: d.startDate ? new Date(d.startDate).toISOString() : d.startDate,
+      endDate: d.endDate ? new Date(d.endDate).toISOString() : d.endDate,
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['reservations'] }); setShowReserveModal(false); setSelectedArea(null); },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/common-areas/reservations/${id}/cancel`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reservations'] }),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/common-areas/reservations/${id}/approve`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reservations'] }),
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Áreas Comuns</h1>
+        <p className="text-muted-foreground">Reserva e gestão de áreas comuns</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {((areas || []) as any[]).map((area: any) => (
+              <div key={area.id} className="bg-white rounded-xl border p-5 flex flex-col gap-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold">{area.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{area.description}</p>
+                  </div>
+                  <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  {area.capacity && <p>Capacidade: {area.capacity} pessoas</p>}
+                  {area.openTime && <p className="flex items-center gap-1"><Clock className="w-3 h-3" />{area.openTime} - {area.closeTime}</p>}
+                  {area.requiresApproval && <span className="inline-block bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded text-xs">Exige aprovação</span>}
+                </div>
+                {area.isAvailable !== false && (
+                  <button onClick={() => { setSelectedArea(area); setShowReserveModal(true); }} className="mt-auto w-full bg-blue-600 text-white py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+                    Reservar
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <div className="px-4 py-3 border-b flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <h2 className="font-semibold text-sm">Reservas</h2>
+            </div>
+            {((reservations || []) as any[]).length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground text-sm"><Calendar className="w-8 h-8" /><p>Nenhuma reserva</p></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b bg-gray-50">
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Área</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Morador</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Início</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Fim</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                    {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Ações</th>}
+                  </tr></thead>
+                  <tbody className="divide-y">
+                    {((reservations || []) as any[]).map((r: any) => {
+                      const st = reservationStatusLabels[r.status] || reservationStatusLabels.PENDING;
+                      return (
+                        <tr key={r.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{r.commonArea?.name}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{r.user?.name}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{formatDateTime(r.startDate)}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{formatDateTime(r.endDate)}</td>
+                          <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.className}`}>{st.label}</span></td>
+                          {isAdmin && (
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                {r.status === 'PENDING' && <button onClick={() => approveMutation.mutate(r.id)} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">Aprovar</button>}
+                                {['PENDING', 'APPROVED'].includes(r.status) && <button onClick={() => cancelMutation.mutate(r.id)} className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">Cancelar</button>}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {showReserveModal && selectedArea && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Reservar: {selectedArea.name}</h2>
+            <div className="space-y-3">
+              {[['Início *', 'startDate', 'datetime-local'], ['Fim *', 'endDate', 'datetime-local']].map(([label, key, type]) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-sm font-medium">{label}</label>
+                  <input type={type} value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Observações</label>
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowReserveModal(false); setSelectedArea(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button onClick={() => reserveMutation.mutate(form)} disabled={!form.startDate || !form.endDate || reserveMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

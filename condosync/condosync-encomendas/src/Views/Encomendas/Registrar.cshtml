@@ -1,0 +1,28 @@
+@using condosync_encomendas.Models
+@using condosync_encomendas.Dtos
+@model RegistrarEncomendaDto
+
+<div class="container">
+    <h2>Registrar Encomenda</h2>
+    <form asp-action="RegistrarEncomenda" method="post">
+        <div class="form-group">
+            <label for="descricao">Descrição</label>
+            <input type="text" class="form-control" id="descricao" name="Descricao" required />
+        </div>
+        <div class="form-group">
+            <label for="moradorId">Selecionar Morador</label>
+            <select class="form-control" id="moradorId" name="MoradorId" required>
+                <option value="">Selecione um morador</option>
+                @foreach (var morador in Model.Moradores)
+                {
+                    <option value="@morador.Id">@morador.Nome - @morador.Apartamento</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/encomendas.js"></script>
+}
