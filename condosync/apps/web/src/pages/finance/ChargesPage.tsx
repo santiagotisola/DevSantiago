@@ -9,7 +9,7 @@ const chargeStatusLabels: Record<string, { label: string; className: string }> =
   PENDING: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-700' },
   PAID: { label: 'Pago', className: 'bg-green-100 text-green-700' },
   OVERDUE: { label: 'Em Atraso', className: 'bg-red-100 text-red-700' },
-  CANCELLED: { label: 'Cancelada', className: 'bg-gray-100 text-gray-500' },
+  CANCELED: { label: 'Cancelada', className: 'bg-gray-100 text-gray-500' },
 };
 
 export function ChargesPage() {
@@ -21,6 +21,9 @@ export function ChargesPage() {
   const [showRatioModal, setShowRatioModal] = useState(false);
   const [form, setForm] = useState({ description: '', amount: '', dueDate: '', unitId: '' });
   const [ratioForm, setRatioForm] = useState({ description: '', totalAmount: '', dueDate: '', method: 'equal' });
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ description: '', amount: '', dueDate: '', unitId: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: charges, isLoading } = useQuery({
@@ -36,7 +39,7 @@ export function ChargesPage() {
   const { data: units } = useQuery({
     queryKey: ['units', selectedCondominiumId],
     queryFn: async () => { const res = await api.get(`/units/condominium/${selectedCondominiumId}`); return res.data.data.units; },
-    enabled: !!selectedCondominiumId && showCreateModal,
+    enabled: !!selectedCondominiumId && (showCreateModal || editModal),
   });
 
   const payMutation = useMutation({
@@ -52,6 +55,26 @@ export function ChargesPage() {
   const ratioMutation = useMutation({
     mutationFn: (d: typeof ratioForm) => api.post('/finance/charges/ratio', { ...d, totalAmount: parseFloat(d.totalAmount), condominiumId: selectedCondominiumId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['charges'] }); setShowRatioModal(false); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm) =>
+      api.patch(`/finance/charges/${editTarget?.id}`, {
+        ...d,
+        amount: parseFloat(d.amount),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charges'] });
+      setEditModal(false);
+      setEditTarget(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/finance/charges/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['charges'] });
+    },
   });
 
   const filtered = ((charges || []) as any[]).filter((c: any) =>
@@ -118,11 +141,42 @@ export function ChargesPage() {
                       <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.className}`}>{st.label}</span></td>
                       {isAdmin && (
                         <td className="px-4 py-3 text-right">
-                          {c.status === 'PENDING' && (
-                            <button onClick={() => payMutation.mutate(c.id)} className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto">
-                              <CheckCircle className="w-3 h-3" /> Marcar Pago
-                            </button>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {c.status === 'PENDING' && (
+                              <button onClick={() => payMutation.mutate(c.id)} className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200">
+                                <CheckCircle className="w-3 h-3" /> Marcar Pago
+                              </button>
+                            )}
+                            {c.status === 'PENDING' && (
+                              <button
+                                onClick={() => {
+                                  setEditForm({
+                                    description: c.description ?? '',
+                                    amount: String(c.amount ?? ''),
+                                    dueDate: c.dueDate ? String(c.dueDate).slice(0, 10) : '',
+                                    unitId: c.unitId ?? '',
+                                  });
+                                  setEditTarget(c);
+                                  setEditModal(true);
+                                }}
+                                className="px-2 py-1 border rounded text-xs hover:bg-gray-50"
+                              >
+                                Editar
+                              </button>
+                            )}
+                            {c.status === 'PENDING' && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Confirmar cancelamento desta cobrança?')) {
+                                    deleteMutation.mutate(c.id);
+                                  }
+                                }}
+                                className="px-2 py-1 border border-red-200 text-red-600 rounded text-xs hover:bg-red-50"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -184,6 +238,61 @@ export function ChargesPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowRatioModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => ratioMutation.mutate(ratioForm)} disabled={!ratioForm.description || !ratioForm.totalAmount || !ratioForm.dueDate || ratioMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Ratear</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Cobrança</h2>
+            <div className="space-y-3">
+              {[['Descrição *', 'description', 'text'], ['Valor (R$) *', 'amount', 'number'], ['Data de Vencimento *', 'dueDate', 'date']].map(([label, key, type]) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-sm font-medium">{label}</label>
+                  <input
+                    type={type}
+                    value={(editForm as any)[key]}
+                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Unidade *</label>
+                <select
+                  value={editForm.unitId}
+                  onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione...</option>
+                  {((units || []) as any[]).map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.identifier}
+                      {u.block ? ' / Bloco ' + u.block : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditModal(false);
+                  setEditTarget(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateMutation.mutate(editForm)}
+                disabled={updateMutation.isPending || !editForm.description || !editForm.amount || !editForm.dueDate || !editForm.unitId}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>

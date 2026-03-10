@@ -15,9 +15,4 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\tests\EncomendaServiceTests.csproj" />
-    <ProjectReference Include="..\tests\MoradorServiceTests.csproj" />
-  </ItemGroup>
-
 </Project>

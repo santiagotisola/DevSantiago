@@ -37,6 +37,8 @@ const paySchema = z.object({
   paidAt: z.string().datetime().optional(),
 });
 
+const updateChargeSchema = createChargeSchema.partial();
+
 const createTransactionSchema = z.object({
   accountId: z.string().uuid(),
   categoryId: z.string().uuid().optional(),
@@ -77,6 +79,15 @@ router.post('/charges', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
   res.status(201).json({ success: true, data: { charge } });
 });
 
+router.patch('/charges/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = validateRequest(updateChargeSchema, req.body);
+  const charge = await financeService.updateCharge(req.params.id, {
+    ...data,
+    ...(data.dueDate && { dueDate: new Date(data.dueDate) }),
+  });
+  res.json({ success: true, data: { charge } });
+});
+
 router.post('/charges/ratio', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const data = validateRequest(ratioSchema, req.body);
   const result = await financeService.ratioCharges({ ...data, dueDate: new Date(data.dueDate) }, req.user!.userId);
@@ -86,6 +97,11 @@ router.post('/charges/ratio', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_AD
 router.patch('/charges/:id/pay', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const { paidAmount, paidAt } = validateRequest(paySchema, req.body);
   const charge = await financeService.markAsPaid(req.params.id, paidAmount, paidAt ? new Date(paidAt) : undefined);
+  res.json({ success: true, data: { charge } });
+});
+
+router.delete('/charges/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const charge = await financeService.cancelCharge(req.params.id);
   res.json({ success: true, data: { charge } });
 });
 

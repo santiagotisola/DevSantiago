@@ -62,6 +62,10 @@ export class AuthService {
       select: {
         id: true, name: true, email: true, role: true,
         passwordHash: true, isActive: true, avatarUrl: true,
+        condominiumUsers: {
+          where: { isActive: true },
+          include: { condominium: { select: { id: true, name: true, logoUrl: true } } },
+        },
       },
     });
 

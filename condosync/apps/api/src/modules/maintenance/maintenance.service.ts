@@ -65,6 +65,21 @@ export class MaintenanceService {
     return prisma.serviceOrder.update({ where: { id }, data: updates });
   }
 
+  async updateOrder(id: string, data: {
+    title?: string;
+    description?: string;
+    category?: string;
+    location?: string;
+    priority?: ServiceOrderPriority;
+    estimatedCost?: number;
+    scheduledAt?: Date;
+  }) {
+    return prisma.serviceOrder.update({
+      where: { id },
+      data,
+    });
+  }
+
   async assign(id: string, serviceProviderId?: string, assignedTo?: string) {
     return prisma.serviceOrder.update({
       where: { id },

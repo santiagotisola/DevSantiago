@@ -18,6 +18,19 @@ const pickupSchema = z.object({
   signature: z.string().optional(),
 });
 
+const cancelSchema = z.object({
+  reason: z.string().optional(),
+});
+
+const updateSchema = z.object({
+  senderName: z.string().optional(),
+  carrier: z.string().optional(),
+  trackingCode: z.string().optional(),
+  photoUrl: z.string().url().optional(),
+  storageLocation: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 export class ParcelController {
   async list(req: Request, res: Response) {
     const condominiumId = req.params.condominiumId || req.user!.condominiumId!;
@@ -38,6 +51,18 @@ export class ParcelController {
   async confirmPickup(req: Request, res: Response) {
     const { pickedUpBy, signature } = validateRequest(pickupSchema, req.body);
     const parcel = await parcelService.confirmPickup(req.params.id, pickedUpBy, signature);
+    res.json({ success: true, data: { parcel } });
+  }
+
+  async update(req: Request, res: Response) {
+    const data = validateRequest(updateSchema, req.body);
+    const parcel = await parcelService.update(req.params.id, data);
+    res.json({ success: true, data: { parcel } });
+  }
+
+  async cancel(req: Request, res: Response) {
+    const { reason } = validateRequest(cancelSchema, req.body);
+    const parcel = await parcelService.cancel(req.params.id, reason);
     res.json({ success: true, data: { parcel } });
   }
 

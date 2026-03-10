@@ -7,9 +7,9 @@ import { formatDate } from '../../lib/utils';
 
 const statusLabels: Record<string, { label: string; className: string; next?: string }> = {
   OPEN: { label: 'Aberto', className: 'bg-yellow-100 text-yellow-700', next: 'IN_PROGRESS' },
-  IN_PROGRESS: { label: 'Em Andamento', className: 'bg-blue-100 text-blue-700', next: 'DONE' },
-  DONE: { label: 'Concluído', className: 'bg-green-100 text-green-700' },
-  CANCELLED: { label: 'Cancelado', className: 'bg-gray-100 text-gray-500' },
+  IN_PROGRESS: { label: 'Em Andamento', className: 'bg-blue-100 text-blue-700', next: 'COMPLETED' },
+  COMPLETED: { label: 'Concluído', className: 'bg-green-100 text-green-700' },
+  CANCELED: { label: 'Cancelado', className: 'bg-gray-100 text-gray-500' },
 };
 
 const priorityLabels: Record<string, { label: string; className: string }> = {
@@ -26,6 +26,9 @@ export function MaintenancePage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: '' });
+    const [editModal, setEditModal] = useState(false);
+    const [editTarget, setEditTarget] = useState<any | null>(null);
+    const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: orders, isLoading } = useQuery({
@@ -46,6 +49,21 @@ export function MaintenancePage() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/maintenance/${id}/status`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['maintenance'] }),
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: (d: typeof editForm & { id: string }) =>
+      api.patch(`/maintenance/${d.id}`, {
+        title: d.title,
+        description: d.description,
+        priority: d.priority,
+        category: d.category,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      setEditModal(false);
+      setEditTarget(null);
+    },
   });
 
   const filtered = ((orders || []) as any[]).filter((o: any) =>
@@ -101,10 +119,43 @@ export function MaintenancePage() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${st.className}`}>{st.label}</span>
-                    {isAdmin && st.next && (
-                      <button onClick={() => updateStatusMutation.mutate({ id: o.id, status: st.next! })} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">
-                        Avançar Status
-                      </button>
+                    {isAdmin && (
+                      <div className="flex flex-col gap-1 items-end">
+                        {st.next && (
+                          <button onClick={() => updateStatusMutation.mutate({ id: o.id, status: st.next! })} className="text-xs px-2 py-1 border rounded hover:bg-gray-50">
+                            Avançar Status
+                          </button>
+                        )}
+                        {o.status !== 'CANCELED' && o.status !== 'COMPLETED' && (
+                          <button
+                            onClick={() => {
+                              setEditForm({
+                                title: o.title ?? '',
+                                description: o.description ?? '',
+                                priority: o.priority ?? 'MEDIUM',
+                                category: o.category ?? '',
+                              });
+                              setEditTarget(o);
+                              setEditModal(true);
+                            }}
+                            className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {o.status !== 'CANCELED' && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Cancelar esta ordem de serviço?')) {
+                                updateStatusMutation.mutate({ id: o.id, status: 'CANCELED' });
+                              }
+                            }}
+                            className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -143,6 +194,76 @@ export function MaintenancePage() {
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => createMutation.mutate(form)} disabled={!form.title || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Criar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Ordem de Serviço</h2>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Título *</label>
+                <input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Descrição</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Prioridade</label>
+                  <select
+                    value={editForm.priority}
+                    onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Object.entries(priorityLabels).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Categoria</label>
+                  <input
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ex: Elétrico"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditModal(false);
+                  setEditTarget(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateOrderMutation.mutate({ ...editForm, id: editTarget.id })}
+                disabled={updateOrderMutation.isPending || !editForm.title}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateOrderMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>

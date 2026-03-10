@@ -44,6 +44,11 @@ router.post('/announcements', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_AD
   res.status(201).json({ success: true, data: { announcement } });
 });
 
+router.delete('/announcements/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  await prisma.announcement.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
 // ─── Notificações ─────────────────────────────────────────────
 router.get('/notifications', async (req: Request, res: Response) => {
   const [notifications, unreadCount] = await prisma.$transaction([

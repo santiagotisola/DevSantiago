@@ -85,6 +85,22 @@ router.delete('/:id', authorize('SUPER_ADMIN'), async (req: Request, res: Respon
   res.json({ success: true });
 });
 
+// Ativar/inativar condomínio
+router.patch('/:id/toggle-active', authorize('SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const condominium = await prisma.condominium.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { isActive: true },
+  });
+
+  const updated = await prisma.condominium.update({
+    where: { id: req.params.id },
+    data: { isActive: !condominium.isActive },
+    select: { id: true, isActive: true },
+  });
+
+  res.json({ success: true, data: { condominium: updated } });
+});
+
 // Adicionar membro ao condomínio
 router.post('/:id/members', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const schema = z.object({ userId: z.string().uuid(), role: z.string(), unitId: z.string().uuid().optional() });
@@ -108,6 +124,14 @@ router.get('/:id/members', async (req: Request, res: Response) => {
     orderBy: { joinedAt: 'asc' },
   });
   res.json({ success: true, data: { members } });
+});
+
+// Remover membro do condomínio
+router.delete('/:id/members/:userId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  await prisma.condominiumUser.deleteMany({
+    where: { condominiumId: req.params.id, userId: req.params.userId },
+  });
+  res.json({ success: true });
 });
 
 export default router;

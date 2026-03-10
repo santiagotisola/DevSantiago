@@ -71,6 +71,13 @@ export class ParcelService {
     return parcel;
   }
 
+  async update(id: string, data: Partial<Omit<RegisterParcelDTO, 'unitId'>>) {
+    return prisma.parcel.update({
+      where: { id },
+      data,
+    });
+  }
+
   async confirmPickup(id: string, pickedUpBy: string, signature?: string) {
     return prisma.parcel.update({
       where: { id },
@@ -79,6 +86,16 @@ export class ParcelService {
         pickedUpAt: new Date(),
         pickedUpBy,
         pickupSignature: signature,
+      },
+    });
+  }
+
+  async cancel(id: string, reason?: string) {
+    return prisma.parcel.update({
+      where: { id },
+      data: {
+        status: ParcelStatus.RETURNED,
+        notes: reason,
       },
     });
   }

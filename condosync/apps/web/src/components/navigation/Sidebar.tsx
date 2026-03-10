@@ -90,9 +90,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           setSelectedCondominium(list[0].id);
         }
       }).catch(() => {});
+    } else if (!selectedCondominiumId && user?.condominiumUsers?.[0]) {
+      setSelectedCondominium(user.condominiumUsers[0].condominium.id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, user?.condominiumUsers]);
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>

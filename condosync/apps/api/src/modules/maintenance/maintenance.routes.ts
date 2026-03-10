@@ -28,6 +28,16 @@ const updateStatusSchema = z.object({
   feedback: z.string().optional(),
 });
 
+const updateOrderSchema = z.object({
+  title: z.string().min(3).optional(),
+  description: z.string().min(10).optional(),
+  category: z.string().min(2).optional(),
+  location: z.string().optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  estimatedCost: z.number().positive().optional(),
+  scheduledAt: z.string().datetime().optional(),
+});
+
 const assignSchema = z.object({
   serviceProviderId: z.string().uuid().optional(),
   assignedTo: z.string().optional(),
@@ -55,6 +65,15 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   const order = await maintenanceService.findById(req.params.id);
+  res.json({ success: true, data: { order } });
+});
+
+router.patch('/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = validateRequest(updateOrderSchema, req.body);
+  const order = await maintenanceService.updateOrder(req.params.id, {
+    ...data,
+    ...(data.scheduledAt && { scheduledAt: new Date(data.scheduledAt) }),
+  });
   res.json({ success: true, data: { order } });
 });
 

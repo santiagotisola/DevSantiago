@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Package, Plus, Search, CheckCircle, Loader2 } from 'lucide-react';
+import { Package, Plus, Search, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: 'Recebida', color: 'bg-blue-100 text-blue-700' },
@@ -19,6 +19,9 @@ export function ParcelsPage() {
   const [showModal, setShowModal] = useState(false);
   const [pickupModal, setPickupModal] = useState<string | null>(null);
   const [pickupName, setPickupName] = useState('');
+  const [pickupResidentId, setPickupResidentId] = useState('');
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const [form, setForm] = useState({ unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '' });
   const [unitSearch, setUnitSearch] = useState('');
@@ -64,6 +67,36 @@ export function ParcelsPage() {
       setPickupModal(null);
       setPickupName('');
       setPickupResidentId('');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.patch(`/parcels/${id}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      setCancelingId(null);
+      setCancelReason('');
+    },
+  });
+
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' });
+
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm & { id: string }) =>
+      api.patch(`/parcels/${d.id}`, {
+        carrier: d.carrier,
+        trackingCode: d.trackingCode,
+        storageLocation: d.storageLocation,
+        senderName: d.senderName,
+        notes: d.notes,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      setEditModal(false);
+      setEditTarget(null);
     },
   });
 
@@ -150,19 +183,51 @@ export function ParcelsPage() {
                     </td>
                     {canRegister && (
                       <td className="px-4 py-3 text-right">
-                        {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                          <button
-                            onClick={() => {
-                              setPickupModal(p.id);
-                              setPickupName('');
-                              setPickupResidentId('');
-                            }}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            Confirmar Retirada
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => {
+                                setPickupModal(p.id);
+                                setPickupName('');
+                                setPickupResidentId('');
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Confirmar Retirada
+                            </button>
+                          )}
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => {
+                                setEditForm({
+                                  carrier: p.carrier ?? '',
+                                  trackingCode: p.trackingCode ?? '',
+                                  storageLocation: p.storageLocation ?? '',
+                                  senderName: p.senderName ?? '',
+                                  notes: p.notes ?? '',
+                                });
+                                setEditTarget(p);
+                                setEditModal(true);
+                              }}
+                              className="px-2 py-1 border rounded text-xs hover:bg-gray-50"
+                            >
+                              Editar
+                            </button>
+                          )}
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => {
+                                setCancelingId(p.id);
+                                setCancelReason('');
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 border border-red-200 text-red-600 rounded text-xs hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -187,7 +252,7 @@ export function ParcelsPage() {
                     onChange={(e) => {
                       const value = e.target.value;
                       setUnitSearch(value);
-                      setSelectedResidentId('');
+                      setSelectedFormResidentId('');
                       setForm({ ...form, unitId: '' });
                     }}
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -197,10 +262,10 @@ export function ParcelsPage() {
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Morador</label>
                   <select
-                    value={selectedResidentId}
+                    value={selectedFormResidentId}
                     onChange={(e) => {
                       const residentId = e.target.value;
-                      setSelectedResidentId(residentId);
+                      setSelectedFormResidentId(residentId);
                       const resident = filteredResidents.find((r: any) => r.id === residentId);
                       if (resident?.unit?.id) {
                         setForm({ ...form, unitId: resident.unit.id });
@@ -300,6 +365,92 @@ export function ParcelsPage() {
                 className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >
                 Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cancelamento */}
+      {cancelingId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Cancelar Encomenda</h2>
+            <p className="text-sm text-muted-foreground">
+              Confirma o cancelamento/devolução desta encomenda? Ela será marcada como "Devolvida" no histórico.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Motivo (opcional)</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setCancelingId(null)} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                Voltar
+              </button>
+              <button
+                onClick={() => cancelMutation.mutate({ id: cancelingId, reason: cancelReason || undefined })}
+                disabled={cancelMutation.isPending}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {cancelMutation.isPending ? 'Cancelando...' : 'Confirmar Cancelamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Encomenda</h2>
+            <div className="space-y-3">
+              {[
+                { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
+                { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
+                { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },
+                { key: 'senderName', label: 'Remetente', placeholder: 'Nome do remetente' },
+              ].map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <label className="text-sm font-medium">{f.label}</label>
+                  <input
+                    value={(editForm as any)[f.key]}
+                    onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={f.placeholder}
+                  />
+                </div>
+              ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Observações</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setEditModal(false);
+                  setEditTarget(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateMutation.mutate({ ...editForm, id: editTarget.id })}
+                disabled={updateMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
           </div>

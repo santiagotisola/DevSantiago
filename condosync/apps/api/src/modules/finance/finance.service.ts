@@ -106,6 +106,13 @@ export class FinanceService {
     });
   }
 
+  async updateCharge(chargeId: string, data: Partial<CreateChargeDTO>) {
+    return prisma.charge.update({
+      where: { id: chargeId },
+      data,
+    });
+  }
+
   async ratioCharges(data: RatioChargesDTO, createdBy: string) {
     const units = await prisma.unit.findMany({
       where: { condominiumId: data.condominiumId, status: 'OCCUPIED' },
@@ -142,6 +149,13 @@ export class FinanceService {
     return prisma.charge.update({
       where: { id: chargeId },
       data: { status: ChargeStatus.PAID, paidAmount, paidAt: paidAt || new Date() },
+    });
+  }
+
+  async cancelCharge(chargeId: string) {
+    return prisma.charge.update({
+      where: { id: chargeId },
+      data: { status: ChargeStatus.CANCELED },
     });
   }
 
