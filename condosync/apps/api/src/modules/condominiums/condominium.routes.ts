@@ -62,45 +62,6 @@ router.put('/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), asyn
   res.json({ success: true, data: { condominium } });
 });
 
-router.delete('/:id', authorize('SUPER_ADMIN'), async (req: Request, res: Response) => {
-  const condominium = await prisma.condominium.findUnique({
-    where: { id: req.params.id },
-    include: { _count: { select: { units: true, condominiumUsers: true } } },
-  });
-
-  if (!condominium) {
-    res.status(404).json({ success: false, message: 'Condomínio não encontrado' });
-    return;
-  }
-
-  if (condominium._count.units > 0 || condominium._count.condominiumUsers > 0) {
-    res.status(400).json({
-      success: false,
-      message: 'Não é possível excluir um condomínio com unidades ou membros vinculados.',
-    });
-    return;
-  }
-
-  await prisma.condominium.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
-});
-
-// Ativar/inativar condomínio
-router.patch('/:id/toggle-active', authorize('SUPER_ADMIN'), async (req: Request, res: Response) => {
-  const condominium = await prisma.condominium.findUniqueOrThrow({
-    where: { id: req.params.id },
-    select: { isActive: true },
-  });
-
-  const updated = await prisma.condominium.update({
-    where: { id: req.params.id },
-    data: { isActive: !condominium.isActive },
-    select: { id: true, isActive: true },
-  });
-
-  res.json({ success: true, data: { condominium: updated } });
-});
-
 // Adicionar membro ao condomínio
 router.post('/:id/members', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const schema = z.object({ userId: z.string().uuid(), role: z.string(), unitId: z.string().uuid().optional() });

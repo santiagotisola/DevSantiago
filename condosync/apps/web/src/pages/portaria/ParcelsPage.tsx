@@ -19,13 +19,7 @@ export function ParcelsPage() {
   const [showModal, setShowModal] = useState(false);
   const [pickupModal, setPickupModal] = useState<string | null>(null);
   const [pickupName, setPickupName] = useState('');
-  const [pickupResidentId, setPickupResidentId] = useState('');
-  const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-
   const [form, setForm] = useState({ unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '' });
-  const [unitSearch, setUnitSearch] = useState('');
-  const [selectedFormResidentId, setSelectedFormResidentId] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['parcels', selectedCondominiumId],
@@ -66,37 +60,6 @@ export function ParcelsPage() {
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
       setPickupModal(null);
       setPickupName('');
-      setPickupResidentId('');
-    },
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      api.patch(`/parcels/${id}/cancel`, { reason }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parcels'] });
-      setCancelingId(null);
-      setCancelReason('');
-    },
-  });
-
-  const [editModal, setEditModal] = useState(false);
-  const [editTarget, setEditTarget] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' });
-
-  const updateMutation = useMutation({
-    mutationFn: (d: typeof editForm & { id: string }) =>
-      api.patch(`/parcels/${d.id}`, {
-        carrier: d.carrier,
-        trackingCode: d.trackingCode,
-        storageLocation: d.storageLocation,
-        senderName: d.senderName,
-        notes: d.notes,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parcels'] });
-      setEditModal(false);
-      setEditTarget(null);
     },
   });
 
@@ -183,51 +146,15 @@ export function ParcelsPage() {
                     </td>
                     {canRegister && (
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => {
-                                setPickupModal(p.id);
-                                setPickupName('');
-                                setPickupResidentId('');
-                              }}
-                              className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              Confirmar Retirada
-                            </button>
-                          )}
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => {
-                                setEditForm({
-                                  carrier: p.carrier ?? '',
-                                  trackingCode: p.trackingCode ?? '',
-                                  storageLocation: p.storageLocation ?? '',
-                                  senderName: p.senderName ?? '',
-                                  notes: p.notes ?? '',
-                                });
-                                setEditTarget(p);
-                                setEditModal(true);
-                              }}
-                              className="px-2 py-1 border rounded text-xs hover:bg-gray-50"
-                            >
-                              Editar
-                            </button>
-                          )}
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => {
-                                setCancelingId(p.id);
-                                setCancelReason('');
-                              }}
-                              className="flex items-center gap-1 px-2 py-1 border border-red-200 text-red-600 rounded text-xs hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Cancelar
-                            </button>
-                          )}
-                        </div>
+                        {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                          <button
+                            onClick={() => setPickupModal(p.id)}
+                            className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            Confirmar Retirada
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -244,50 +171,8 @@ export function ParcelsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Registrar Encomenda</h2>
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Unidade</label>
-                  <input
-                    value={unitSearch}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setUnitSearch(value);
-                      setSelectedFormResidentId('');
-                      setForm({ ...form, unitId: '' });
-                    }}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Número da unidade (ex: 101)"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Morador</label>
-                  <select
-                    value={selectedFormResidentId}
-                    onChange={(e) => {
-                      const residentId = e.target.value;
-                      setSelectedFormResidentId(residentId);
-                      const resident = filteredResidents.find((r: any) => r.id === residentId);
-                      if (resident?.unit?.id) {
-                        setForm({ ...form, unitId: resident.unit.id });
-                        setUnitSearch(resident.unit.identifier ?? '');
-                      }
-                    }}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isLoadingResidents || filteredResidents.length === 0}
-                  >
-                    <option value="">{filteredResidents.length === 0 ? 'Nenhum morador para esta unidade' : 'Selecione...'}</option>
-                    {filteredResidents.map((r: any) => (
-                      r.unit && (
-                        <option key={r.id} value={r.id}>
-                          {r.user?.name}
-                        </option>
-                      )
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">Digite a unidade e selecione o morador correspondente.</p>
-                </div>
-              </div>
               {[
+                { key: 'unitId', label: 'ID da Unidade *', placeholder: 'UUID da unidade' },
                 { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
                 { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
                 { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },
