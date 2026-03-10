@@ -10,6 +10,9 @@ export function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', role: '', email: '', phone: '', shiftType: 'MORNING' });
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', role: '', email: '', phone: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: employees, isLoading } = useQuery({
@@ -21,6 +24,15 @@ export function EmployeesPage() {
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/employees', { ...d, condominiumId: selectedCondominiumId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['employees'] }); setShowModal(false); setForm({ name: '', role: '', email: '', phone: '', shiftType: 'MORNING' }); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm) => api.put(`/employees/${editTarget?.id}`, d),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setEditModal(false);
+      setEditTarget(null);
+    },
   });
 
   const deactivateMutation = useMutation({
@@ -76,8 +88,34 @@ export function EmployeesPage() {
                 {e.phone && <p className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{e.phone}</p>}
                 {e.shiftType && <p>Turno: {shiftLabels[e.shiftType] || e.shiftType}</p>}
               </div>
-              {isAdmin && e.isActive && (
-                <button onClick={() => deactivateMutation.mutate(e.id)} className="mt-3 w-full text-xs text-red-600 border border-red-200 hover:bg-red-50 py-1 rounded-lg">Desativar</button>
+              {isAdmin && (
+                <div className="mt-3 flex flex-col gap-1 text-xs">
+                  {e.isActive && (
+                    <button
+                      onClick={() => {
+                        setEditForm({
+                          name: e.name ?? '',
+                          role: e.role ?? '',
+                          email: e.email ?? '',
+                          phone: e.phone ?? '',
+                        });
+                        setEditTarget(e);
+                        setEditModal(true);
+                      }}
+                      className="w-full border rounded-lg py-1 hover:bg-gray-50 text-gray-700"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  {e.isActive && (
+                    <button
+                      onClick={() => deactivateMutation.mutate(e.id)}
+                      className="w-full text-red-600 border border-red-200 hover:bg-red-50 py-1 rounded-lg"
+                    >
+                      Desativar
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}
@@ -109,6 +147,36 @@ export function EmployeesPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.role || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Cadastrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Funcionário</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[['Nome *', 'name'], ['Cargo *', 'role'], ['E-mail', 'email'], ['Telefone', 'phone']].map(([label, key]) => (
+                <div key={key} className={`space-y-1 ${key === 'name' ? 'col-span-2' : ''}`}>
+                  <label className="text-sm font-medium">{label}</label>
+                  <input
+                    value={(editForm as any)[key]}
+                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button
+                onClick={() => updateMutation.mutate(editForm)}
+                disabled={updateMutation.isPending || !editForm.name || !editForm.role}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>

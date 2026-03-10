@@ -10,6 +10,9 @@ export function ServiceProvidersPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', serviceType: '', email: '', phone: '', cnpj: '' });
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', serviceType: '', email: '', phone: '', cnpj: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: providers, isLoading } = useQuery({
@@ -23,11 +26,26 @@ export function ServiceProvidersPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-providers'] }); setShowModal(false); setForm({ name: '', serviceType: '', email: '', phone: '', cnpj: '' }); },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm) => api.put(`/service-providers/${editTarget?.id}`, d),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['service-providers'] });
+      setEditModal(false);
+      setEditTarget(null);
+    },
+  });
+
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/service-providers/${id}/approve`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['service-providers'] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/service-providers/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['service-providers'] });
+    },
+  });
   const filtered = ((providers || []) as any[]).filter((p: any) =>
     (p.name ?? '').toLowerCase().includes(search.toLowerCase()) || (p.serviceType ?? '').toLowerCase().includes(search.toLowerCase())
   );
@@ -73,10 +91,39 @@ export function ServiceProvidersPage() {
                 {p.phone && <p className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{p.phone}</p>}
                 {p.cnpj && <p>CNPJ: {p.cnpj}</p>}
               </div>
-              {isAdmin && !p.isApproved && (
-                <button onClick={() => approveMutation.mutate(p.id)} className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-green-700 border border-green-200 hover:bg-green-50 py-1.5 rounded-lg font-medium">
-                  <CheckCircle className="w-3 h-3" /> Aprovar
-                </button>
+              {isAdmin && (
+                <div className="mt-3 flex flex-col gap-1 text-xs">
+                  <button
+                    onClick={() => {
+                      setEditForm({
+                        name: p.name ?? '',
+                        serviceType: p.serviceType ?? '',
+                        email: p.email ?? '',
+                        phone: p.phone ?? '',
+                        cnpj: p.cnpj ?? '',
+                      });
+                      setEditTarget(p);
+                      setEditModal(true);
+                    }}
+                    className="w-full border rounded-lg py-1 hover:bg-gray-50 text-gray-700"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(p.id)}
+                    className="w-full text-red-600 border border-red-200 hover:bg-red-50 py-1 rounded-lg"
+                  >
+                    Excluir
+                  </button>
+                  {!p.isApproved && (
+                    <button
+                      onClick={() => approveMutation.mutate(p.id)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs text-green-700 border border-green-200 hover:bg-green-50 py-1.5 rounded-lg font-medium"
+                    >
+                      <CheckCircle className="w-3 h-3" /> Aprovar
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}
@@ -98,6 +145,36 @@ export function ServiceProvidersPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.serviceType || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Cadastrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Prestador de Serviço</h2>
+            <div className="space-y-3">
+              {[['Nome/Empresa *', 'name'], ['Tipo de Serviço *', 'serviceType'], ['E-mail', 'email'], ['Telefone', 'phone'], ['CNPJ', 'cnpj']].map(([label, key]) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-sm font-medium">{label}</label>
+                  <input
+                    value={(editForm as any)[key]}
+                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button
+                onClick={() => updateMutation.mutate(editForm)}
+                disabled={updateMutation.isPending || !editForm.name || !editForm.serviceType}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>

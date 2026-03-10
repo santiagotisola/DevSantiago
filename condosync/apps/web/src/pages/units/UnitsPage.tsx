@@ -18,6 +18,9 @@ export function UnitsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ identifier: '', block: '', floor: '', fraction: '', type: '' });
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ identifier: '', block: '', floor: '', fraction: '', type: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: units, isLoading } = useQuery({
@@ -32,6 +35,22 @@ export function UnitsPage() {
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/units', { ...d, condominiumId: selectedCondominiumId, fraction: d.fraction ? parseFloat(d.fraction) : undefined }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['units'] }); setShowModal(false); setForm({ identifier: '', block: '', floor: '', fraction: '', type: '' }); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (d: typeof editForm) => api.put(`/units/${editTarget?.id}`, { ...d, fraction: d.fraction ? parseFloat(d.fraction) : undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      setEditModal(false);
+      setEditTarget(null);
+    },
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: (unit: any) => api.put(`/units/${unit.id}`, { status: unit.status === 'BLOCKED' ? 'VACANT' : 'BLOCKED' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+    },
   });
 
   const filtered = ((units || []) as any[]).filter((u: any) =>
@@ -76,13 +95,39 @@ export function UnitsPage() {
           {filtered.map((u: any) => {
             const st = statusLabels[u.status] || statusLabels.VACANT;
             return (
-              <div key={u.id} className="bg-white border rounded-xl p-3 text-center hover:shadow-md transition-shadow">
+              <div key={u.id} className="bg-white border rounded-xl p-3 text-center hover:shadow-md transition-shadow space-y-1">
                 <div className="text-lg font-bold">{u.identifier}</div>
                 {u.block && <div className="text-xs text-muted-foreground">Bloco {u.block}</div>}
                 {u.floor && <div className="text-xs text-muted-foreground">{u.floor}º andar</div>}
                 <div className={`mt-2 text-xs px-2 py-0.5 rounded-full font-medium inline-block ${st.className}`}>{st.label}</div>
                 {u.resident && (
                   <div className="mt-1 text-xs text-gray-500 truncate">{u.resident.name}</div>
+                )}
+                {isAdmin && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <button
+                      onClick={() => {
+                        setEditForm({
+                          identifier: u.identifier ?? '',
+                          block: u.block ?? '',
+                          floor: u.floor ?? '',
+                          fraction: u.fraction ? String(u.fraction) : '',
+                          type: u.type ?? '',
+                        });
+                        setEditTarget(u);
+                        setEditModal(true);
+                      }}
+                      className="w-full text-xs px-2 py-1 border rounded-lg hover:bg-gray-50 text-gray-700"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => toggleStatusMutation.mutate(u)}
+                      className="w-full text-xs px-2 py-1 border rounded-lg text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      {u.status === 'BLOCKED' ? 'Desbloquear' : 'Bloquear'}
+                    </button>
+                  </div>
                 )}
               </div>
             );
@@ -105,6 +150,38 @@ export function UnitsPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => createMutation.mutate(form)} disabled={!form.identifier || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Criar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Unidade</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[['Identificador *', 'identifier'], ['Bloco', 'block'], ['Andar', 'floor'], ['Fração ideal (%)', 'fraction'], ['Tipo', 'type']].map(([label, key]) => (
+                <div key={key} className={`space-y-1 ${key === 'identifier' ? 'col-span-2' : ''}`}>
+                  <label className="text-sm font-medium">{label}</label>
+                  <input
+                    value={(editForm as any)[key]}
+                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateMutation.mutate(editForm)}
+                disabled={updateMutation.isPending || !editForm.identifier}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
             </div>
           </div>
         </div>
