@@ -255,6 +255,9 @@ model Unit {
   condominiumId String
   identifier    String     // ex: "Casa 01", "Lote 15"
   block         String?
+  street        String?    // endereço / rua da unidade
+  floor         String?    // andar
+  type          String?    // tipo: apartamento, casa, loja, etc.
   area          Float?
   bedrooms      Int?
   status        UnitStatus @default(OCCUPIED)

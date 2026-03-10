@@ -17,10 +17,10 @@ export function UnitsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ identifier: '', block: '', floor: '', fraction: '', type: '' });
+  const [form, setForm] = useState({ identifier: '', block: '', street: '', floor: '', fraction: '', type: '' });
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ identifier: '', block: '', floor: '', fraction: '', type: '' });
+  const [editForm, setEditForm] = useState({ identifier: '', block: '', street: '', floor: '', fraction: '', type: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: units, isLoading } = useQuery({
@@ -34,7 +34,7 @@ export function UnitsPage() {
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/units', { ...d, condominiumId: selectedCondominiumId, fraction: d.fraction ? parseFloat(d.fraction) : undefined }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['units'] }); setShowModal(false); setForm({ identifier: '', block: '', floor: '', fraction: '', type: '' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['units'] }); setShowModal(false); setForm({ identifier: '', block: '', street: '', floor: '', fraction: '', type: '' }); },
   });
 
   const updateMutation = useMutation({
@@ -97,7 +97,10 @@ export function UnitsPage() {
             return (
               <div key={u.id} className="bg-white border rounded-xl p-3 text-center hover:shadow-md transition-shadow space-y-1">
                 <div className="text-lg font-bold">{u.identifier}</div>
-                {u.block && <div className="text-xs text-muted-foreground">Bloco {u.block}</div>}
+                {u.block
+                  ? <div className="text-xs text-muted-foreground">Bloco {u.block}</div>
+                  : u.street && <div className="text-xs text-muted-foreground truncate">{u.street}</div>
+                }
                 {u.floor && <div className="text-xs text-muted-foreground">{u.floor}º andar</div>}
                 <div className={`mt-2 text-xs px-2 py-0.5 rounded-full font-medium inline-block ${st.className}`}>{st.label}</div>
                 {u.resident && (
@@ -110,6 +113,7 @@ export function UnitsPage() {
                         setEditForm({
                           identifier: u.identifier ?? '',
                           block: u.block ?? '',
+                          street: u.street ?? '',
                           floor: u.floor ?? '',
                           fraction: u.fraction ? String(u.fraction) : '',
                           type: u.type ?? '',
@@ -140,12 +144,41 @@ export function UnitsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Nova Unidade</h2>
             <div className="grid grid-cols-2 gap-3">
-              {[['Identificador *', 'identifier'], ['Bloco', 'block'], ['Andar', 'floor'], ['Fração ideal (%)', 'fraction'], ['Tipo', 'type']].map(([label, key]) => (
-                <div key={key} className={`space-y-1 ${key === 'identifier' ? 'col-span-2' : ''}`}>
-                  <label className="text-sm font-medium">{label}</label>
-                  <input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Identificador *</label>
+                <input value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} placeholder="Ex: Casa 01, Lote 15" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Rua / Endereço</label>
+                <input value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} placeholder="Ex: Rua das Palmeiras, 500" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Bloco</label>
+                <input value={form.block} onChange={(e) => setForm({ ...form, block: e.target.value })} placeholder="Ex: A" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Andar</label>
+                <input value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} placeholder="Ex: 3" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Fração ideal (%)</label>
+                <input value={form.fraction} onChange={(e) => setForm({ ...form, fraction: e.target.value })} placeholder="Ex: 0.10" type="number" step="0.01" min="0" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tipo</label>
+                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Selecionar...</option>
+                  <option value="Casa">Casa</option>
+                  <option value="Apartamento">Apartamento</option>
+                  <option value="Lote">Lote</option>
+                  <option value="Sala Comercial">Sala Comercial</option>
+                  <option value="Loja">Loja</option>
+                  <option value="Vaga de Garagem">Vaga de Garagem</option>
+                  <option value="Depósito">Depósito</option>
+                  <option value="Cobertura">Cobertura</option>
+                  <option value="Studio">Studio</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
@@ -160,15 +193,41 @@ export function UnitsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Editar Unidade</h2>
             <div className="grid grid-cols-2 gap-3">
-              {[['Identificador *', 'identifier'], ['Bloco', 'block'], ['Andar', 'floor'], ['Fração ideal (%)', 'fraction'], ['Tipo', 'type']].map(([label, key]) => (
-                <div key={key} className={`space-y-1 ${key === 'identifier' ? 'col-span-2' : ''}`}>
-                  <label className="text-sm font-medium">{label}</label>
-                  <input
-                    value={(editForm as any)[key]}
-                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Identificador *</label>
+                <input value={editForm.identifier} onChange={(e) => setEditForm({ ...editForm, identifier: e.target.value })} placeholder="Ex: Casa 01, Lote 15" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Rua / Endereço</label>
+                <input value={editForm.street} onChange={(e) => setEditForm({ ...editForm, street: e.target.value })} placeholder="Ex: Rua das Palmeiras, 500" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Bloco</label>
+                <input value={editForm.block} onChange={(e) => setEditForm({ ...editForm, block: e.target.value })} placeholder="Ex: A" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Andar</label>
+                <input value={editForm.floor} onChange={(e) => setEditForm({ ...editForm, floor: e.target.value })} placeholder="Ex: 3" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Fração ideal (%)</label>
+                <input value={editForm.fraction} onChange={(e) => setEditForm({ ...editForm, fraction: e.target.value })} placeholder="Ex: 0.10" type="number" step="0.01" min="0" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tipo</label>
+                <select value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Selecionar...</option>
+                  <option value="Casa">Casa</option>
+                  <option value="Apartamento">Apartamento</option>
+                  <option value="Lote">Lote</option>
+                  <option value="Sala Comercial">Sala Comercial</option>
+                  <option value="Loja">Loja</option>
+                  <option value="Vaga de Garagem">Vaga de Garagem</option>
+                  <option value="Depósito">Depósito</option>
+                  <option value="Cobertura">Cobertura</option>
+                  <option value="Studio">Studio</option>
+                </select>
+              </div>
               ))}
             </div>
             <div className="flex gap-3">

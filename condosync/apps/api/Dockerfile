@@ -21,7 +21,8 @@ WORKDIR /app/apps/api
 RUN npx prisma generate
 
 # Compilar TypeScript → dist/
-RUN npx tsc --noEmitOnError false 2>&1 || true
+# tsconfig.json já tem "noEmitOnError": false — emite JS mesmo com erros de tipo
+RUN npx tsc 2>&1 || true
 RUN test -f dist/server.js || (echo "ERRO: dist/server.js não foi gerado" && exit 1)
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
