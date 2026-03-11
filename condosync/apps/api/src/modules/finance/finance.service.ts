@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { ChargeStatus, FinancialTransactionType } from '@prisma/client';
 import { AppError } from '../../middleware/errorHandler';
+import { toNumber, roundMoney } from '../../utils/decimal';
 
 export interface CreateChargeDTO {
   unitId: string;
@@ -63,8 +64,8 @@ export class FinanceService {
       }),
     ]);
 
-    const balance = (income._sum.amount || 0) - (expense._sum.amount || 0);
-    return { account, balance, totalIncome: income._sum.amount || 0, totalExpense: expense._sum.amount || 0 };
+    const balance = toNumber(income._sum.amount) - toNumber(expense._sum.amount);
+    return { account, balance, totalIncome: toNumber(income._sum.amount), totalExpense: toNumber(expense._sum.amount) };
   }
 
   // ─── Cobranças ───────────────────────────────────────────────
@@ -120,12 +121,12 @@ export class FinanceService {
 
     if (units.length === 0) throw new AppError('Nenhuma unidade ocupada encontrada');
 
-    const totalFraction = units.reduce((sum, u) => sum + u.fraction, 0);
+    const totalFraction = units.reduce((sum, u) => sum + u.fraction.toNumber(), 0);
 
     const charges = units.map((unit) => {
       const amount =
         data.method === 'fraction'
-          ? (data.totalAmount * unit.fraction) / totalFraction
+          ? (data.totalAmount * unit.fraction.toNumber()) / totalFraction
           : data.totalAmount / units.length;
 
       return {
@@ -133,7 +134,7 @@ export class FinanceService {
         accountId: data.accountId,
         categoryId: data.categoryId,
         description: data.description,
-        amount: Math.round(amount * 100) / 100,
+        amount: roundMoney(amount),
         dueDate: data.dueDate,
         referenceMonth: data.referenceMonth,
         status: ChargeStatus.PENDING,
@@ -228,12 +229,12 @@ export class FinanceService {
 
         return {
           month,
-          income: income._sum.amount || 0,
-          expense: expense._sum.amount || 0,
-          charged: charged._sum.amount || 0,
-          paid: paid._sum.paidAmount || 0,
+          income: toNumber(income._sum.amount),
+          expense: toNumber(expense._sum.amount),
+          charged: toNumber(charged._sum.amount),
+          paid: toNumber(paid._sum.paidAmount),
           overdueCount: overdue,
-          balance: (income._sum.amount || 0) - (expense._sum.amount || 0),
+          balance: toNumber(income._sum.amount) - toNumber(expense._sum.amount),
         };
       })
     );
@@ -262,7 +263,7 @@ export class FinanceService {
       }),
       prisma.charge.aggregate({ where: { unitId }, _sum: { amount: true } }),
     ]);
-    return { pending, total: total._sum.amount || 0 };
+    return { pending, total: toNumber(total._sum.amount) };
   }
 }
 

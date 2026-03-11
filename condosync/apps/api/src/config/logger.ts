@@ -7,11 +7,14 @@ const logFormat = winston.format.combine(
   winston.format.splat(),
   env.NODE_ENV === 'production'
     ? winston.format.json()
-    : winston.format.colorize(),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaStr = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
-    return `[${timestamp}] ${level}: ${message}${metaStr}`;
-  })
+    : winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, module: mod, ...meta }) => {
+          const prefix = mod ? `[${mod}] ` : '';
+          const metaStr = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+          return `[${timestamp}] ${level}: ${prefix}${message}${metaStr}`;
+        })
+      )
 );
 
 export const logger = winston.createLogger({
@@ -32,3 +35,12 @@ export const logger = winston.createLogger({
     }),
   ],
 });
+
+/**
+ * Cria um logger com contexto de módulo (ex: "finance", "portaria").
+ * Uso: const log = createModuleLogger('finance');
+ *      log.info('Cobrança criada', { chargeId, amount });
+ */
+export function createModuleLogger(moduleName: string) {
+  return logger.child({ module: moduleName });
+}

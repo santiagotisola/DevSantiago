@@ -3,53 +3,18 @@ import { Request, Response } from 'express';
 import { financeService } from './finance.service';
 import { authenticate, authorize } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
-import { z } from 'zod';
+import {
+  createChargeSchema,
+  updateChargeSchema,
+  ratioSchema,
+  paySchema,
+  createTransactionSchema,
+} from './finance.validation';
 
 const router = Router();
 router.use(authenticate);
 router.use(authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN', 'RESIDENT'));
 
-const createChargeSchema = z.object({
-  unitId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  amount: z.number().positive(),
-  dueDate: z.string().datetime(),
-  referenceMonth: z.string().optional(),
-  interestRate: z.number().min(0).optional(),
-  penaltyAmount: z.number().min(0).optional(),
-});
-
-const ratioSchema = z.object({
-  condominiumId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  totalAmount: z.number().positive(),
-  dueDate: z.string().datetime(),
-  referenceMonth: z.string(),
-  method: z.enum(['equal', 'fraction']),
-});
-
-const paySchema = z.object({
-  paidAmount: z.number().positive(),
-  paidAt: z.string().datetime().optional(),
-});
-
-const updateChargeSchema = createChargeSchema.partial();
-
-const createTransactionSchema = z.object({
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  type: z.enum(['INCOME', 'EXPENSE']),
-  amount: z.number().positive(),
-  description: z.string().min(3),
-  dueDate: z.string().datetime(),
-  paidAt: z.string().datetime().optional(),
-  referenceMonth: z.string().optional(),
-  notes: z.string().optional(),
-});
 
 // Contas
 router.get('/accounts/:condominiumId', async (req: Request, res: Response) => {

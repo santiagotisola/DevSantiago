@@ -11,13 +11,16 @@ export class AppError extends Error {
     this.statusCode = statusCode;
     this.isOperational = true;
     this.code = code;
-    Error.captureStackTrace(this, this.constructor);
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(resource = 'Recurso') {
-    super(`${resource} não encontrado`, 404, 'NOT_FOUND');
+  constructor(resource = 'Recurso', id?: string) {
+    const msg = id
+      ? `${resource} com ID "${id}" não encontrado`
+      : `${resource} não encontrado`;
+    super(msg, 404, 'NOT_FOUND');
   }
 }
 
@@ -34,16 +37,22 @@ export class ForbiddenError extends AppError {
 }
 
 export class ValidationError extends AppError {
-  public errors: unknown;
-  constructor(message: string, errors?: unknown) {
+  public details: Record<string, string[]>;
+  constructor(message: string, details?: Record<string, string[]>) {
     super(message, 422, 'VALIDATION_ERROR');
-    this.errors = errors;
+    this.details = details || {};
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(message, 409, 'CONFLICT');
+  }
+}
+
+export class RateLimitError extends AppError {
+  constructor(message = 'Limite de requisições excedido') {
+    super(message, 429, 'RATE_LIMIT');
   }
 }
 
@@ -55,7 +64,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
       error: {
         code: err.code || 'APP_ERROR',
         message: err.message,
-        ...(err instanceof ValidationError && { errors: err.errors }),
+        ...(err instanceof ValidationError && Object.keys(err.details).length > 0 && { details: err.details }),
       },
     });
   }

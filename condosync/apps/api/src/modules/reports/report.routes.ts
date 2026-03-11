@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
+import { toNumber } from '../../utils/decimal';
 
 const router = Router();
 router.use(authenticate);
@@ -84,20 +85,25 @@ router.get('/financial/:condominiumId', async (req: Request, res: Response) => {
     }),
   ]);
 
-  const collectionRate = charged._sum.amount
-    ? ((collected._sum.paidAmount || 0) / charged._sum.amount) * 100
+  const chargedTotal = toNumber(charged._sum.amount);
+  const collectedTotal = toNumber(collected._sum.paidAmount);
+  const incomeTotal = toNumber(income._sum.amount);
+  const expensesTotal = toNumber(expenses._sum.amount);
+
+  const collectionRate = chargedTotal
+    ? (collectedTotal / chargedTotal) * 100
     : 0;
 
   res.json({
     success: true,
     data: {
-      income: { total: income._sum.amount || 0, count: income._count },
-      expenses: { total: expenses._sum.amount || 0, count: expenses._count },
-      charges: { total: charged._sum.amount || 0, count: charged._count },
-      collected: { total: collected._sum.paidAmount || 0, count: collected._count },
+      income: { total: incomeTotal, count: income._count },
+      expenses: { total: expensesTotal, count: expenses._count },
+      charges: { total: chargedTotal, count: charged._count },
+      collected: { total: collectedTotal, count: collected._count },
       defaulters,
       collectionRate: Math.round(collectionRate * 10) / 10,
-      balance: (income._sum.amount || 0) - (expenses._sum.amount || 0),
+      balance: incomeTotal - expensesTotal,
     },
   });
 });
