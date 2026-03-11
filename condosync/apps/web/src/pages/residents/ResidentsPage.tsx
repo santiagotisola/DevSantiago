@@ -17,7 +17,7 @@ export function ResidentsPage() {
   const [depTarget, setDepTarget] = useState<any>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [editForm, setEditForm] = useState({ name: '', phone: '', cpf: '', unitId: '' });
-  const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '' });
+  const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '', birthDate: '' });
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: residents, isLoading } = useQuery({
@@ -54,8 +54,12 @@ export function ResidentsPage() {
   });
 
   const addDepMutation = useMutation({
-    mutationFn: (d: typeof depForm) => api.post('/residents/dependents', { ...d, unitId: depTarget?.unitId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setDepTarget(null); setDepForm({ name: '', relationship: '', cpf: '' }); },
+    mutationFn: (d: typeof depForm) => api.post('/residents/dependents', {
+      ...d,
+      unitId: depTarget?.unit?.id,
+      birthDate: d.birthDate ? new Date(d.birthDate).toISOString() : undefined,
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setDepTarget(null); setDepForm({ name: '', relationship: '', cpf: '', birthDate: '' }); },
   });
 
   const removeDepMutation = useMutation({
@@ -142,9 +146,9 @@ export function ResidentsPage() {
                         </button>
                       )}
                     </div>
-                    {r.dependents?.length > 0 ? (
+                    {r.unit?.dependents?.length > 0 ? (
                       <ul className="space-y-1 ml-1">
-                        {r.dependents.map((d: any) => (
+                        {r.unit?.dependents?.map((d: any) => (
                           <li key={d.id} className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>{d.name} <span className="text-gray-400">({d.relationship})</span></span>
                             {isAdmin && (
@@ -259,20 +263,67 @@ export function ResidentsPage() {
 
       {/* Modal: Adicionar Dependente */}
       {depTarget && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Adicionar Dependente</h2>
-            <p className="text-xs text-muted-foreground">Dependente de: <span className="font-medium">{depTarget.user?.name}</span></p>
-            <div className="space-y-3">
-              {[['Nome *', 'name', 'text'], ['Parentesco *', 'relationship', 'text'], ['CPF', 'cpf', 'text']].map(([label, key, type]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium">{label}</label>
-                  <input type={type} value={(depForm as any)[key]} onChange={(e) => setDepForm({ ...depForm, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4 my-auto">
+            <div>
+              <h2 className="text-lg font-semibold">Adicionar Dependente</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Dependente de: <span className="font-medium text-gray-800">{depTarget.user?.name}</span></p>
             </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Nome completo *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Maria Silva"
+                  value={depForm.name}
+                  onChange={(e) => setDepForm({ ...depForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Parentesco *</label>
+                <select
+                  value={depForm.relationship}
+                  onChange={(e) => setDepForm({ ...depForm, relationship: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">Selecionar...</option>
+                  <option value="Cônjuge">Cônjuge</option>
+                  <option value="Filho(a)">Filho(a)</option>
+                  <option value="Enteado(a)">Enteado(a)</option>
+                  <option value="Pai">Pai</option>
+                  <option value="Mãe">Mãe</option>
+                  <option value="Irmão(ã)">Irmão(ã)</option>
+                  <option value="Avô/Avó">Avô/Avó</option>
+                  <option value="Neto(a)">Neto(a)</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">CPF</label>
+                  <input
+                    type="text"
+                    placeholder="000.000.000-00"
+                    value={depForm.cpf}
+                    onChange={(e) => setDepForm({ ...depForm, cpf: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={depForm.birthDate}
+                    onChange={(e) => setDepForm({ ...depForm, birthDate: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+            {addDepMutation.isError && <p className="text-sm text-red-600">Erro ao adicionar dependente. Tente novamente.</p>}
             <div className="flex gap-3">
-              <button onClick={() => { setDepTarget(null); setDepForm({ name: '', relationship: '', cpf: '' }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button onClick={() => { setDepTarget(null); setDepForm({ name: '', relationship: '', cpf: '', birthDate: '' }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button onClick={() => addDepMutation.mutate(depForm)} disabled={!depForm.name || !depForm.relationship || addDepMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                 {addDepMutation.isPending ? 'Adicionando...' : 'Adicionar'}
               </button>

@@ -72,7 +72,7 @@ export default function App() {
 
           {/* Financeiro */}
           <Route path="financeiro" element={<FinancePage />} />
-          <Route path="financeiro/cobranças" element={<ChargesPage />} />
+          <Route path="financeiro/cobrancas" element={<ChargesPage />} />
 
           {/* Manutenção */}
           <Route path="manutencao" element={<MaintenancePage />} />

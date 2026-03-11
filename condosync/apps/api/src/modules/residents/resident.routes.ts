@@ -44,7 +44,14 @@ router.get('/condominium/:condominiumId', async (req: Request, res: Response) =>
     where: { condominiumId: req.params.condominiumId, role: 'RESIDENT', isActive: true },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true, avatarUrl: true, cpf: true } },
-      unit: { select: { id: true, identifier: true, block: true } },
+      unit: {
+        select: {
+          id: true,
+          identifier: true,
+          block: true,
+          dependents: { where: { isActive: true }, orderBy: { name: 'asc' } },
+        },
+      },
     },
     orderBy: { joinedAt: 'asc' },
   });

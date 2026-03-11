@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Package, Plus, Search, CheckCircle, Loader2, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: 'Recebida', color: 'bg-blue-100 text-blue-700' },
@@ -12,14 +12,23 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RETURNED: { label: 'Devolvida', color: 'bg-gray-100 text-gray-700' },
 };
 
+const emptyForm = { unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' };
+const emptyEditForm = { carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' };
+
 export function ParcelsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
   const [pickupModal, setPickupModal] = useState<string | null>(null);
   const [pickupName, setPickupName] = useState('');
-  const [form, setForm] = useState({ unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '' });
+  const [pickupResidentId, setPickupResidentId] = useState('');
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editForm, setEditForm] = useState(emptyEditForm);
 
   const { data, isLoading } = useQuery({
     queryKey: ['parcels', selectedCondominiumId],
@@ -30,7 +39,7 @@ export function ParcelsPage() {
     enabled: !!selectedCondominiumId,
   });
 
-  const { data: residents, isLoading: isLoadingResidents } = useQuery({
+  const { data: residents } = useQuery({
     queryKey: ['residents', selectedCondominiumId],
     queryFn: async () => {
       const res = await api.get(`/residents/condominium/${selectedCondominiumId}`);
@@ -39,17 +48,21 @@ export function ParcelsPage() {
     enabled: !!selectedCondominiumId,
   });
 
-  const filteredResidents = Array.isArray(residents)
-    ? residents.filter((r: any) =>
-        (r.unit?.identifier ?? '').toLowerCase().includes(unitSearch.toLowerCase())
-      )
-    : [];
+  const { data: unitsData } = useQuery({
+    queryKey: ['units', selectedCondominiumId],
+    queryFn: async () => {
+      const res = await api.get(`/units/condominium/${selectedCondominiumId}`);
+      return res.data.data.units as { id: string; identifier: string; block?: string }[];
+    },
+    enabled: !!selectedCondominiumId && showModal,
+  });
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/parcels', d),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
       setShowModal(false);
+      setForm(emptyForm);
     },
   });
 
@@ -60,6 +73,27 @@ export function ParcelsPage() {
       queryClient.invalidateQueries({ queryKey: ['parcels'] });
       setPickupModal(null);
       setPickupName('');
+      setPickupResidentId('');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.patch(`/parcels/${id}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      setCancelingId(null);
+      setCancelReason('');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & typeof emptyEditForm) =>
+      api.patch(`/parcels/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
+      setEditModal(false);
+      setEditTarget(null);
     },
   });
 
@@ -146,15 +180,35 @@ export function ParcelsPage() {
                     </td>
                     {canRegister && (
                       <td className="px-4 py-3 text-right">
-                        {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                          <button
-                            onClick={() => setPickupModal(p.id)}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            Confirmar Retirada
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => setPickupModal(p.id)}
+                              className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Retirada
+                            </button>
+                          )}
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => { setEditTarget(p); setEditForm({ carrier: p.carrier || '', trackingCode: p.trackingCode || '', storageLocation: p.storageLocation || '', senderName: p.senderName || '', notes: p.notes || '' }); setEditModal(true); }}
+                              className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Editar
+                            </button>
+                          )}
+                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                            <button
+                              onClick={() => setCancelingId(p.id)}
+                              className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                            >
+                              <X className="w-3 h-3" />
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -171,8 +225,22 @@ export function ParcelsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Registrar Encomenda</h2>
             <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Unidade *</label>
+                <select
+                  value={form.unitId}
+                  onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione a unidade...</option>
+                  {(unitsData || []).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.block ? `${u.block} - ` : ''}{u.identifier}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {[
-                { key: 'unitId', label: 'ID da Unidade *', placeholder: 'UUID da unidade' },
                 { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
                 { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
                 { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },

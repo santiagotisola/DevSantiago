@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     icon: DollarSign,
     children: [
       { label: 'Visão Geral', to: '/financeiro' },
-      { label: 'Cobranças', to: '/financeiro/cobranças' },
+      { label: 'Cobranças', to: '/financeiro/cobrancas' },
     ],
   },
   { label: 'Manutenção', to: '/manutencao', icon: Wrench },
