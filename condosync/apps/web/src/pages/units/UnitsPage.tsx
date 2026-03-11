@@ -228,7 +228,6 @@ export function UnitsPage() {
                   <option value="Studio">Studio</option>
                 </select>
               </div>
-              ))}
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
