@@ -1,7 +1,7 @@
-import { prisma } from '../../config/prisma';
-import { NotFoundError, ForbiddenError } from '../../middleware/errorHandler';
-import { VisitorStatus } from '@prisma/client';
-import { NotificationService } from '../../notifications/notification.service';
+import { prisma } from "../../config/prisma";
+import { NotFoundError, ForbiddenError } from "../../middleware/errorHandler";
+import { VisitorStatus } from "@prisma/client";
+import { NotificationService } from "../../notifications/notification.service";
 
 export interface CreateVisitorDTO {
   unitId: string;
@@ -16,13 +16,16 @@ export interface CreateVisitorDTO {
 }
 
 export class VisitorService {
-  async list(condominiumId: string, filters: {
-    unitId?: string;
-    status?: VisitorStatus;
-    date?: string;
-    page?: number;
-    limit?: number;
-  }) {
+  async list(
+    condominiumId: string,
+    filters: {
+      unitId?: string;
+      status?: VisitorStatus;
+      date?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     const { page = 1, limit = 20, ...where } = filters;
 
     const [visitors, total] = await prisma.$transaction([
@@ -39,20 +42,31 @@ export class VisitorService {
           }),
         },
         include: { unit: { select: { identifier: true, block: true } } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.visitor.count({
-        where: { unit: { condominiumId }, ...(where.unitId && { unitId: where.unitId }) },
+        where: {
+          unit: { condominiumId },
+          ...(where.unitId && { unitId: where.unitId }),
+        },
       }),
     ]);
 
-    return { visitors, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      visitors,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async create(data: CreateVisitorDTO, authorizedBy?: string) {
-    const unit = await prisma.unit.findUniqueOrThrow({ where: { id: data.unitId } });
+    const unit = await prisma.unit.findUniqueOrThrow({
+      where: { id: data.unitId },
+    });
 
     const visitor = await prisma.visitor.create({
       data: {
@@ -66,22 +80,28 @@ export class VisitorService {
     if (authorizedBy) {
       await NotificationService.enqueue({
         userId: authorizedBy,
-        type: 'VISITOR',
-        title: 'Visitante pré-autorizado',
+        type: "VISITOR",
+        title: "Visitante pré-autorizado",
         message: `${data.name} foi pré-autorizado para sua unidade`,
         data: { visitorId: visitor.id },
-        channels: ['inapp', 'email'],
+        channels: ["inapp", "email"],
       });
     }
 
     return visitor;
   }
 
-  async registerEntry(visitorId: string, registeredBy: string, photoUrl?: string) {
-    const visitor = await prisma.visitor.findUniqueOrThrow({ where: { id: visitorId } });
+  async registerEntry(
+    visitorId: string,
+    registeredBy: string,
+    photoUrl?: string,
+  ) {
+    const visitor = await prisma.visitor.findUniqueOrThrow({
+      where: { id: visitorId },
+    });
 
     if (visitor.status === VisitorStatus.INSIDE) {
-      throw new ForbiddenError('Visitante já está dentro do condomínio');
+      throw new ForbiddenError("Visitante já está dentro do condomínio");
     }
 
     const updated = await prisma.visitor.update({
@@ -104,20 +124,22 @@ export class VisitorService {
       unitUsers.map((u) =>
         NotificationService.enqueue({
           userId: u.userId,
-          type: 'VISITOR',
-          title: 'Visitante chegou',
+          type: "VISITOR",
+          title: "Visitante chegou",
           message: `${visitor.name} entrou no condomínio`,
           data: { visitorId: visitor.id },
-          channels: ['inapp', 'email'],
-        })
-      )
+          channels: ["inapp", "email"],
+        }),
+      ),
     );
 
     return updated;
   }
 
   async registerExit(visitorId: string, registeredBy: string) {
-    const visitor = await prisma.visitor.findUniqueOrThrow({ where: { id: visitorId } });
+    const visitor = await prisma.visitor.findUniqueOrThrow({
+      where: { id: visitorId },
+    });
 
     return prisma.visitor.update({
       where: { id: visitorId },
@@ -138,14 +160,38 @@ export class VisitorService {
   async findById(id: string) {
     return prisma.visitor.findUniqueOrThrow({
       where: { id },
-      include: { unit: { select: { identifier: true, block: true, condominiumId: true } } },
+      include: {
+        unit: {
+          select: { identifier: true, block: true, condominiumId: true },
+        },
+      },
     });
   }
 
-  async update(id: string, data: Partial<Pick<CreateVisitorDTO, 'name' | 'document' | 'documentType' | 'phone' | 'company' | 'reason' | 'notes' | 'scheduledAt'>>) {
+  async update(
+    id: string,
+    data: Partial<
+      Pick<
+        CreateVisitorDTO,
+        | "name"
+        | "document"
+        | "documentType"
+        | "phone"
+        | "company"
+        | "reason"
+        | "notes"
+        | "scheduledAt"
+      >
+    >,
+  ) {
     const visitor = await prisma.visitor.findUniqueOrThrow({ where: { id } });
-    if (visitor.status === VisitorStatus.INSIDE || visitor.status === VisitorStatus.LEFT) {
-      throw new ForbiddenError('Não é possível editar um visitante que já entrou ou saiu');
+    if (
+      visitor.status === VisitorStatus.INSIDE ||
+      visitor.status === VisitorStatus.LEFT
+    ) {
+      throw new ForbiddenError(
+        "Não é possível editar um visitante que já entrou ou saiu",
+      );
     }
     return prisma.visitor.update({ where: { id }, data });
   }
@@ -154,7 +200,7 @@ export class VisitorService {
     const [visitors, total] = await prisma.$transaction([
       prisma.visitor.findMany({
         where: { unitId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),

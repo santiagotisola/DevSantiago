@@ -19,7 +19,7 @@ const createSchema = z.object({
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
   document: z.string().optional(),
-  documentType: z.enum(['CPF', 'RG', 'CNH', 'PASSPORT']).optional(),
+  documentType: z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
   reason: z.string().optional(),
