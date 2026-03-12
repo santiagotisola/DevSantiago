@@ -10,6 +10,7 @@ import {
   CheckCircle,
   Loader2,
   Trash2,
+  Pencil,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -243,16 +244,38 @@ export function ParcelsPage() {
                     </td>
                     {canRegister && (
                       <td className="px-4 py-3 text-right">
-                        {(p.status === "RECEIVED" ||
-                          p.status === "NOTIFIED") && (
-                          <button
-                            onClick={() => setPickupModal(p.id)}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 ml-auto"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            Confirmar Retirada
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {(p.status === "RECEIVED" ||
+                            p.status === "NOTIFIED") && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditTarget(p);
+                                  setEditForm({
+                                    carrier: p.carrier || "",
+                                    trackingCode: p.trackingCode || "",
+                                    storageLocation: p.storageLocation || "",
+                                    senderName: p.senderName || "",
+                                    notes: p.notes || "",
+                                  });
+                                  setEditModal(true);
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200"
+                                title="Editar encomenda"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => setPickupModal(p.id)}
+                                className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                              >
+                                <CheckCircle className="w-3 h-3" />
+                                Confirmar Retirada
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

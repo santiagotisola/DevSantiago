@@ -39,7 +39,7 @@ COPY --from=builder /app/apps/api/prisma     ./prisma
 COPY --from=builder /app/apps/api/package*.json ./
 
 COPY apps/api/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3333
