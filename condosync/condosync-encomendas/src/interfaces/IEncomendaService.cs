@@ -1,8 +1,13 @@
+using CondosyncEncomendas.Dtos;
+using CondosyncEncomendas.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace CondosyncEncomendas.Interfaces
 {
     public interface IEncomendaService
     {
-        void CriarEncomenda(RegistrarEncomendaDto registrarEncomendaDto);
-        // Outros métodos relevantes para o serviço de encomendas
+        Task<Encomenda> CriarEncomenda(RegistrarEncomendaDto registrarEncomendaDto);
+        Task<List<Encomenda>> ListarEncomendas();
     }
 }

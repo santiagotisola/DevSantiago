@@ -13,6 +13,9 @@ import { rateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 
+// Inicializar workers em background
+import './notifications/notification.worker';
+
 // Rotas
 import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/users/user.routes';
@@ -30,6 +33,10 @@ import reportRoutes from './modules/reports/report.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import employeeRoutes from './modules/employees/employee.routes';
 import serviceProviderRoutes from './modules/service-providers/serviceProvider.routes';
+import webhookRoutes from './modules/webhooks/asaas.routes';
+import assemblyRoutes from './modules/assemblies/assembly.routes';
+import petRoutes from './modules/pets/pet.routes';
+import lostAndFoundRoutes from './modules/lost-and-found/lost-and-found.routes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -102,6 +109,10 @@ app.use(`${API}/reports`, reportRoutes);
 app.use(`${API}/dashboard`, dashboardRoutes);
 app.use(`${API}/employees`, employeeRoutes);
 app.use(`${API}/service-providers`, serviceProviderRoutes);
+app.use(`${API}/webhooks`, webhookRoutes);
+app.use(`${API}/assemblies`, assemblyRoutes);
+app.use(`${API}/pets`, petRoutes);
+app.use(`${API}/lost-and-found`, lostAndFoundRoutes);
 
 // ─── Error Handlers ───────────────────────────────────────────
 app.use(notFoundHandler);

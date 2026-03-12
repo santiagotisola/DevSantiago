@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
 import { toNumber } from '../../utils/decimal';
+import { reportService } from './report.service';
 
 const router = Router();
 router.use(authenticate);
@@ -115,16 +116,19 @@ router.get('/maintenance/:condominiumId', async (req: Request, res: Response) =>
       by: ['status'],
       where: { condominiumId: req.params.condominiumId },
       _count: true,
+      orderBy: { status: 'asc' },
     }),
     prisma.serviceOrder.groupBy({
       by: ['priority'],
       where: { condominiumId: req.params.condominiumId },
       _count: true,
+      orderBy: { priority: 'asc' },
     }),
     prisma.serviceOrder.groupBy({
       by: ['category'],
       where: { condominiumId: req.params.condominiumId },
       _count: true,
+      orderBy: { category: 'asc' },
     }),
     prisma.serviceOrder.findMany({
       where: { condominiumId: req.params.condominiumId, status: 'COMPLETED', startedAt: { not: null }, completedAt: { not: null } },
@@ -163,6 +167,24 @@ router.get('/occupancy/:condominiumId', async (req: Request, res: Response) => {
       occupancyRate: total > 0 ? Math.round((occupied / total) * 1000) / 10 : 0,
     },
   });
+});
+
+// Download de PDF da prestação de contas
+router.get('/financial/:condominiumId/pdf', async (req: Request, res: Response) => {
+  const { referenceMonth } = req.query;
+  
+  if (!referenceMonth) {
+    return res.status(400).json({ success: false, message: 'Mês de referência é obrigatório' });
+  }
+
+  const pdfBuffer = await reportService.generateFinancialPdf(
+    req.params.condominiumId,
+    referenceMonth as string
+  );
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename=prestacao-contas-${referenceMonth}.pdf`);
+  res.send(pdfBuffer);
 });
 
 export default router;

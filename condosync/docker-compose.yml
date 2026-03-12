@@ -38,6 +38,7 @@ services:
       JWT_REFRESH_EXPIRES_IN: 7d
       CORS_ORIGINS: http://localhost:80,http://localhost
       BCRYPT_ROUNDS: "12"
+      REDIS_URL: redis://redis:6379
     ports:
       - "3333:3333"
     volumes:
@@ -62,6 +63,17 @@ services:
     ports:
       - "80:80"
 
+  # ─── Redis ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: condosync-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
   api_logs:
+  redis_data:

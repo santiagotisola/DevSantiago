@@ -1,14 +1,14 @@
-import { Request, Response } from 'express';
-import { visitorService } from './visitor.service';
-import { validateRequest } from '../../utils/validateRequest';
-import { z } from 'zod';
-import type { VisitorStatus } from '@prisma/client';
+import { Request, Response } from "express";
+import { visitorService } from "./visitor.service";
+import { validateRequest } from "../../utils/validateRequest";
+import { z } from "zod";
+import type { VisitorStatus } from "@prisma/client";
 
 const createSchema = z.object({
   unitId: z.string().uuid(),
   name: z.string().min(2),
   document: z.string().optional(),
-  documentType: z.enum(['CPF', 'RG', 'CNH', 'PASSPORT']).optional(),
+  documentType: z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
   reason: z.string().optional(),
@@ -34,24 +34,41 @@ export class VisitorController {
 
   async create(req: Request, res: Response) {
     const data = validateRequest(createSchema, req.body);
-    const visitor = await visitorService.create(data, req.user?.userId);
+    const visitor = await visitorService.create(
+      {
+        ...data,
+        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+      },
+      req.user?.userId,
+    );
     res.status(201).json({ success: true, data: { visitor } });
   }
 
   async registerEntry(req: Request, res: Response) {
     const { photoUrl } = validateRequest(entrySchema, req.body);
-    const visitor = await visitorService.registerEntry(req.params.id, req.user!.userId, photoUrl);
+    const visitor = await visitorService.registerEntry(
+      req.params.id,
+      req.user!.userId,
+      photoUrl,
+    );
     res.json({ success: true, data: { visitor } });
   }
 
   async registerExit(req: Request, res: Response) {
-    const visitor = await visitorService.registerExit(req.params.id, req.user!.userId);
+    const visitor = await visitorService.registerExit(
+      req.params.id,
+      req.user!.userId,
+    );
     res.json({ success: true, data: { visitor } });
   }
 
   async authorize(req: Request, res: Response) {
     const { authorized } = validateRequest(authorizeSchema, req.body);
-    const visitor = await visitorService.authorize(req.params.id, req.user!.userId, authorized);
+    const visitor = await visitorService.authorize(
+      req.params.id,
+      req.user!.userId,
+      authorized,
+    );
     res.json({ success: true, data: { visitor } });
   }
 

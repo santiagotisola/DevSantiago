@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using condosync_encomendas.src.models;
-using condosync_encomendas.src.interfaces;
+using CondosyncEncomendas.Models;
+using CondosyncEncomendas.Interfaces;
 
-namespace condosync_encomendas.src.services
+namespace CondosyncEncomendas.Services
 {
     public class MoradorService : IMoradorService
     {
@@ -14,9 +14,9 @@ namespace condosync_encomendas.src.services
             _moradorRepository = moradorRepository;
         }
 
-        public async Task<List<Morador>> ListarMoradores()
+        public Task<List<Morador>> ListarMoradores()
         {
-            return await _moradorRepository.ObterTodos();
+            return Task.FromResult(_moradorRepository.ObterTodos().ToList());
         }
     }
 }

@@ -22,11 +22,11 @@ export interface LoginDTO {
 
 export class AuthService {
   private generateTokens(payload: JwtPayload) {
-    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN as string,
+    const accessToken = (jwt.sign as any)({ ...payload }, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN,
     });
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN as string,
+    const refreshToken = (jwt.sign as any)({ ...payload }, env.JWT_REFRESH_SECRET, {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
     });
     return { accessToken, refreshToken };
   }

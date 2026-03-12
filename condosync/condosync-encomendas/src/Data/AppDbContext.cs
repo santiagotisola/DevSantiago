@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using src.models;
+using CondosyncEncomendas.Models;
 
-namespace src.Data
+namespace CondosyncEncomendas.Data
 {
     public class AppDbContext : DbContext
     {

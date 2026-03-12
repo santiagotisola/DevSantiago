@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { NotFoundError, ForbiddenError } from '../../middleware/errorHandler';
 import { VisitorStatus } from '@prisma/client';
+import { NotificationService } from '../../notifications/notification.service';
 
 export interface CreateVisitorDTO {
   unitId: string;
@@ -63,14 +64,13 @@ export class VisitorService {
 
     // Notificar morador
     if (authorizedBy) {
-      await prisma.notification.create({
-        data: {
-          userId: authorizedBy,
-          type: 'VISITOR',
-          title: 'Visitante pré-autorizado',
-          message: `${data.name} foi pré-autorizado para sua unidade`,
-          data: { visitorId: visitor.id },
-        },
+      await NotificationService.enqueue({
+        userId: authorizedBy,
+        type: 'VISITOR',
+        title: 'Visitante pré-autorizado',
+        message: `${data.name} foi pré-autorizado para sua unidade`,
+        data: { visitorId: visitor.id },
+        channels: ['inapp', 'email'],
       });
     }
 
@@ -100,15 +100,18 @@ export class VisitorService {
       select: { userId: true },
     });
 
-    await prisma.notification.createMany({
-      data: unitUsers.map((u) => ({
-        userId: u.userId,
-        type: 'VISITOR' as const,
-        title: 'Visitante chegou',
-        message: `${visitor.name} entrou no condomínio`,
-        data: { visitorId: visitor.id },
-      })),
-    });
+    await Promise.all(
+      unitUsers.map((u) =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: 'VISITOR',
+          title: 'Visitante chegou',
+          message: `${visitor.name} entrou no condomínio`,
+          data: { visitorId: visitor.id },
+          channels: ['inapp', 'email'],
+        })
+      )
+    );
 
     return updated;
   }

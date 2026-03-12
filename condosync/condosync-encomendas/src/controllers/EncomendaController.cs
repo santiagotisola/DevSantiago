@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using condosync_encomendas.Models;
-using condosync_encomendas.Services;
-using condosync_encomendas.Dtos;
+using CondosyncEncomendas.Models;
+using CondosyncEncomendas.Interfaces;
+using CondosyncEncomendas.Dtos;
 
-namespace condosync_encomendas.Controllers
+namespace CondosyncEncomendas.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

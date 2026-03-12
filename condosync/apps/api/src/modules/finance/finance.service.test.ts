@@ -5,6 +5,7 @@ import { ChargeStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 describe('FinanceService', () => {
+  console.log('DEBUG: ChargeStatus =', ChargeStatus);
   describe('listAccounts', () => {
     it('should return a list of active accounts for a condominium', async () => {
       const mockAccounts = [

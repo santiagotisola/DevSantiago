@@ -1,4 +1,4 @@
-namespace CondoSyncEncomendas.Dtos
+namespace CondosyncEncomendas.Dtos
 {
     public class MoradorDto
     {

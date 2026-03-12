@@ -1,3 +1,6 @@
+using CondosyncEncomendas.Models;
+using System.Collections.Generic;
+
 namespace CondosyncEncomendas.Interfaces
 {
     public interface IMoradorRepository

@@ -96,6 +96,20 @@ enum NotificationType {
   COMMUNICATION
   RESERVATION
   OCCURRENCE
+  ASSEMBLY
+}
+
+enum AssemblyStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELED
+}
+
+enum GatewayType {
+  NONE
+  ASAAS
+  PJBANK
 }
 
 enum VehicleType {
@@ -141,6 +155,7 @@ model User {
   auditLogs          AuditLog[]
   refreshTokens      RefreshToken[]
   passwordResets     PasswordReset[]
+  lostAndFoundItems  LostAndFound[] @relation("CreatedLostAndFound")
 
   @@map("users")
 }
@@ -228,6 +243,8 @@ model Condominium {
   maintenanceSchedules MaintenanceSchedule[]
   contracts          Contract[]
   polls              Poll[]
+  assemblies         Assembly[]
+  lostAndFoundItems  LostAndFound[]
 
   @@map("condominiums")
 }
@@ -274,6 +291,7 @@ model Unit {
   charges       Charge[]
   serviceOrders ServiceOrder[]
   dependents    Dependent[]
+  pets          Pet[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -556,6 +574,12 @@ model FinancialAccount {
   accountNumber String?
   balance       Decimal     @default(0) @db.Decimal(12,2)
   isActive      Boolean     @default(true)
+  
+  // Gateway config
+  gatewayType   GatewayType @default(NONE)
+  gatewayKey    String?     // API Key or Token
+  gatewayConfig Json?       // walletId, common settings, etc.
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -617,6 +641,14 @@ model Charge {
   paidAmount    Decimal? @db.Decimal(12,2)
   status        ChargeStatus      @default(PENDING)
   referenceMonth String?
+  
+  // Gateway metadata
+  gatewayId     String?
+  gatewayStatus String?
+  pixQrCode     String?     @db.Text
+  pixCopyPaste  String?     @db.Text
+  paymentLink   String?     @db.Text
+
   boletoUrl     String?
   boletoCode    String?
   penaltyAmount Decimal           @default(0) @db.Decimal(12,2)
@@ -777,6 +809,69 @@ model AreaBlockedPeriod {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ASSEMBLEIAS
+// ─────────────────────────────────────────────────────────────
+
+model Assembly {
+  id             String         @id @default(uuid())
+  condominium    Condominium    @relation(fields: [condominiumId], references: [id])
+  condominiumId  String
+  title          String
+  description    String?
+  meetingUrl     String?        // Link Zoom/Meet
+  scheduledAt    DateTime
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  minutesUrl     String?        // PDF da ata
+  status         AssemblyStatus @default(SCHEDULED)
+  createdBy      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  votingItems    AssemblyVotingItem[]
+  attendees      AssemblyAttendee[]
+
+  @@map("assemblies")
+}
+
+model AssemblyVotingItem {
+  id          String   @id @default(uuid())
+  assembly    Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  assemblyId  String
+  title       String
+  description String?
+  options     Json     // [{id, text}]
+  
+  votes       AssemblyVote[]
+
+  @@map("assembly_voting_items")
+}
+
+model AssemblyVote {
+  id           String             @id @default(uuid())
+  votingItem   AssemblyVotingItem @relation(fields: [votingItemId], references: [id], onDelete: Cascade)
+  votingItemId String
+  userId       String
+  optionId     String             // ID da opção escolhida do JSON
+  votedAt      DateTime           @default(now())
+
+  @@unique([votingItemId, userId])
+  @@map("assembly_votes")
+}
+
+model AssemblyAttendee {
+  id          String   @id @default(uuid())
+  assembly    Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  assemblyId  String
+  userId      String
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+
+  @@unique([assemblyId, userId])
+  @@map("assembly_attendees")
+}
+
+// ─────────────────────────────────────────────────────────────
 // SEGURANÇA E AUDITORIA
 // ─────────────────────────────────────────────────────────────
 
@@ -797,4 +892,69 @@ model AuditLog {
   createdAt     DateTime    @default(now())
 
   @@map("audit_logs")
+}
+model FinalizedAssembly {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime @default(now())
+  minutesUrl  String?
+  condominiumId String
+  
+  @@map("finalized_assemblies")
+}
+
+model Pet {
+  id            String      @id @default(uuid())
+  name          String
+  type          String      // Cachorro, Gato, Pássaro, etc.
+  breed         String?
+  size          String?     // Pequeno, Médio, Grande
+  gender        String?     // Macho, Fêmea
+  birthDate     DateTime?
+  color         String?
+  photoUrl      String?
+  weight        Float?
+  lastVaccination DateTime?
+  isActive      Boolean     @default(true)
+  notes         String?
+  
+  unit          Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId        String
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("pets")
+}
+enum LostAndFoundStatus {
+  LOST
+  FOUND
+  RETURNED
+  DISCARDED
+}
+
+model LostAndFound {
+  id            String             @id @default(uuid())
+  title         String
+  description   String?
+  category      String             // Eletrônico, Chaves, Vestuário, etc.
+  place         String?            // Onde foi encontrado/perdido
+  status        LostAndFoundStatus @default(FOUND)
+  photoUrl      String?
+  foundDate     DateTime?
+  lostDate      DateTime?
+  returnedAt    DateTime?
+  returnedTo    String?            // Nome de quem retirou
+  
+  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+  
+  createdBy     User               @relation("CreatedLostAndFound", fields: [createdById], references: [id])
+  createdById   String
+  
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@map("lost_and_found")
 }

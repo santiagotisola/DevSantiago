@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using condosync_encomendas.Data;
-using condosync_encomendas.Models;
-using condosync_encomendas.Interfaces;
+using CondosyncEncomendas.Data;
+using CondosyncEncomendas.Models;
+using CondosyncEncomendas.Interfaces;
 
-namespace condosync_encomendas.Repositories
+namespace CondosyncEncomendas.Repositories
 {
     public class MoradorRepository : IMoradorRepository
     {

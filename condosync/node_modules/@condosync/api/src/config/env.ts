@@ -19,8 +19,8 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('noreply@condosync.com.br'),
-  REDIS_URL: z.string().optional(),
   BCRYPT_ROUNDS: z.string().default('12'),
+  REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
 });
 
 const parsed = envSchema.safeParse(process.env);

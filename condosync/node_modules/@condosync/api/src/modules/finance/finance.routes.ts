@@ -48,7 +48,7 @@ router.patch('/charges/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
   const data = validateRequest(updateChargeSchema, req.body);
   const charge = await financeService.updateCharge(req.params.id, {
     ...data,
-    ...(data.dueDate && { dueDate: new Date(data.dueDate) }),
+    ...(data.dueDate && { dueDate: new Date(data.dueDate) as any }),
   });
   res.json({ success: true, data: { charge } });
 });
@@ -101,6 +101,11 @@ router.post('/transactions', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
 // Relatórios
 router.get('/balance/:condominiumId/yearly/:year', async (req: Request, res: Response) => {
   const data = await financeService.getMonthlyBalance(req.params.condominiumId, Number(req.params.year));
+  res.json({ success: true, data });
+});
+
+router.get('/forecast/:condominiumId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = await financeService.getFinancialForecast(req.params.condominiumId);
   res.json({ success: true, data });
 });
 

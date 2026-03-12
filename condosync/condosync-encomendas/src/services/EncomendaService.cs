@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using condosync_encomendas.src.models;
-using condosync_encomendas.src.repositories;
-using condosync_encomendas.src.interfaces;
+using CondosyncEncomendas.Dtos;
+using CondosyncEncomendas.Models;
+using CondosyncEncomendas.Repositories;
+using CondosyncEncomendas.Interfaces;
 
-namespace condosync_encomendas.src.services
+namespace CondosyncEncomendas.Services
 {
     public class EncomendaService : IEncomendaService
     {
@@ -17,7 +18,7 @@ namespace condosync_encomendas.src.services
             _moradorRepository = moradorRepository;
         }
 
-        public async Task<Encomenda> CriarEncomenda(RegistrarEncomendaDto registrarEncomendaDto)
+        public Task<Encomenda> CriarEncomenda(RegistrarEncomendaDto registrarEncomendaDto)
         {
             var encomenda = new Encomenda
             {
@@ -26,13 +27,13 @@ namespace condosync_encomendas.src.services
                 MoradorId = registrarEncomendaDto.MoradorId
             };
 
-            await _encomendaRepository.Adicionar(encomenda);
-            return encomenda;
+            _encomendaRepository.Adicionar(encomenda);
+            return Task.FromResult(encomenda);
         }
 
-        public async Task<List<Encomenda>> ListarEncomendas()
+        public Task<List<Encomenda>> ListarEncomendas()
         {
-            return await _encomendaRepository.ObterTodos();
+            return Task.FromResult(_encomendaRepository.ObterTodos().ToList());
         }
     }
 }

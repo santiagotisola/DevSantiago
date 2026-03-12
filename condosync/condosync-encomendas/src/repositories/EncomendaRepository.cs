@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using condosync_encomendas.Data;
-using condosync_encomendas.Models;
-using condosync_encomendas.Interfaces;
+using CondosyncEncomendas.Data;
+using CondosyncEncomendas.Models;
+using CondosyncEncomendas.Interfaces;
 
-namespace condosync_encomendas.Repositories
+namespace CondosyncEncomendas.Repositories
 {
     public class EncomendaRepository : IEncomendaRepository
     {
@@ -21,7 +21,7 @@ namespace condosync_encomendas.Repositories
             _context.SaveChanges();
         }
 
-        public List<Encomenda> ObterTodas()
+        public IEnumerable<Encomenda> ObterTodos()
         {
             return _context.Encomendas.ToList();
         }
@@ -29,6 +29,22 @@ namespace condosync_encomendas.Repositories
         public Encomenda ObterPorId(int id)
         {
             return _context.Encomendas.Find(id);
+        }
+
+        public void Atualizar(Encomenda encomenda)
+        {
+            _context.Encomendas.Update(encomenda);
+            _context.SaveChanges();
+        }
+
+        public void Remover(int id)
+        {
+            var encomenda = ObterPorId(id);
+            if (encomenda != null)
+            {
+                _context.Encomendas.Remove(encomenda);
+                _context.SaveChanges();
+            }
         }
     }
 }

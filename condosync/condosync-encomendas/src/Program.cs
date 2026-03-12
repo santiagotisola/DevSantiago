@@ -1,16 +1,32 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+using CondosyncEncomendas.Data;
+using CondosyncEncomendas.Interfaces;
+using CondosyncEncomendas.Repositories;
+using CondosyncEncomendas.Services;
+using Microsoft.EntityFrameworkCore;
 
-public class Program
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IEncomendaRepository, EncomendaRepository>();
+builder.Services.AddScoped<IMoradorRepository, MoradorRepository>();
+builder.Services.AddScoped<IEncomendaService, EncomendaService>();
+builder.Services.AddScoped<IMoradorService, MoradorService>();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
 {
-    public static void Main(string[] args)
-    {
-        CreateHostBuilder(args).Build().Run();
-    }
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder =>
-            {
-                webBuilder.UseStartup<Startup>();
-            });
+app.UseRouting();
+app.MapControllers();
+
+app.Run();
