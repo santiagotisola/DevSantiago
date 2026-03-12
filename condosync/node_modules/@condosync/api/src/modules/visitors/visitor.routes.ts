@@ -33,10 +33,12 @@ router.patch(
 );
 router.patch(
   "/:id/authorize",
+  authorize("RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   visitorController.authorize.bind(visitorController),
 );
 router.get(
   "/unit/:unitId/history",
+  authorize("RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   visitorController.historyByUnit.bind(visitorController),
 );
 

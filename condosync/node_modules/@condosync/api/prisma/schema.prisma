@@ -32,6 +32,14 @@ enum UnitStatus {
   UNDER_RENOVATION
 }
 
+enum RenovationStatus {
+  PENDING
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
 enum VisitorStatus {
   PENDING
   AUTHORIZED
@@ -245,6 +253,7 @@ model Condominium {
   polls              Poll[]
   assemblies         Assembly[]
   lostAndFoundItems  LostAndFound[]
+  documents          CondominiumDocument[]
 
   @@map("condominiums")
 }
@@ -292,6 +301,7 @@ model Unit {
   serviceOrders ServiceOrder[]
   dependents    Dependent[]
   pets          Pet[]
+  renovations   Renovation[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -957,4 +967,68 @@ model LostAndFound {
   updatedAt     DateTime           @updatedAt
 
   @@map("lost_and_found")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DOCUMENTOS DO CONDOMÍNIO
+// ─────────────────────────────────────────────────────────────
+
+model CondominiumDocument {
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+  title         String
+  description   String?
+  category      String      // ata, convenção, regulamento, boleto, comunicado, outro
+  fileName      String      // nome original do arquivo
+  storedName    String      // nome UUID usado no disco
+  filePath      String      // caminho completo
+  fileSize      Int
+  mimeType      String
+  uploadedBy    String      // userId de quem fez upload
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("condominium_documents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// OBRAS E REFORÇAS
+// ─────────────────────────────────────────────────────────────
+
+model Renovation {
+  id            String           @id @default(uuid())
+  unit          Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId        String
+  condominiumId String
+  description   String
+  type          String           // pintura, hidráulica, elétrica, estrutural, outro
+  startDate     DateTime
+  endDate       DateTime?
+  status        RenovationStatus @default(PENDING)
+  approvedBy    String?          // userId
+  approvedAt    DateTime?
+  rejectedReason String?
+  notes         String?
+  createdBy     String           // userId do morador
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  authorizedProviders RenovationProvider[]
+
+  @@map("renovations")
+}
+
+model RenovationProvider {
+  id           String     @id @default(uuid())
+  renovation   Renovation @relation(fields: [renovationId], references: [id], onDelete: Cascade)
+  renovationId String
+  name         String
+  serviceType  String
+  document     String?    // CPF ou CNPJ
+  phone        String?
+  company      String?
+  createdAt    DateTime   @default(now())
+
+  @@map("renovation_providers")
 }

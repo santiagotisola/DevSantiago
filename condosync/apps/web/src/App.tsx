@@ -33,6 +33,10 @@ import { ServiceProvidersPage } from "./pages/service-providers/ServiceProviders
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { CondominiumsPage } from "./pages/admin/CondominiumsPage";
+import { MyVisitorsPage } from "./pages/minha-portaria/MyVisitorsPage";
+import MinhasObrasPage from "./pages/minha-portaria/MinhasObrasPage";
+import ObrasAdminPage from "./pages/obras/ObrasAdminPage";
+import { DocumentsPage } from "./pages/documents/DocumentsPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -105,7 +109,10 @@ export default function App() {
           {/* Comunicação */}
           <Route path="comunicacao/avisos" element={<AnnouncementsPage />} />
           <Route path="comunicacao/ocorrencias" element={<OccurrencesPage />} />
-          <Route path="comunicacao/achados-e-perdidos" element={<LostAndFoundPage />} />
+          <Route
+            path="comunicacao/achados-e-perdidos"
+            element={<LostAndFoundPage />}
+          />
           <Route path="assembleias" element={<AssemblyList />} />
           <Route path="assembleias/:id" element={<AssemblyDetail />} />
           <Route path="pets" element={<PetPage />} />
@@ -119,6 +126,19 @@ export default function App() {
 
           {/* Admin */}
           <Route path="admin/condominios" element={<CondominiumsPage />} />
+
+          {/* Portal do Morador */}
+          <Route
+            path="minha-portaria/visitantes"
+            element={<MyVisitorsPage />}
+          />
+          <Route path="minha-portaria/obras" element={<MinhasObrasPage />} />
+
+          {/* Obras (admin/síndico) */}
+          <Route path="obras" element={<ObrasAdminPage />} />
+
+          {/* Documentos */}
+          <Route path="documentos" element={<DocumentsPage />} />
 
           {/* Perfil e Configurações */}
           <Route path="perfil" element={<ProfilePage />} />

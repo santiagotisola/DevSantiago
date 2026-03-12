@@ -1,6 +1,6 @@
 import { prisma } from "../../config/prisma";
-import { NotFoundError, ForbiddenError } from "../../middleware/errorHandler";
-import { VisitorStatus } from "@prisma/client";
+import { ForbiddenError } from "../../middleware/errorHandler";
+import { UserRole, VisitorStatus } from "@prisma/client";
 import { NotificationService } from "../../notifications/notification.service";
 
 export interface CreateVisitorDTO {
@@ -15,7 +15,48 @@ export interface CreateVisitorDTO {
   notes?: string;
 }
 
+type VisitorActor = {
+  userId: string;
+  role: UserRole;
+};
+
 export class VisitorService {
+  private async ensureUnitAccess(
+    userId: string,
+    role: UserRole,
+    unitId: string,
+  ) {
+    const unit = await prisma.unit.findUniqueOrThrow({
+      where: { id: unitId },
+      select: { id: true, condominiumId: true },
+    });
+
+    if (role === UserRole.SUPER_ADMIN) {
+      return unit;
+    }
+
+    const membership = await prisma.condominiumUser.findFirst({
+      where: {
+        userId,
+        condominiumId: unit.condominiumId,
+        isActive: true,
+      },
+      select: { unitId: true },
+    });
+
+    if (!membership) {
+      throw new ForbiddenError("Acesso negado a esta unidade");
+    }
+
+    if (role === UserRole.RESIDENT && membership.unitId !== unit.id) {
+      throw new ForbiddenError(
+        "Morador só pode acessar visitantes da própria unidade",
+      );
+    }
+
+    return unit;
+  }
+
   async list(
     condominiumId: string,
     filters: {
@@ -63,26 +104,27 @@ export class VisitorService {
     };
   }
 
-  async create(data: CreateVisitorDTO, authorizedBy?: string) {
-    const unit = await prisma.unit.findUniqueOrThrow({
-      where: { id: data.unitId },
-    });
+  async create(data: CreateVisitorDTO, actor: VisitorActor) {
+    await this.ensureUnitAccess(actor.userId, actor.role, data.unitId);
+
+    const isResidentPreAuthorization = actor.role === UserRole.RESIDENT;
 
     const visitor = await prisma.visitor.create({
       data: {
         ...data,
-        preAuthorizedBy: authorizedBy,
-        status: authorizedBy ? VisitorStatus.AUTHORIZED : VisitorStatus.PENDING,
+        preAuthorizedBy: isResidentPreAuthorization ? actor.userId : undefined,
+        status: isResidentPreAuthorization
+          ? VisitorStatus.AUTHORIZED
+          : VisitorStatus.PENDING,
       },
     });
 
-    // Notificar morador
-    if (authorizedBy) {
+    if (isResidentPreAuthorization) {
       await NotificationService.enqueue({
-        userId: authorizedBy,
+        userId: actor.userId,
         type: "VISITOR",
-        title: "Visitante pré-autorizado",
-        message: `${data.name} foi pré-autorizado para sua unidade`,
+        title: "Visitante prÃ©-autorizado",
+        message: `${data.name} foi prÃ©-autorizado para sua unidade`,
         data: { visitorId: visitor.id },
         channels: ["inapp", "email"],
       });
@@ -101,7 +143,7 @@ export class VisitorService {
     });
 
     if (visitor.status === VisitorStatus.INSIDE) {
-      throw new ForbiddenError("Visitante já está dentro do condomínio");
+      throw new ForbiddenError("Visitante jÃ¡ estÃ¡ dentro do condomÃ­nio");
     }
 
     const updated = await prisma.visitor.update({
@@ -114,7 +156,6 @@ export class VisitorService {
       },
     });
 
-    // Notificar morador da unidade
     const unitUsers = await prisma.condominiumUser.findMany({
       where: { unitId: visitor.unitId },
       select: { userId: true },
@@ -126,7 +167,7 @@ export class VisitorService {
           userId: u.userId,
           type: "VISITOR",
           title: "Visitante chegou",
-          message: `${visitor.name} entrou no condomínio`,
+          message: `${visitor.name} entrou no condomÃ­nio`,
           data: { visitorId: visitor.id },
           channels: ["inapp", "email"],
         }),
@@ -147,12 +188,28 @@ export class VisitorService {
     });
   }
 
-  async authorize(visitorId: string, userId: string, authorized: boolean) {
+  async authorize(visitorId: string, actor: VisitorActor, authorized: boolean) {
+    const visitor = await prisma.visitor.findUniqueOrThrow({
+      where: { id: visitorId },
+      select: { unitId: true, status: true },
+    });
+
+    await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
+
+    if (
+      visitor.status === VisitorStatus.INSIDE ||
+      visitor.status === VisitorStatus.LEFT
+    ) {
+      throw new ForbiddenError(
+        "NÃ£o Ã© possÃ­vel alterar um visitante que jÃ¡ entrou ou saiu",
+      );
+    }
+
     return prisma.visitor.update({
       where: { id: visitorId },
       data: {
         status: authorized ? VisitorStatus.AUTHORIZED : VisitorStatus.DENIED,
-        preAuthorizedBy: userId,
+        preAuthorizedBy: actor.role === UserRole.RESIDENT ? actor.userId : undefined,
       },
     });
   }
@@ -190,13 +247,20 @@ export class VisitorService {
       visitor.status === VisitorStatus.LEFT
     ) {
       throw new ForbiddenError(
-        "Não é possível editar um visitante que já entrou ou saiu",
+        "NÃ£o Ã© possÃ­vel editar um visitante que jÃ¡ entrou ou saiu",
       );
     }
     return prisma.visitor.update({ where: { id }, data });
   }
 
-  async historyByUnit(unitId: string, page = 1, limit = 20) {
+  async historyByUnit(
+    unitId: string,
+    actor: VisitorActor,
+    page = 1,
+    limit = 20,
+  ) {
+    await this.ensureUnitAccess(actor.userId, actor.role, unitId);
+
     const [visitors, total] = await prisma.$transaction([
       prisma.visitor.findMany({
         where: { unitId },

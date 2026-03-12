@@ -50,7 +50,7 @@ export class VisitorController {
         ...data,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
       },
-      req.user?.userId,
+      req.user!,
     );
     res.status(201).json({ success: true, data: { visitor } });
   }
@@ -77,7 +77,7 @@ export class VisitorController {
     const { authorized } = validateRequest(authorizeSchema, req.body);
     const visitor = await visitorService.authorize(
       req.params.id,
-      req.user!.userId,
+      req.user!,
       authorized,
     );
     res.json({ success: true, data: { visitor } });
@@ -100,6 +100,7 @@ export class VisitorController {
   async historyByUnit(req: Request, res: Response) {
     const data = await visitorService.historyByUnit(
       req.params.unitId,
+      req.user!,
       Number(req.query.page) || 1,
       Number(req.query.limit) || 20,
     );

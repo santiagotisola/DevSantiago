@@ -23,7 +23,7 @@ async function main() {
     data: {
       name: 'Super Admin',
       email: 'admin@condosync.com.br',
-      password,
+      passwordHash: password,
       role: 'SUPER_ADMIN',
       isActive: true,
     },
