@@ -132,7 +132,7 @@ Análise comparativa com concorrente (organizemeucondominio.com.br) — Março 2
 
 ### [MEL-12] Controle de acesso por papel (Role-based Access Control) no frontend
 
-**Status:** `[ ] Pendente`  
+**Status:** `[x] Concluído — Março/2026`  
 **Prioridade:** Alta — problema de segurança identificado. Atualmente o morador (`RESIDENT`) consegue ver e acessar páginas que não são para ele (Portaria, Unidades, Moradores, Financeiro, Relatórios, Manutenção, Áreas Comuns, Comunicação, etc.).
 
 **O que deve ser feito:**
@@ -169,7 +169,7 @@ Análise comparativa com concorrente (organizemeucondominio.com.br) — Março 2
 | ~~4~~ | ~~MEL-03 — Manutenção preventiva~~                    | ~~Alta~~     | ~~Médio-alto~~ |
 | ~~5~~ | ~~MEL-05 — Documentos para download~~                 | ~~Média~~    | ~~Médio~~      |
 | ~~6~~ | ~~MEL-04 — Autorização de obras~~                     | ~~Média~~    | ~~Médio~~      |
-| 7     | **MEL-12 — Controle de acesso por papel (RBAC)**      | **Alta**     | Médio          |
+| 7     | ~~**MEL-12 — Controle de acesso por papel (RBAC)**~~  | ~~**Alta**~~ | ~~Médio~~      |
 | 8     | MEL-07 — Controle de estoque                          | Média        | Médio          |
 | 9     | MEL-06 — Mensagens individuais                        | Média        | Médio-alto     |
 | 10    | MEL-10 — Galeria de fotos                             | Baixa        | Baixo          |

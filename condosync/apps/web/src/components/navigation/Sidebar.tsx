@@ -33,9 +33,12 @@ interface NavItem {
   label: string;
   to?: string;
   icon: React.ElementType;
-  children?: { label: string; to: string }[];
+  children?: { label: string; to: string; roles?: string[] }[];
   roles?: string[];
 }
+
+const STAFF_ROLES = ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"];
+const MGMT_ROLES  = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -51,29 +54,31 @@ const navItems: NavItem[] = [
   {
     label: "Portaria",
     icon: Shield,
+    roles: STAFF_ROLES,
     children: [
       { label: "Visitantes", to: "/portaria/visitantes" },
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
     ],
   },
-  { label: "Unidades", to: "/unidades", icon: Home },
-  { label: "Moradores", to: "/moradores", icon: Users },
-  { label: "Pets", to: "/pets", icon: Dog },
+  { label: "Unidades", to: "/unidades", icon: Home, roles: STAFF_ROLES },
+  { label: "Moradores", to: "/moradores", icon: Users, roles: STAFF_ROLES },
+  { label: "Pets", to: "/pets", icon: Dog, roles: STAFF_ROLES },
   {
     label: "Financeiro",
     icon: DollarSign,
+    roles: MGMT_ROLES,
     children: [
       { label: "Visão Geral", to: "/financeiro" },
       { label: "Cobranças", to: "/financeiro/cobranças" },
     ],
   },
-  { label: "Manutenção", to: "/manutencao", icon: Wrench },
+  { label: "Manutenção", to: "/manutencao", icon: Wrench, roles: MGMT_ROLES },
   {
     label: "Obras",
     to: "/obras",
     icon: HardHat,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MGMT_ROLES,
   },
   { label: "Áreas Comuns", to: "/areas-comuns", icon: CalendarDays },
   {
@@ -83,22 +88,22 @@ const navItems: NavItem[] = [
       { label: "Avisos", to: "/comunicacao/avisos" },
       { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
       { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos" },
-      { label: "Assembleias", to: "/assembleias" },
+      { label: "Assembleias", to: "/assembleias", roles: MGMT_ROLES },
     ],
   },
-  { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
+  { label: "Relatórios", to: "/relatorios", icon: BarChart3, roles: MGMT_ROLES },
   { label: "Documentos", to: "/documentos", icon: FileText },
   {
     label: "Funcionários",
     to: "/funcionarios",
     icon: UserCog,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MGMT_ROLES,
   },
   {
     label: "Prestadores",
     to: "/prestadores",
     icon: Building,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MGMT_ROLES,
   },
   {
     label: "Condomínios",
@@ -225,12 +230,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems
             .filter(
-              (item) =>
-                (item.to !== "/manutencao" ||
-                  ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"].includes(
-                    user?.role || "",
-                  )) &&
-                (!item.roles || item.roles.includes(user?.role || "")),
+              (item) => !item.roles || item.roles.includes(user?.role ?? ""),
             )
             .map((item) => {
               if (item.children) {
@@ -255,7 +255,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
                     {isExpanded && (
                       <div className="ml-7 mt-1 space-y-1">
-                        {item.children.map((child) => (
+                        {item.children.filter((c) => !c.roles || c.roles.includes(user?.role ?? "")).map((child) => (
                           <NavLink
                             key={child.to}
                             to={child.to}

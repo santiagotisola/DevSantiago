@@ -48,6 +48,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
 }
 
+const STAFF = ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"];
+const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+
+function RoleGuard({ children, roles }: { children: React.ReactNode; roles: string[] }) {
+  const user = useAuthStore((s) => s.user);
+  if (!roles.includes(user?.role ?? "")) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter
@@ -88,20 +97,20 @@ export default function App() {
           <Route index element={<DashboardPage />} />
 
           {/* Portaria */}
-          <Route path="portaria/visitantes" element={<VisitorsPage />} />
-          <Route path="portaria/encomendas" element={<ParcelsPage />} />
-          <Route path="portaria/veiculos" element={<VehiclesPage />} />
+          <Route path="portaria/visitantes" element={<RoleGuard roles={STAFF}><VisitorsPage /></RoleGuard>} />
+          <Route path="portaria/encomendas" element={<RoleGuard roles={STAFF}><ParcelsPage /></RoleGuard>} />
+          <Route path="portaria/veiculos" element={<RoleGuard roles={STAFF}><VehiclesPage /></RoleGuard>} />
 
           {/* Moradores */}
-          <Route path="moradores" element={<ResidentsPage />} />
-          <Route path="unidades" element={<UnitsPage />} />
+          <Route path="moradores" element={<RoleGuard roles={STAFF}><ResidentsPage /></RoleGuard>} />
+          <Route path="unidades" element={<RoleGuard roles={STAFF}><UnitsPage /></RoleGuard>} />
 
           {/* Financeiro */}
-          <Route path="financeiro" element={<FinancePage />} />
-          <Route path="financeiro/cobranças" element={<ChargesPage />} />
+          <Route path="financeiro" element={<RoleGuard roles={MANAGEMENT}><FinancePage /></RoleGuard>} />
+          <Route path="financeiro/cobranças" element={<RoleGuard roles={MANAGEMENT}><ChargesPage /></RoleGuard>} />
 
           {/* Manutenção */}
-          <Route path="manutencao" element={<MaintenancePage />} />
+          <Route path="manutencao" element={<RoleGuard roles={MANAGEMENT}><MaintenancePage /></RoleGuard>} />
 
           {/* Áreas Comuns */}
           <Route path="areas-comuns" element={<CommonAreasPage />} />
@@ -113,29 +122,29 @@ export default function App() {
             path="comunicacao/achados-e-perdidos"
             element={<LostAndFoundPage />}
           />
-          <Route path="assembleias" element={<AssemblyList />} />
-          <Route path="assembleias/:id" element={<AssemblyDetail />} />
-          <Route path="pets" element={<PetPage />} />
+          <Route path="assembleias" element={<RoleGuard roles={MANAGEMENT}><AssemblyList /></RoleGuard>} />
+          <Route path="assembleias/:id" element={<RoleGuard roles={MANAGEMENT}><AssemblyDetail /></RoleGuard>} />
+          <Route path="pets" element={<RoleGuard roles={STAFF}><PetPage /></RoleGuard>} />
 
           {/* Relatórios */}
-          <Route path="relatorios" element={<ReportsPage />} />
+          <Route path="relatorios" element={<RoleGuard roles={MANAGEMENT}><ReportsPage /></RoleGuard>} />
 
           {/* Funcionários e Prestadores */}
-          <Route path="funcionarios" element={<EmployeesPage />} />
-          <Route path="prestadores" element={<ServiceProvidersPage />} />
+          <Route path="funcionarios" element={<RoleGuard roles={MANAGEMENT}><EmployeesPage /></RoleGuard>} />
+          <Route path="prestadores" element={<RoleGuard roles={MANAGEMENT}><ServiceProvidersPage /></RoleGuard>} />
 
           {/* Admin */}
-          <Route path="admin/condominios" element={<CondominiumsPage />} />
+          <Route path="admin/condominios" element={<RoleGuard roles={["SUPER_ADMIN"]}><CondominiumsPage /></RoleGuard>} />
 
           {/* Portal do Morador */}
           <Route
             path="minha-portaria/visitantes"
-            element={<MyVisitorsPage />}
+            element={<RoleGuard roles={["RESIDENT"]}><MyVisitorsPage /></RoleGuard>}
           />
-          <Route path="minha-portaria/obras" element={<MinhasObrasPage />} />
+          <Route path="minha-portaria/obras" element={<RoleGuard roles={["RESIDENT"]}><MinhasObrasPage /></RoleGuard>} />
 
           {/* Obras (admin/síndico) */}
-          <Route path="obras" element={<ObrasAdminPage />} />
+          <Route path="obras" element={<RoleGuard roles={MANAGEMENT}><ObrasAdminPage /></RoleGuard>} />
 
           {/* Documentos */}
           <Route path="documentos" element={<DocumentsPage />} />

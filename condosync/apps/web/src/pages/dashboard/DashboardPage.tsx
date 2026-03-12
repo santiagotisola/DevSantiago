@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 import {
   Users, Package, Wrench, DollarSign, AlertTriangle,
   TrendingUp, Home, Shield, Calendar, ChevronRight,
-  Loader2, Building2, Video
+  Loader2, Building2, Video, HardHat, FileText
 } from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '../../lib/utils';
 import { Link } from 'react-router-dom';
@@ -46,6 +46,101 @@ function StatCard({ title, value, subtitle, icon: Icon, color, trend, to }: {
   return to ? <Link to={to}>{content}</Link> : content;
 }
 
+function ResidentDashboard({ d, user, selectedCondominiumId }: { d: any; user: any; selectedCondominiumId: string | null }) {
+  const condominium = user?.condominiumUsers?.find(
+    (cu: any) => cu.condominium.id === selectedCondominiumId
+  )?.condominium;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! 👋</h1>
+        <p className="text-muted-foreground">
+          {condominium?.name} · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          title="Encomendas Aguardando"
+          value={d?.portaria?.parcelsAwaiting ?? 0}
+          subtitle="aguardando retirada na portaria"
+          icon={Package}
+          color="bg-orange-500"
+        />
+        <StatCard
+          title="Próximas Reservas"
+          value={d?.communication?.upcomingReservations ?? 0}
+          subtitle="áreas comuns reservadas"
+          icon={Calendar}
+          color="bg-teal-500"
+          to="/areas-comuns"
+        />
+        <StatCard
+          title="Ocorrências Abertas"
+          value={d?.communication?.unreadOccurrences ?? 0}
+          subtitle="aguardando resposta"
+          icon={AlertTriangle}
+          color="bg-yellow-500"
+          to="/comunicacao/ocorrencias"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-700">Comunicados</h3>
+            <Link to="/comunicacao/avisos" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+              Ver todos <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="space-y-3 flex-1">
+            {d?.recentAnnouncements?.length > 0 ? (
+              d.recentAnnouncements.slice(0, 5).map((a: any) => (
+                <div key={a.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? 'bg-blue-500' : 'bg-gray-400'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{a.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{formatRelativeTime(a.publishedAt)}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground py-8">
+                <Shield className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-sm">Nenhum comunicado recente</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border p-5 shadow-sm">
+          <h3 className="font-semibold text-gray-700 mb-4">Acesso Rápido</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Pré-autorizar Visita', to: '/minha-portaria/visitantes', icon: Shield, color: 'text-purple-600 bg-purple-50' },
+              { label: 'Minhas Obras', to: '/minha-portaria/obras', icon: HardHat, color: 'text-orange-600 bg-orange-50' },
+              { label: 'Reservar Área', to: '/areas-comuns', icon: Calendar, color: 'text-teal-600 bg-teal-50' },
+              { label: 'Documentos', to: '/documentos', icon: FileText, color: 'text-blue-600 bg-blue-50' },
+              { label: 'Relatar Ocorrência', to: '/comunicacao/ocorrencias', icon: AlertTriangle, color: 'text-yellow-600 bg-yellow-50' },
+              { label: 'Achados e Perdidos', to: '/comunicacao/achados-e-perdidos', icon: Users, color: 'text-gray-600 bg-gray-50' },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 p-3 rounded-xl ${item.color} hover:opacity-80 transition-opacity`}
+              >
+                <item.icon className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { selectedCondominiumId, user } = useAuthStore();
 
@@ -81,6 +176,10 @@ export function DashboardPage() {
   }
 
   const d = data;
+
+  if (user?.role === 'RESIDENT') {
+    return <ResidentDashboard d={d} user={user} selectedCondominiumId={selectedCondominiumId} />;
+  }
 
   // Séries temporais do backend
   const visitorsWeek = d?.portaria?.visitorStats || [];
