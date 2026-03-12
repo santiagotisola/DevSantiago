@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Users, Plus, Search, LogIn, LogOut, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Users, Plus, Search, LogIn, LogOut, CheckCircle, XCircle, Clock, Loader2, Pencil } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700' },
@@ -20,6 +20,9 @@ export function VisitorsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', document: '', documentType: 'RG', phone: '', company: '', reason: '', unitId: '' });
+  const [editModal, setEditModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', document: '', documentType: 'RG', phone: '', company: '', reason: '', notes: '' });
 
   const { data: unitsData } = useQuery({
     queryKey: ['units', selectedCondominiumId],
@@ -57,6 +60,15 @@ export function VisitorsPage() {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
       setShowModal(false);
       setForm({ name: '', document: '', documentType: 'RG', phone: '', company: '', reason: '', unitId: '' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...d }: typeof editForm & { id: string }) => api.patch(`/visitors/${id}`, d),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      setEditModal(false);
+      setEditTarget(null);
     },
   });
 
@@ -162,6 +174,20 @@ export function VisitorsPage() {
                     {canRegisterEntry && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-2 justify-end">
+                          {(v.status === 'PENDING' || v.status === 'AUTHORIZED') && (
+                            <button
+                              onClick={() => {
+                                setEditTarget(v);
+                                setEditForm({ name: v.name, document: v.document || '', documentType: v.documentType || 'RG', phone: v.phone || '', company: v.company || '', reason: v.reason || '', notes: v.notes || '' });
+                                setEditModal(true);
+                              }}
+                              className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200 transition-colors"
+                              title="Editar visitante"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Editar
+                            </button>
+                          )}
                           {v.status === 'AUTHORIZED' || v.status === 'PENDING' ? (
                             <button
                               onClick={() => entryMutation.mutate(v.id)}
@@ -286,6 +312,60 @@ export function VisitorsPage() {
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Registrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de edição */}
+      {editModal && editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Editar Visitante</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1">
+                <label className="text-sm font-medium">Nome *</label>
+                <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome completo" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Documento</label>
+                <input value={editForm.document} onChange={(e) => setEditForm({ ...editForm, document: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Número" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tipo</label>
+                <select value={editForm.documentType} onChange={(e) => setEditForm({ ...editForm, documentType: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="RG">RG</option>
+                  <option value="CPF">CPF</option>
+                  <option value="CNH">CNH</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Telefone</label>
+                <input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="(11) 99999-0000" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Empresa</label>
+                <input value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Opcional" />
+              </div>
+              <div className="col-span-2 space-y-1">
+                <label className="text-sm font-medium">Motivo da visita</label>
+                <input value={editForm.reason} onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: visita familiar, entrega..." />
+              </div>
+              <div className="col-span-2 space-y-1">
+                <label className="text-sm font-medium">Observações</label>
+                <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button
+                onClick={() => updateMutation.mutate({ ...editForm, id: editTarget.id })}
+                disabled={updateMutation.isPending || !editForm.name}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
               </button>
             </div>
           </div>

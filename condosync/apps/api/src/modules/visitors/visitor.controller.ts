@@ -16,6 +16,17 @@ const createSchema = z.object({
   notes: z.string().optional(),
 });
 
+const updateSchema = z.object({
+  name: z.string().min(2).optional(),
+  document: z.string().optional(),
+  documentType: z.enum(['CPF', 'RG', 'CNH', 'PASSPORT']).optional(),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+  scheduledAt: z.string().datetime().optional(),
+});
+
 const entrySchema = z.object({ photoUrl: z.string().url().optional() });
 const authorizeSchema = z.object({ authorized: z.boolean() });
 
@@ -69,6 +80,15 @@ export class VisitorController {
       req.user!.userId,
       authorized,
     );
+    res.json({ success: true, data: { visitor } });
+  }
+
+  async update(req: Request, res: Response) {
+    const data = validateRequest(updateSchema, req.body);
+    const visitor = await visitorService.update(req.params.id, {
+      ...data,
+      scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+    });
     res.json({ success: true, data: { visitor } });
   }
 

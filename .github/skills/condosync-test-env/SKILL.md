@@ -129,7 +129,19 @@ docker compose up -d --build
 
 ---
 
-## 7. Parar o sistema
+## 7. Após alterar código do frontend
+
+Rebuildar e subir o web + limpar cache em sequência:
+
+```powershell
+docker compose build web
+docker compose up -d web
+docker exec condosync-redis redis-cli FLUSHDB
+```
+
+Depois recarregar a página (F5).
+
+## 8. Parar o sistema
 
 ```powershell
 docker compose down

@@ -43,9 +43,20 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
 // Registro de acesso de veículos
 router.get('/access-logs/:condominiumId', authorize('DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  // Busca IDs de todas as unidades do condomínio para filtrar logs sem vehicleId
+  const unitIds = (await prisma.unit.findMany({
+    where: { condominiumId: req.params.condominiumId },
+    select: { id: true },
+  })).map((u) => u.id);
+
   const logs = await prisma.vehicleAccessLog.findMany({
     where: {
-      vehicle: { unit: { condominiumId: req.params.condominiumId } },
+      OR: [
+        { vehicle: { unit: { condominiumId: req.params.condominiumId } } },
+        { vehicleId: null, unitId: { in: unitIds } },
+        // logs sem vehicleId nem unitId registrados pelo porteiro deste condomínio
+        { vehicleId: null, unitId: null, registeredBy: { not: null } },
+      ],
     },
     include: {
       vehicle: { include: { unit: { select: { identifier: true, block: true } } } },
@@ -58,14 +69,30 @@ router.get('/access-logs/:condominiumId', authorize('DOORMAN', 'CONDOMINIUM_ADMI
 
 router.post('/access-logs', authorize('DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const schema = z.object({
-    plate: z.string(),
+    plate: z.string().min(1),
     vehicleId: z.string().uuid().optional(),
     unitId: z.string().uuid().optional(),
     isResident: z.boolean().optional(),
     notes: z.string().optional(),
   });
   const data = validateRequest(schema, req.body);
-  const log = await prisma.vehicleAccessLog.create({ data: { ...data, registeredBy: req.user!.userId } });
+
+  // Tenta vincular automaticamente ao veículo cadastrado pela placa
+  let vehicleId = data.vehicleId;
+  let unitId = data.unitId;
+  if (!vehicleId) {
+    const existing = await prisma.vehicle.findFirst({
+      where: { plate: data.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(), isActive: true },
+    });
+    if (existing) {
+      vehicleId = existing.id;
+      unitId = unitId ?? existing.unitId;
+    }
+  }
+
+  const log = await prisma.vehicleAccessLog.create({
+    data: { ...data, vehicleId, unitId, registeredBy: req.user!.userId },
+  });
   res.status(201).json({ success: true, data: { log } });
 });
 

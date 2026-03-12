@@ -142,6 +142,14 @@ export class VisitorService {
     });
   }
 
+  async update(id: string, data: Partial<Pick<CreateVisitorDTO, 'name' | 'document' | 'documentType' | 'phone' | 'company' | 'reason' | 'notes' | 'scheduledAt'>>) {
+    const visitor = await prisma.visitor.findUniqueOrThrow({ where: { id } });
+    if (visitor.status === VisitorStatus.INSIDE || visitor.status === VisitorStatus.LEFT) {
+      throw new ForbiddenError('Não é possível editar um visitante que já entrou ou saiu');
+    }
+    return prisma.visitor.update({ where: { id }, data });
+  }
+
   async historyByUnit(unitId: string, page = 1, limit = 20) {
     const [visitors, total] = await prisma.$transaction([
       prisma.visitor.findMany({
