@@ -42,9 +42,16 @@ Análise comparativa com concorrente (organizemeucondominio.com.br) — Março 2
 
 ### [MEL-04] Autorização de obras e prestadores por unidade
 
-**Status:** `[ ] Pendente`  
+**Status:** `[x] Concluído — Março/2026`  
 **Descrição:** Morador registra reforma em andamento na sua unidade e lista os prestadores autorizados a entrar. Porteiro só libera acesso aos prestadores previamente registrados.  
-**Observação:** `service-providers/` existe mas não tem esse fluxo de vínculo com unidade/obra.  
+**O que foi feito:**
+
+- Modelos Prisma: `Renovation` (tipo, datas, status PENDING/APPROVED/IN_PROGRESS/COMPLETED/REJECTED, motivo reprovação) + `RenovationProvider` (nome, serviço, CPF/CNPJ, telefone, empresa)
+- Backend: `POST /renovations`, `GET /renovations/unit/:unitId`, `GET /renovations/condominium/:condominiumId`, `PATCH /renovations/:id/approve`, `PATCH /renovations/:id/status`, `DELETE /renovations/:id`, `POST /renovations/:id/providers`, `DELETE /renovations/:id/providers/:providerId`
+- Frontend morador: `MinhasObrasPage` em `/minha-portaria/obras` — cria solicitação, adiciona/remove prestadores, atualiza status (Iniciar/Concluir)
+- Frontend admin/síndico: `ObrasAdminPage` em `/obras` — lista todas obras com filtros por status, aprovação/reprovação com motivo, accordion com detalhes e prestadores
+- Menu "Minhas Obras" adicionado em "Minha Portaria" (RESIDENT); menu "Obras" adicionado para CONDOMINIUM_ADMIN/SYNDIC/SUPER_ADMIN
+
 **Esforço estimado:** Médio (novo modelo `Renovation` + tela portaria + portal morador)
 
 ---

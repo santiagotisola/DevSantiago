@@ -75,13 +75,23 @@ const STATUS_CONFIG: Record<
 };
 
 export default function MinhasObrasPage() {
-  const { user } = useAuthStore();
+  const { user, selectedCondominiumId } = useAuthStore();
   const qc = useQueryClient();
-  const unitId = user?.unitId;
+  const condominiumUser = user?.condominiumUsers?.find(
+    (cu) => cu.condominium.id === selectedCondominiumId,
+  );
+  const unitId = condominiumUser?.unitId;
+  const condominiumId = selectedCondominiumId;
 
   const [showCreate, setShowCreate] = useState(false);
   const [showProvider, setShowProvider] = useState<string | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    description: string;
+    type: (typeof TIPOS)[number];
+    startDate: string;
+    endDate: string;
+    notes: string;
+  }>({
     description: "",
     type: TIPOS[0],
     startDate: "",
@@ -164,11 +174,11 @@ export default function MinhasObrasPage() {
   });
 
   const handleCreate = () => {
-    if (!unitId || !user?.condominiumId) return;
+    if (!unitId || !condominiumId) return;
     createMutation.mutate({
       ...form,
       unitId,
-      condominiumId: user.condominiumId,
+      condominiumId: condominiumId!,
       startDate: new Date(form.startDate).toISOString(),
       endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
     });
