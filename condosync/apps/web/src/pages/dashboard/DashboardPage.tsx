@@ -18,6 +18,7 @@ import {
   FileText,
   MessageSquare,
   Image,
+  Video,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";

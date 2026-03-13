@@ -1,15 +1,103 @@
 import { Router, Request, Response } from "express";
+import { UserRole } from "@prisma/client";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from "../../middleware/auth";
+import { ForbiddenError } from "../../middleware/errorHandler";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
 
 const router = Router();
 router.use(authenticate);
 
-// ─── Áreas Comuns ─────────────────────────────────────────────
+async function ensureUnitAccess(req: Request, unitId: string) {
+  const unit = await prisma.unit.findUniqueOrThrow({
+    where: { id: unitId },
+    select: { id: true, condominiumId: true },
+  });
+
+  if (req.user!.role === UserRole.SUPER_ADMIN) {
+    return unit;
+  }
+
+  const membership = await prisma.condominiumUser.findFirst({
+    where: {
+      userId: req.user!.userId,
+      condominiumId: unit.condominiumId,
+      isActive: true,
+    },
+    select: { role: true, unitId: true },
+  });
+
+  if (!membership) {
+    throw new ForbiddenError("Acesso negado a esta unidade");
+  }
+
+  if (membership.role === UserRole.RESIDENT && membership.unitId !== unit.id) {
+    throw new ForbiddenError("Morador so pode acessar a propria unidade");
+  }
+
+  return unit;
+}
+
+async function ensureReservationAccess(
+  req: Request,
+  reservationId: string,
+  options?: { managementOnly?: boolean; residentOwnOnly?: boolean },
+) {
+  const reservation = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      requestedBy: true,
+      unitId: true,
+      commonArea: { select: { condominiumId: true } },
+    },
+  });
+
+  if (req.user!.role === UserRole.SUPER_ADMIN) {
+    return reservation;
+  }
+
+  const membership = await prisma.condominiumUser.findFirst({
+    where: {
+      userId: req.user!.userId,
+      condominiumId: reservation.commonArea.condominiumId,
+      isActive: true,
+    },
+    select: { role: true, unitId: true },
+  });
+
+  if (!membership) {
+    throw new ForbiddenError("Acesso negado a esta reserva");
+  }
+
+  const isManagement =
+    membership.role === UserRole.CONDOMINIUM_ADMIN ||
+    membership.role === UserRole.SYNDIC;
+
+  if (options?.managementOnly && !isManagement) {
+    throw new ForbiddenError("Apenas a administracao pode executar esta acao");
+  }
+
+  if (
+    options?.residentOwnOnly &&
+    membership.role === UserRole.RESIDENT &&
+    (membership.unitId !== reservation.unitId ||
+      reservation.requestedBy !== req.user!.userId)
+  ) {
+    throw new ForbiddenError("Morador so pode acessar a propria reserva");
+  }
+
+  return reservation;
+}
+
 router.get(
   "/condominium/:condominiumId",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const areas = await prisma.commonArea.findMany({
       where: { condominiumId: req.params.condominiumId, isActive: true },
@@ -24,6 +112,7 @@ router.get(
 router.post(
   "/",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const schema = z.object({
       condominiumId: z.string().uuid(),
@@ -42,9 +131,16 @@ router.post(
   },
 );
 
-// ─── Reservas ─────────────────────────────────────────────────
 router.get("/:areaId/reservations", async (req: Request, res: Response) => {
   const { startDate, endDate } = req.query;
+  const area = await prisma.commonArea.findUniqueOrThrow({
+    where: { id: req.params.areaId },
+    select: { condominiumId: true },
+  });
+
+  req.params.condominiumId = area.condominiumId;
+  await authorizeCondominium(req, res, async () => {});
+
   const reservations = await prisma.reservation.findMany({
     where: {
       commonAreaId: req.params.areaId,
@@ -72,8 +168,17 @@ const reservationSchema = z.object({
 
 router.post("/reservations", async (req: Request, res: Response) => {
   const data = validateRequest(reservationSchema, req.body);
+  const unit = await ensureUnitAccess(req, data.unitId);
+  const area = await prisma.commonArea.findUniqueOrThrow({
+    where: { id: data.commonAreaId },
+  });
 
-  // Verificar disponibilidade
+  if (area.condominiumId !== unit.condominiumId) {
+    throw new ForbiddenError(
+      "A unidade informada nao pertence ao mesmo condominio da area",
+    );
+  }
+
   const conflict = await prisma.reservation.findFirst({
     where: {
       commonAreaId: data.commonAreaId,
@@ -90,13 +195,10 @@ router.post("/reservations", async (req: Request, res: Response) => {
   if (conflict) {
     return res.status(409).json({
       success: false,
-      error: { code: "CONFLICT", message: "Área já reservada neste período" },
+      error: { code: "CONFLICT", message: "Area ja reservada neste periodo" },
     });
   }
 
-  const area = await prisma.commonArea.findUniqueOrThrow({
-    where: { id: data.commonAreaId },
-  });
   const reservation = await prisma.reservation.create({
     data: {
       ...data,
@@ -114,6 +216,7 @@ router.patch(
   "/reservations/:id/approve",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
+    await ensureReservationAccess(req, req.params.id, { managementOnly: true });
     const reservation = await prisma.reservation.update({
       where: { id: req.params.id },
       data: { status: "CONFIRMED", approvedBy: req.user!.userId },
@@ -122,35 +225,32 @@ router.patch(
   },
 );
 
-router.patch(
-  "/reservations/:id/cancel",
-  async (req: Request, res: Response) => {
-    const reservation = await prisma.reservation.update({
-      where: { id: req.params.id },
-      data: {
-        status: "CANCELED",
-        canceledBy: req.user!.userId,
-        cancelReason: req.body.reason,
-      },
-    });
-    res.json({ success: true, data: { reservation } });
-  },
-);
+router.patch("/reservations/:id/cancel", async (req: Request, res: Response) => {
+  await ensureReservationAccess(req, req.params.id, { residentOwnOnly: true });
+  const reservation = await prisma.reservation.update({
+    where: { id: req.params.id },
+    data: {
+      status: "CANCELED",
+      canceledBy: req.user!.userId,
+      cancelReason: req.body.reason,
+    },
+  });
+  res.json({ success: true, data: { reservation } });
+});
 
-router.get(
-  "/reservations/unit/:unitId",
-  async (req: Request, res: Response) => {
-    const reservations = await prisma.reservation.findMany({
-      where: { unitId: req.params.unitId },
-      include: { commonArea: { select: { name: true } } },
-      orderBy: { startDate: "desc" },
-    });
-    res.json({ success: true, data: { reservations } });
-  },
-);
+router.get("/reservations/unit/:unitId", async (req: Request, res: Response) => {
+  await ensureUnitAccess(req, req.params.unitId);
+  const reservations = await prisma.reservation.findMany({
+    where: { unitId: req.params.unitId },
+    include: { commonArea: { select: { name: true } } },
+    orderBy: { startDate: "desc" },
+  });
+  res.json({ success: true, data: { reservations } });
+});
 
 router.get(
   "/reservations/condominium/:condominiumId",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const reservations = await prisma.reservation.findMany({
       where: {
