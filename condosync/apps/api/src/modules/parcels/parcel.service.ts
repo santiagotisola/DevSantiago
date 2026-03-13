@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { ParcelStatus } from '@prisma/client';
+import { NotificationService } from '../../notifications/notification.service';
 
 export interface RegisterParcelDTO {
   unitId: string;
@@ -58,19 +59,22 @@ export class ParcelService {
       data: { notifiedAt: new Date() },
     });
 
-    await prisma.notification.createMany({
-      data: unitUsers.map((u) => ({
-        userId: u.userId,
-        type: 'PARCEL' as const,
-        title: 'Encomenda recebida',
-        message: `Nova encomenda ${data.carrier ? `da ${data.carrier}` : ''} aguarda retirada`,
-        data: {
-          parcelId: parcel.id,
-          storageLocation: data.storageLocation,
-          trackingCode: data.trackingCode,
-        },
-      })),
-    });
+    await Promise.all(
+      unitUsers.map((u) =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: 'PARCEL',
+          title: 'Encomenda recebida',
+          message: `Nova encomenda ${data.carrier ? `da ${data.carrier}` : ''} aguarda retirada`,
+          data: {
+            parcelId: parcel.id,
+            storageLocation: data.storageLocation,
+            trackingCode: data.trackingCode,
+          },
+          channels: ['inapp', 'email'],
+        })
+      )
+    );
 
     return parcel;
   }

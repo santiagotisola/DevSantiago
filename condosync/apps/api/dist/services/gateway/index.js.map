@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../src/services/gateway/index.ts"],"names":[],"mappings":";;;AAEA,mDAA+C;AAE/C,MAAa,cAAc;IACzB,MAAM,CAAC,UAAU,CAAC,IAAiB;QACjC,QAAQ,IAAI,EAAE,CAAC;YACb,KAAK,OAAO;gBACV,OAAO,4BAAY,CAAC;YACtB;gBACE,OAAO,IAAI,CAAC;QAChB,CAAC;IACH,CAAC;CACF;AATD,wCASC"}

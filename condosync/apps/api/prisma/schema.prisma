@@ -32,6 +32,14 @@ enum UnitStatus {
   UNDER_RENOVATION
 }
 
+enum RenovationStatus {
+  PENDING
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
 enum VisitorStatus {
   PENDING
   AUTHORIZED
@@ -96,6 +104,20 @@ enum NotificationType {
   COMMUNICATION
   RESERVATION
   OCCURRENCE
+  ASSEMBLY
+}
+
+enum AssemblyStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELED
+}
+
+enum GatewayType {
+  NONE
+  ASAAS
+  PJBANK
 }
 
 enum VehicleType {
@@ -141,6 +163,10 @@ model User {
   auditLogs          AuditLog[]
   refreshTokens      RefreshToken[]
   passwordResets     PasswordReset[]
+  lostAndFoundItems  LostAndFound[] @relation("CreatedLostAndFound")
+  ticketsCreated     Ticket[]       @relation("TicketCreator")
+  ticketsAssigned    Ticket[]       @relation("TicketAssignee")
+  ticketMessages     TicketMessage[] @relation("TicketMessages")
 
   @@map("users")
 }
@@ -228,6 +254,9 @@ model Condominium {
   maintenanceSchedules MaintenanceSchedule[]
   contracts          Contract[]
   polls              Poll[]
+  assemblies         Assembly[]
+  lostAndFoundItems  LostAndFound[]
+  documents          CondominiumDocument[]
 
   @@map("condominiums")
 }
@@ -261,7 +290,7 @@ model Unit {
   area          Float?
   bedrooms      Int?
   status        UnitStatus @default(OCCUPIED)
-  fraction      Float      @default(1.0) // fração ideal para rateio
+  fraction      Decimal    @default(1.0) @db.Decimal(8,6) // fração ideal para rateio
   notes         String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -274,6 +303,8 @@ model Unit {
   charges       Charge[]
   serviceOrders ServiceOrder[]
   dependents    Dependent[]
+  pets          Pet[]
+  renovations   Renovation[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -324,7 +355,7 @@ model Employee {
   email         String?
   shift         ShiftType
   admissionDate DateTime
-  salaryAmount  Float?
+  salaryAmount  Decimal?   @db.Decimal(10,2)
   isActive      Boolean     @default(true)
   notes         String?
   createdAt     DateTime    @default(now())
@@ -560,8 +591,14 @@ model FinancialAccount {
   bankName      String?
   agency        String?
   accountNumber String?
-  balance       Float       @default(0)
+  balance       Decimal     @default(0) @db.Decimal(12,2)
   isActive      Boolean     @default(true)
+  
+  // Gateway config
+  gatewayType   GatewayType @default(NONE)
+  gatewayKey    String?     // API Key or Token
+  gatewayConfig Json?       // walletId, common settings, etc.
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -593,7 +630,7 @@ model FinancialTransaction {
   category         FinancialCategory?       @relation(fields: [categoryId], references: [id])
   categoryId       String?
   type             FinancialTransactionType
-  amount           Float
+  amount           Decimal  @db.Decimal(12,2)
   description      String
   dueDate          DateTime
   paidAt           DateTime?
@@ -617,16 +654,24 @@ model Charge {
   category      FinancialCategory? @relation(fields: [categoryId], references: [id])
   categoryId    String?
   description   String
-  amount        Float
+  amount        Decimal  @db.Decimal(12,2)
   dueDate       DateTime
   paidAt        DateTime?
-  paidAmount    Float?
+  paidAmount    Decimal? @db.Decimal(12,2)
   status        ChargeStatus      @default(PENDING)
   referenceMonth String?
+  
+  // Gateway metadata
+  gatewayId     String?
+  gatewayStatus String?
+  pixQrCode     String?     @db.Text
+  pixCopyPaste  String?     @db.Text
+  paymentLink   String?     @db.Text
+
   boletoUrl     String?
   boletoCode    String?
-  penaltyAmount Float             @default(0)
-  interestRate  Float             @default(0) // % a.m.
+  penaltyAmount Decimal           @default(0) @db.Decimal(12,2)
+  interestRate  Decimal           @default(0) @db.Decimal(5,4) // % a.m.
   createdBy     String
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
@@ -654,8 +699,8 @@ model ServiceOrder {
   priority        ServiceOrderPriority @default(MEDIUM)
   status          ServiceOrderStatus   @default(OPEN)
   photoUrls       String[]
-  estimatedCost   Float?
-  finalCost       Float?
+  estimatedCost   Decimal? @db.Decimal(10,2)
+  finalCost       Decimal? @db.Decimal(10,2)
   scheduledAt     DateTime?
   startedAt       DateTime?
   completedAt     DateTime?
@@ -693,7 +738,7 @@ model MaintenanceSchedule {
   frequency     String      // diário, semanal, mensal, anual
   nextDueDate   DateTime
   lastDoneDate  DateTime?
-  estimatedCost Float?
+  estimatedCost Decimal? @db.Decimal(10,2)
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -709,7 +754,7 @@ model Contract {
   serviceProviderId String
   title           String
   description     String?
-  value           Float
+  value           Decimal  @db.Decimal(12,2)
   startDate       DateTime
   endDate         DateTime?
   isActive        Boolean         @default(true)
@@ -783,6 +828,69 @@ model AreaBlockedPeriod {
 }
 
 // ─────────────────────────────────────────────────────────────
+// ASSEMBLEIAS
+// ─────────────────────────────────────────────────────────────
+
+model Assembly {
+  id             String         @id @default(uuid())
+  condominium    Condominium    @relation(fields: [condominiumId], references: [id])
+  condominiumId  String
+  title          String
+  description    String?
+  meetingUrl     String?        // Link Zoom/Meet
+  scheduledAt    DateTime
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  minutesUrl     String?        // PDF da ata
+  status         AssemblyStatus @default(SCHEDULED)
+  createdBy      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  votingItems    AssemblyVotingItem[]
+  attendees      AssemblyAttendee[]
+
+  @@map("assemblies")
+}
+
+model AssemblyVotingItem {
+  id          String   @id @default(uuid())
+  assembly    Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  assemblyId  String
+  title       String
+  description String?
+  options     Json     // [{id, text}]
+  
+  votes       AssemblyVote[]
+
+  @@map("assembly_voting_items")
+}
+
+model AssemblyVote {
+  id           String             @id @default(uuid())
+  votingItem   AssemblyVotingItem @relation(fields: [votingItemId], references: [id], onDelete: Cascade)
+  votingItemId String
+  userId       String
+  optionId     String             // ID da opção escolhida do JSON
+  votedAt      DateTime           @default(now())
+
+  @@unique([votingItemId, userId])
+  @@map("assembly_votes")
+}
+
+model AssemblyAttendee {
+  id          String   @id @default(uuid())
+  assembly    Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  assemblyId  String
+  userId      String
+  joinedAt    DateTime @default(now())
+  leftAt      DateTime?
+
+  @@unique([assemblyId, userId])
+  @@map("assembly_attendees")
+}
+
+// ─────────────────────────────────────────────────────────────
 // SEGURANÇA E AUDITORIA
 // ─────────────────────────────────────────────────────────────
 
@@ -803,4 +911,242 @@ model AuditLog {
   createdAt     DateTime    @default(now())
 
   @@map("audit_logs")
+}
+model FinalizedAssembly {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime @default(now())
+  minutesUrl  String?
+  condominiumId String
+  
+  @@map("finalized_assemblies")
+}
+
+model Pet {
+  id            String      @id @default(uuid())
+  name          String
+  type          String      // Cachorro, Gato, Pássaro, etc.
+  breed         String?
+  size          String?     // Pequeno, Médio, Grande
+  gender        String?     // Macho, Fêmea
+  birthDate     DateTime?
+  color         String?
+  photoUrl      String?
+  weight        Float?
+  lastVaccination DateTime?
+  isActive      Boolean     @default(true)
+  notes         String?
+  
+  unit          Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId        String
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("pets")
+}
+enum LostAndFoundStatus {
+  LOST
+  FOUND
+  RETURNED
+  DISCARDED
+}
+
+model LostAndFound {
+  id            String             @id @default(uuid())
+  title         String
+  description   String?
+  category      String             // Eletrônico, Chaves, Vestuário, etc.
+  place         String?            // Onde foi encontrado/perdido
+  status        LostAndFoundStatus @default(FOUND)
+  photoUrl      String?
+  foundDate     DateTime?
+  lostDate      DateTime?
+  returnedAt    DateTime?
+  returnedTo    String?            // Nome de quem retirou
+  
+  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+  
+  createdBy     User               @relation("CreatedLostAndFound", fields: [createdById], references: [id])
+  createdById   String
+  
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@map("lost_and_found")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DOCUMENTOS DO CONDOMÍNIO
+// ─────────────────────────────────────────────────────────────
+
+model CondominiumDocument {
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+  title         String
+  description   String?
+  category      String      // ata, convenção, regulamento, boleto, comunicado, outro
+  fileName      String      // nome original do arquivo
+  storedName    String      // nome UUID usado no disco
+  filePath      String      // caminho completo
+  fileSize      Int
+  mimeType      String
+  uploadedBy    String      // userId de quem fez upload
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("condominium_documents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// OBRAS E REFORÇAS
+// ─────────────────────────────────────────────────────────────
+
+model Renovation {
+  id            String           @id @default(uuid())
+  unit          Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId        String
+  condominiumId String
+  description   String
+  type          String           // pintura, hidráulica, elétrica, estrutural, outro
+  startDate     DateTime
+  endDate       DateTime?
+  status        RenovationStatus @default(PENDING)
+  approvedBy    String?          // userId
+  approvedAt    DateTime?
+  rejectedReason String?
+  notes         String?
+  createdBy     String           // userId do morador
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  authorizedProviders RenovationProvider[]
+
+  @@map("renovations")
+}
+
+model RenovationProvider {
+  id           String     @id @default(uuid())
+  renovation   Renovation @relation(fields: [renovationId], references: [id], onDelete: Cascade)
+  renovationId String
+  name         String
+  serviceType  String
+  document     String?    // CPF ou CNPJ
+  phone        String?
+  company      String?
+  createdAt    DateTime   @default(now())
+
+  @@map("renovation_providers")
+}
+
+// ─── Controle de Estoque ── MEL-07 ───────────────────────────────────────────
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model StockItem {
+  id              String          @id @default(uuid())
+  condominiumId   String
+  name            String
+  description     String?
+  category        String          // limpeza, manutenção, segurança, escritório, outro
+  unit            String          // unidade de medida: un, kg, L, m, etc.
+  quantity        Float           @default(0)
+  minQuantity     Float           @default(0)  // estoque mínimo para alerta
+  location        String?         // ex: "Almoxarifado", "Depósito 2"
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  movements       StockMovement[]
+
+  @@map("stock_items")
+}
+
+model StockMovement {
+  id          String            @id @default(uuid())
+  item        StockItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      String
+  type        StockMovementType
+  quantity    Float
+  reason      String?
+  performedBy String
+  createdAt   DateTime          @default(now())
+
+  @@map("stock_movements")
+}
+
+// ─── Tickets / Mensagens individuais ── MEL-06 ────────────────────────────────
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketCategory {
+  manutencao
+  financeiro
+  barulho
+  seguranca
+  outro
+}
+
+model Ticket {
+  id            String          @id @default(uuid())
+  condominiumId String
+  title         String
+  category      TicketCategory  @default(outro)
+  priority      TicketPriority  @default(LOW)
+  status        TicketStatus    @default(OPEN)
+  createdById   String
+  createdBy     User            @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedToId  String?
+  assignedTo    User?           @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  messages      TicketMessage[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String   @id @default(uuid())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId  String
+  senderId  String
+  sender    User     @relation("TicketMessages", fields: [senderId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+
+  @@map("ticket_messages")
+}
+
+// ─── Galeria de Fotos ── MEL-10 ───────────────────────────────────────────────
+
+model Photo {
+  id            String   @id @default(uuid())
+  condominiumId String
+  title         String
+  description   String?
+  category      String   // areas-comuns, eventos, obras, outro
+  fileName      String
+  storedName    String
+  filePath      String
+  fileSize      Int
+  mimeType      String
+  uploadedBy    String
+  createdAt     DateTime @default(now())
+
+  @@map("photos")
 }

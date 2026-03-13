@@ -3,78 +3,21 @@ import { Request, Response } from 'express';
 import { financeService } from './finance.service';
 import { authenticate, authorize } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
-import { z } from 'zod';
+import {
+  createChargeSchema,
+  updateChargeSchema,
+  ratioSchema,
+  paySchema,
+  createTransactionSchema,
+  ratioInstallmentsSchema,
+  chargeInstallmentsSchema,
+} from './finance.validation';
 
 const router = Router();
 router.use(authenticate);
 router.use(authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN', 'RESIDENT'));
 
-const createChargeSchema = z.object({
-  unitId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  amount: z.number().positive(),
-  dueDate: z.string().datetime(),
-  referenceMonth: z.string().optional(),
-  interestRate: z.number().min(0).optional(),
-  penaltyAmount: z.number().min(0).optional(),
-});
-
-const ratioSchema = z.object({
-  condominiumId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  totalAmount: z.number().positive(),
-  dueDate: z.string().datetime(),
-  referenceMonth: z.string().optional().default(''),
-  method: z.enum(['equal', 'fraction']),
-});
-
-const ratioInstallmentsSchema = z.object({
-  condominiumId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  totalAmount: z.number().positive(),
-  firstDueDate: z.string().datetime(),
-  installments: z.number().int().min(2).max(60),
-  intervalDays: z.number().int().min(7).max(90).default(30),
-  method: z.enum(['equal', 'fraction']),
-});
-
-const chargeInstallmentsSchema = z.object({
-  unitId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  description: z.string().min(3),
-  amount: z.number().positive(),
-  firstDueDate: z.string().datetime(),
-  installments: z.number().int().min(2).max(60),
-  intervalDays: z.number().int().min(7).max(90).default(30),
-});
-
-const paySchema = z.object({
-  paidAmount: z.number().positive(),
-  paidAt: z.string().datetime().optional(),
-});
-
-const updateChargeSchema = createChargeSchema.partial();
-
-const createTransactionSchema = z.object({
-  accountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
-  type: z.enum(['INCOME', 'EXPENSE']),
-  amount: z.number().positive(),
-  description: z.string().min(3),
-  dueDate: z.string().datetime(),
-  paidAt: z.string().datetime().optional(),
-  referenceMonth: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-// Contas
+// ─── Contas
 router.get('/accounts/:condominiumId', async (req: Request, res: Response) => {
   const accounts = await financeService.listAccounts(req.params.condominiumId);
   res.json({ success: true, data: { accounts } });
@@ -106,7 +49,7 @@ router.patch('/charges/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
   const data = validateRequest(updateChargeSchema, req.body);
   const charge = await financeService.updateCharge(req.params.id, {
     ...data,
-    ...(data.dueDate && { dueDate: new Date(data.dueDate) }),
+    ...(data.dueDate && { dueDate: new Date(data.dueDate) as any }),
   });
   res.json({ success: true, data: { charge } });
 });
@@ -184,9 +127,34 @@ router.post('/transactions', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
   res.status(201).json({ success: true, data: { transaction } });
 });
 
+// Cobrança individual (com campos de pagamento)
+router.get('/charges/:id/detail', async (req: Request, res: Response) => {
+  const charge = await financeService.getChargeById(req.params.id);
+  if (!charge) return res.status(404).json({ success: false, message: 'Cobrança não encontrada' });
+  res.json({ success: true, data: { charge } });
+});
+
+// Sincronização manual com gateway
+router.post('/charges/:id/sync', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const charge = await financeService.forceSyncWithGateway(req.params.id);
+  res.json({ success: true, data: { charge } });
+});
+
+// Configurar gateway na conta financeira
+router.patch('/accounts/:accountId/gateway', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const { gatewayType, gatewayKey, gatewayConfig } = req.body;
+  const account = await financeService.configureGateway(req.params.accountId, { gatewayType, gatewayKey, gatewayConfig });
+  res.json({ success: true, data: { account } });
+});
+
 // Relatórios
 router.get('/balance/:condominiumId/yearly/:year', async (req: Request, res: Response) => {
   const data = await financeService.getMonthlyBalance(req.params.condominiumId, Number(req.params.year));
+  res.json({ success: true, data });
+});
+
+router.get('/forecast/:condominiumId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = await financeService.getFinancialForecast(req.params.condominiumId);
   res.json({ success: true, data });
 });
 

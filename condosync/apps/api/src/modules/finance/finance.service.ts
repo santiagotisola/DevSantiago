@@ -1,6 +1,11 @@
 import { prisma } from '../../config/prisma';
-import { ChargeStatus, FinancialTransactionType } from '@prisma/client';
+import { ChargeStatus, FinancialTransactionType, GatewayType } from '@prisma/client';
 import { AppError } from '../../middleware/errorHandler';
+import { toNumber, roundMoney } from '../../utils/decimal';
+import { GatewayFactory } from '../../services/gateway';
+import { logger } from '../../config/logger';
+import { subMonths, startOfMonth, format } from 'date-fns';
+import { NotificationService } from '../../notifications/notification.service';
 
 export interface CreateChargeDTO {
   unitId: string;
@@ -63,8 +68,8 @@ export class FinanceService {
       }),
     ]);
 
-    const balance = (income._sum.amount || 0) - (expense._sum.amount || 0);
-    return { account, balance, totalIncome: income._sum.amount || 0, totalExpense: expense._sum.amount || 0 };
+    const balance = toNumber(income._sum.amount) - toNumber(expense._sum.amount);
+    return { account, balance, totalIncome: toNumber(income._sum.amount), totalExpense: toNumber(expense._sum.amount) };
   }
 
   // ─── Cobranças ───────────────────────────────────────────────
@@ -100,16 +105,36 @@ export class FinanceService {
   }
 
   async createCharge(data: CreateChargeDTO, createdBy: string) {
-    return prisma.charge.create({
-      data: { ...data, createdBy, status: ChargeStatus.PENDING },
+    const charge = await prisma.charge.create({
+      data: { ...(data as any), createdBy, status: ChargeStatus.PENDING },
       include: { unit: { select: { identifier: true, block: true } } },
     });
+
+    const unitUsers = await prisma.condominiumUser.findMany({
+      where: { unitId: data.unitId },
+      select: { userId: true },
+    });
+
+    await Promise.all(
+      unitUsers.map((u) =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: 'FINANCIAL',
+          title: 'Nova cobrança gerada',
+          message: `Uma nova cobrança no valor de R$ ${Number(data.amount).toFixed(2)} foi gerada com vencimento em ${format(new Date(data.dueDate), 'dd/MM/yyyy')}.`,
+          data: { chargeId: charge.id, amount: data.amount, dueDate: data.dueDate },
+          channels: ['inapp', 'email'],
+        })
+      )
+    );
+
+    return charge;
   }
 
   async updateCharge(chargeId: string, data: Partial<CreateChargeDTO>) {
     return prisma.charge.update({
       where: { id: chargeId },
-      data,
+      data: data as any,
     });
   }
 
@@ -120,12 +145,12 @@ export class FinanceService {
 
     if (units.length === 0) throw new AppError('Nenhuma unidade ocupada encontrada');
 
-    const totalFraction = units.reduce((sum, u) => sum + u.fraction, 0);
+    const totalFraction = units.reduce((sum: number, u: any) => sum + u.fraction.toNumber(), 0);
 
-    const charges = units.map((unit) => {
+    const chargesData = units.map((unit: any) => {
       const amount =
         data.method === 'fraction'
-          ? (data.totalAmount * unit.fraction) / totalFraction
+          ? (data.totalAmount * unit.fraction.toNumber()) / totalFraction
           : data.totalAmount / units.length;
 
       return {
@@ -133,7 +158,7 @@ export class FinanceService {
         accountId: data.accountId,
         categoryId: data.categoryId,
         description: data.description,
-        amount: Math.round(amount * 100) / 100,
+        amount: roundMoney(amount),
         dueDate: data.dueDate,
         referenceMonth: data.referenceMonth,
         status: ChargeStatus.PENDING,
@@ -141,12 +166,106 @@ export class FinanceService {
       };
     });
 
-    await prisma.charge.createMany({ data: charges });
-    return { count: charges.length, totalAmount: data.totalAmount };
+    // Usamos transaction individual para poder capturar IDs e sincronizar
+    const createdCharges = await prisma.$transaction(
+      chargesData.map((c: any) => prisma.charge.create({ data: c, select: { id: true } }))
+    );
+
+    // Sincronização assíncrona
+    Promise.all(createdCharges.map((c: { id: string }) => this.syncChargeWithGateway(c.id))).catch(e => 
+      logger.error('Erro na sincronização em lote de cobranças:', e)
+    );
+
+    return { count: createdCharges.length, totalAmount: data.totalAmount };
   }
 
-  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {
+  // ─── Integração com Gateway ──────────────────────────────────
+  async syncChargeWithGateway(chargeId: string) {
+    const charge = await prisma.charge.findUnique({
+      where: { id: chargeId },
+      include: { 
+        account: true,
+      }
+    });
+
+    if (!charge || !charge.account.gatewayKey || charge.gatewayId) return;
+
+    const gateway = GatewayFactory.getService(charge.account.gatewayType);
+    if (!gateway) return;
+
+    try {
+      const response = await gateway.createPayment(charge, { 
+        apiKey: charge.account.gatewayKey,
+        config: charge.account.gatewayConfig 
+      });
+
+      return prisma.charge.update({
+        where: { id: charge.id },
+        data: {
+          gatewayId: response.gatewayId,
+          gatewayStatus: response.gatewayStatus,
+          paymentLink: response.paymentLink,
+          pixQrCode: response.pixQrCode,
+          pixCopyPaste: response.pixCopyPaste,
+          boletoUrl: response.boletoUrl,
+          boletoCode: response.boletoCode,
+        }
+      });
+    } catch (error) {
+      logger.error(`Erro ao sincronizar cobrança ${chargeId} com gateway:`, error);
+    }
+  }
+
+  async getChargeById(chargeId: string) {
+    return prisma.charge.findUnique({
+      where: { id: chargeId },
+      include: {
+        unit: { select: { identifier: true, block: true, condominiumId: true } },
+        category: { select: { name: true } },
+      },
+    });
+  }
+
+  async forceSyncWithGateway(chargeId: string) {
+    const charge = await prisma.charge.findUnique({
+      where: { id: chargeId },
+      include: { account: true },
+    });
+    if (!charge) throw new AppError('Cobrança não encontrada', 404);
+    if (charge.status !== 'PENDING') throw new AppError('Apenas cobranças pendentes podem ser sincronizadas');
+    if (!charge.account.gatewayKey) throw new AppError('Conta financeira não possui gateway configurado');
+
+    const gateway = GatewayFactory.getService(charge.account.gatewayType);
+    if (!gateway) throw new AppError('Gateway não suportado');
+
+    const response = await gateway.createPayment(charge, { apiKey: charge.account.gatewayKey, config: charge.account.gatewayConfig });
     return prisma.charge.update({
+      where: { id: chargeId },
+      data: {
+        gatewayId: response.gatewayId,
+        gatewayStatus: response.gatewayStatus,
+        paymentLink: response.paymentLink,
+        pixQrCode: response.pixQrCode,
+        pixCopyPaste: response.pixCopyPaste,
+        boletoUrl: response.boletoUrl,
+        boletoCode: response.boletoCode,
+      },
+    });
+  }
+
+  async configureGateway(accountId: string, config: { gatewayType: string; gatewayKey: string; gatewayConfig?: any }) {
+    return prisma.financialAccount.update({
+      where: { id: accountId },
+      data: {
+        gatewayType: config.gatewayType as any,
+        gatewayKey: config.gatewayKey,
+        gatewayConfig: config.gatewayConfig ?? undefined,
+      },
+      select: { id: true, name: true, gatewayType: true },
+    });
+  }
+
+  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {    return prisma.charge.update({
       where: { id: chargeId },
       data: { status: ChargeStatus.PAID, paidAmount, paidAt: paidAt || new Date() },
     });
@@ -202,7 +321,7 @@ export class FinanceService {
           where: { condominiumId },
           select: { id: true },
         });
-        const accountIds = accounts.map((a) => a.id);
+        const accountIds = accounts.map((a: { id: string }) => a.id);
 
         const [income, expense, charged, paid, overdue] = await prisma.$transaction([
           prisma.financialTransaction.aggregate({
@@ -228,12 +347,12 @@ export class FinanceService {
 
         return {
           month,
-          income: income._sum.amount || 0,
-          expense: expense._sum.amount || 0,
-          charged: charged._sum.amount || 0,
-          paid: paid._sum.paidAmount || 0,
+          income: toNumber(income._sum.amount),
+          expense: toNumber(expense._sum.amount),
+          charged: toNumber(charged._sum.amount),
+          paid: toNumber(paid._sum.paidAmount),
           overdueCount: overdue,
-          balance: (income._sum.amount || 0) - (expense._sum.amount || 0),
+          balance: toNumber(income._sum.amount) - toNumber(expense._sum.amount),
         };
       })
     );
@@ -262,7 +381,55 @@ export class FinanceService {
       }),
       prisma.charge.aggregate({ where: { unitId }, _sum: { amount: true } }),
     ]);
-    return { pending, total: total._sum.amount || 0 };
+    return { pending, total: toNumber(total._sum.amount) };
+  }
+
+  async getFinancialForecast(condominiumId: string) {
+    const now = new Date();
+    const sixMonthsAgo = subMonths(startOfMonth(now), 6);
+
+    // 1. Média de despesas dos últimos 6 meses
+    const expenses = await prisma.financialTransaction.findMany({
+      where: {
+        account: { condominiumId },
+        type: 'EXPENSE',
+        paidAt: { gte: sixMonthsAgo },
+      },
+      select: { amount: true, paidAt: true },
+    });
+
+    const monthlyExpenses: Record<string, number> = {};
+    expenses.forEach((e: { amount: any; paidAt: Date | null }) => {
+      const month = format(e.paidAt!, 'yyyy-MM');
+      monthlyExpenses[month] = (monthlyExpenses[month] || 0) + toNumber(e.amount);
+    });
+
+    const expenseValues = Object.values(monthlyExpenses);
+    const averageExpense = expenseValues.length > 0 
+      ? expenseValues.reduce((a, b) => a + b, 0) / expenseValues.length 
+      : 0;
+
+    // 2. Receita esperada (baseado no total de unidades e taxa média)
+    // Aqui usamos o total de unidades ocupadas para prever o próximo rateio
+    const unitCount = await prisma.unit.count({ where: { condominiumId, status: 'OCCUPIED' } });
+    
+    // Pegamos o valor total do último rateio como base
+    const lastCharge = await prisma.charge.findFirst({
+      where: { unit: { condominiumId } },
+      orderBy: { createdAt: 'desc' },
+      select: { amount: true },
+    });
+
+    const baseAmountPerUnit = lastCharge ? toNumber(lastCharge.amount) : 0;
+    const expectedRevenue = unitCount * baseAmountPerUnit;
+
+    return {
+      averageExpense: roundMoney(averageExpense),
+      expectedRevenue: roundMoney(expectedRevenue),
+      suggestedReserve: roundMoney(expectedRevenue * 0.1), // 10% de margEM
+      forecastBalance: roundMoney(expectedRevenue - averageExpense),
+      safetyMargin: averageExpense > 0 ? ((expectedRevenue - averageExpense) / averageExpense) * 100 : 100,
+    };
   }
 
   // ─── Rateio Parcelado ─────────────────────────────────────────

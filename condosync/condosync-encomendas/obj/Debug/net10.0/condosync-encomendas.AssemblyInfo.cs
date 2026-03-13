@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("condosync-encomendas")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a87a86d5994eec3efac36f4f4d643500fcd5ba4c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+14978a17c04a294d664ce6b2c7378efca9a6e507")]
 [assembly: System.Reflection.AssemblyProductAttribute("condosync-encomendas")]
 [assembly: System.Reflection.AssemblyTitleAttribute("condosync-encomendas")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

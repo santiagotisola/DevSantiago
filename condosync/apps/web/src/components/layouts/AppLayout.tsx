@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../navigation/Sidebar';
 import { Header } from '../navigation/Header';
+import { AiAssistantChat } from '../ai/AiAssistantChat';
 import { useState } from 'react';
 
 export function AppLayout() {
@@ -21,6 +22,9 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+
+      {/* Assistente IA flutuante (visível apenas para MGMT) */}
+      <AiAssistantChat />
     </div>
   );
 }

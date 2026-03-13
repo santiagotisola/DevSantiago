@@ -38,10 +38,18 @@ services:
       JWT_REFRESH_EXPIRES_IN: 7d
       CORS_ORIGINS: http://localhost:80,http://localhost
       BCRYPT_ROUNDS: "12"
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ""  # Opcional: insira sua chave OpenAI para habilitar o Assistente IA
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_USER: condosync
+      SMTP_PASS: condosync
+      SMTP_FROM: "CondoSync <noreply@condosync.com.br>"
     ports:
       - "3333:3333"
     volumes:
       - api_logs:/app/logs
+      - uploads_data:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3333/health || exit 1"]
       interval: 10s
@@ -62,6 +70,27 @@ services:
     ports:
       - "80:80"
 
+  # ─── Redis ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: condosync-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ─── Mailpit (capturador de email para desenvolvimento) ───────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: condosync-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # Interface web para visualizar emails
+      - "1025:1025" # Porta SMTP
+
 volumes:
   postgres_data:
   api_logs:
+  redis_data:
+  uploads_data:
