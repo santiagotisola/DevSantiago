@@ -15,16 +15,16 @@ import {
   Building,
   Shield,
   Package,
-  Car,
   LogOut,
   ChevronDown,
   Building2,
   X,
-  Video,
   Dog,
   DoorOpen,
   FileText,
   HardHat,
+  MessageSquare,
+  Image,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -39,6 +39,13 @@ interface NavItem {
 
 const STAFF_ROLES = ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"];
 const MGMT_ROLES = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+const COMMUNITY_ROLES = [
+  "RESIDENT",
+  "DOORMAN",
+  "CONDOMINIUM_ADMIN",
+  "SYNDIC",
+  "SUPER_ADMIN",
+];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -49,6 +56,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "Meus Visitantes", to: "/minha-portaria/visitantes" },
       { label: "Minhas Obras", to: "/minha-portaria/obras" },
+      { label: "Minhas Cobranças", to: "/minhas-cobranças" },
     ],
   },
   {
@@ -80,7 +88,12 @@ const navItems: NavItem[] = [
     icon: HardHat,
     roles: MGMT_ROLES,
   },
-  { label: "Áreas Comuns", to: "/areas-comuns", icon: CalendarDays },
+  {
+    label: "Áreas Comuns",
+    to: "/areas-comuns",
+    icon: CalendarDays,
+    roles: COMMUNITY_ROLES,
+  },
   {
     label: "Comunicação",
     icon: Megaphone,
@@ -97,8 +110,25 @@ const navItems: NavItem[] = [
     icon: BarChart3,
     roles: MGMT_ROLES,
   },
-  { label: "Documentos", to: "/documentos", icon: FileText },
+  {
+    label: "Documentos",
+    to: "/documentos",
+    icon: FileText,
+    roles: COMMUNITY_ROLES,
+  },
   { label: "Estoque", to: "/estoque", icon: Package, roles: MGMT_ROLES },
+  {
+    label: "Chamados",
+    to: "/chamados",
+    icon: MessageSquare,
+    roles: COMMUNITY_ROLES,
+  },
+  {
+    label: "Galeria",
+    to: "/galeria",
+    icon: Image,
+    roles: COMMUNITY_ROLES,
+  },
   {
     label: "Funcionários",
     to: "/funcionarios",

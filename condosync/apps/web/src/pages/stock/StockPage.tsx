@@ -187,6 +187,14 @@ export default function StockPage() {
     (i) => i.quantity <= i.minQuantity && i.minQuantity > 0,
   ).length;
 
+  if (!condominiumId) {
+    return (
+      <div className="p-8 text-center text-gray-400">
+        Selecione um condominio para visualizar o estoque.
+      </div>
+    );
+  }
+
   if (isLoading)
     return (
       <div className="p-8 text-center text-gray-400">Carregando estoque...</div>
@@ -481,7 +489,12 @@ export default function StockPage() {
                 onClick={() =>
                   moveMutation.mutate({ id: moveTarget.id, data: moveForm })
                 }
-                disabled={moveMutation.isPending || moveForm.quantity <= 0}
+                disabled={
+                  moveMutation.isPending ||
+                  moveForm.quantity < 0 ||
+                  ((moveForm.type === "IN" || moveForm.type === "OUT") &&
+                    moveForm.quantity <= 0)
+                }
                 className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 {moveMutation.isPending ? "Registrando..." : "Confirmar"}

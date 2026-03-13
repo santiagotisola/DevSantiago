@@ -39,6 +39,7 @@ services:
       CORS_ORIGINS: http://localhost:80,http://localhost
       BCRYPT_ROUNDS: "12"
       REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ""  # Opcional: insira sua chave OpenAI para habilitar o Assistente IA
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_USER: condosync

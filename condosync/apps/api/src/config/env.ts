@@ -21,6 +21,8 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default('noreply@condosync.com.br'),
   BCRYPT_ROUNDS: z.string().default('12'),
   REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 });
 
 const parsed = envSchema.safeParse(process.env);

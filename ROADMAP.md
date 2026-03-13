@@ -79,10 +79,17 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ### [MEL-06] Mensagens individuais morador <-> administracao
 
-**Status:** `[ ] Pendente`  
-**Descricao:** Sistema de chamados/tickets onde o morador abre uma solicitacao e a administracao responde. Diferente dos comunicados em broadcast.  
-**Observacao:** `communication/` hoje cobre broadcast; faltaria um modulo de tickets com thread de mensagens.  
-**Esforco estimado:** Medio-alto (novo modulo completo)
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Sistema de chamados/tickets com thread de mensagens entre morador e administracao.  
+**O que foi feito:**
+
+- Modelos Prisma: `Ticket` e `TicketMessage` (enums: `TicketStatus`, `TicketPriority`, `TicketCategory`)
+- Backend: listar tickets (staff vê todos, morador vê apenas os seus), detalhe com thread, criar ticket, responder, atualizar status/prioridade, excluir
+- Seguranca: criacao aberta a qualquer usuario autenticado do condominio; resposta e status restrito ao criador ou staff; atualizacao de status/atribuicao apenas para staff
+- Frontend: `TicketsPage` em `/chamados` com filtros por status e categoria, thread de mensagens estilo chat (Enter para enviar), indicadores de status com icones e badges coloridos
+- Navegacao: item "Chamados" adicionado ao menu (visivel a todos)
+
+**Esforco estimado:** Medio-alto
 
 ---
 
@@ -106,10 +113,21 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ### [MEL-08] Integracao de boleto bancario (sem remessa/retorno)
 
-**Status:** `[ ] Pendente`  
-**Descricao:** Integracao com gateway financeiro (ex.: Asaas, PJBank, Inter Empresas) para emissao de boleto registrado diretamente pelo sistema.  
-**Observacao:** O modulo `finance/` tem as cobrancas. Falta o gateway de pagamento.  
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Integracao com gateway financeiro Asaas para emissao de boleto registrado, PIX e link de pagamento diretamente pelo sistema.  
 **Esforco estimado:** Alto (integracao com API bancaria + conciliacao)
+
+**O que foi feito:**
+
+- Gateway Asaas ja existia (`AsaasService`) com suporte a boleto, PIX e link de pagamento; webhook de conciliacao automatica tambem existia
+- Adicionado endpoint `GET /finance/charges/:id/detail` para retornar todos os campos de pagamento (boletoUrl, boletoCode, pixQrCode, pixCopyPaste, paymentLink, gatewayId)  
+- Adicionado endpoint `POST /finance/charges/:id/sync` para sincronizacao manual de uma cobranca com o gateway (caso falha no sync automatico)
+- Adicionado endpoint `PATCH /finance/accounts/:accountId/gateway` para configurar tipo e chave do gateway por conta financeira (MGMT apenas)
+- Atualizado `ChargesPage` (admin/sindico): nova coluna "Pagamento" com botoes de link externo, boleto e PIX; botao de re-sync para cobranças sem gateway
+- Modal PIX com QR Code (base64) e codigo copia-e-cola com botao de copiar
+- Criada `MyChargesPage` para moradores: cards de resumo (total em aberto, pendentes, em atraso), historico filtrado por status, botoes de pagamento (Pagar Online / Ver Boleto / PIX) por cobranca
+- Sidebar: item "Minhas Cobranças" dentro do menu "Minha Portaria" (RESIDENT apenas)
+- Rota `/minhas-cobranças` protegida por `RoleGuard roles=["RESIDENT"]`
 
 ---
 
@@ -129,37 +147,62 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ### [MEL-10] Galeria de fotos do condominio
 
-**Status:** `[ ] Pendente`  
+**Status:** `[x] Concluido - Marco/2026`  
 **Descricao:** Album de fotos das areas comuns, eventos e obras. Organizado por categoria e visivel para moradores.  
 **Esforco estimado:** Baixo-medio (upload + galeria)
+
+**O que foi feito:**
+
+- Modelo `Photo` no schema Prisma com campos: titulo, descricao, categoria, fileName, fileSize, mimeType, uploadedBy
+- Backend com 4 endpoints: listar (com filtro por categoria), upload (multer, imagens ate 10MB), stream do arquivo (autenticado, com Cache-Control), deletar (MGMT apenas)
+- Armazenamento no volume Docker `uploads_data` em `/app/uploads/:condoId/gallery/`
+- Frontend com grid responsivo (2 a 5 colunas), thumbnails carregados via blob URL autenticado com React Query
+- Lightbox com navegacao por teclado (Escape, setas), contador de fotos e botao de delete para gestao
+- Modal de upload com drag-and-drop, validacao de tipo/tamanho e preview de nome
+- Tabs de filtro por categoria: Todas / Areas Comuns / Eventos / Obras / Outro
+- Barra de estatisticas com contagem por categoria
+- Sidebar: item "Galeria" com icone Image (visivel para todos os usuarios)
+- Rota `/galeria` registrada no App.tsx
 
 ---
 
 ### [MEL-11] Assistente IA para sindico
 
-**Status:** `[ ] Pendente`  
-**Descricao:** Integracao com OpenAI/Claude para ajudar o sindico a rascunhar comunicados, responder duvidas e gerar relatorios financeiros em linguagem natural.  
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Integracao com OpenAI (GPT-4o-mini) para ajudar o sindico a rascunhar comunicados, responder duvidas e interpretar dados financeiros e operacionais em linguagem natural.  
 **Esforco estimado:** Medio (integracao API + UI de chat)
+
+**O que foi feito:**
+
+- Backend: `POST /ai/chat` que injeta contexto real do condominio (financeiro do mes, ordens abertas, chamados, manutencoes proximas) no system prompt antes de chamar a OpenAI
+- Backend: `GET /ai/status` para verificar se a API Key esta configurada
+- Sem dependencia nova: usa axios (ja existia) para chamar a API OpenAI diretamente
+- Variaveis de ambiente: `OPENAI_API_KEY` (opcional) e `OPENAI_MODEL` (default: gpt-4o-mini) em `env.ts` e `docker-compose.yml`
+- Endpoint protegido: apenas CONDOMINIUM_ADMIN, SYNDIC e SUPER_ADMIN (authorize middleware)
+- Frontend: componente `AiAssistantChat` — botao flutuante azul/indigo no canto inferior direito, visivel apenas para roles MGMT
+- Chat panel deslizante com historico de conversa, sugestoes de perguntas rapidas, indicador de carregamento e estado de erro
+- Botao de limpar conversa, atalho Enter para enviar (Shift+Enter para nova linha)
+- Montado no `AppLayout` (global em todas as paginas autenticadas)
+- Graceful degradation: se a API Key nao estiver configurada, exibe mensagem informativa em vez de travar
+
+**Para ativar:** Definir `OPENAI_API_KEY` no `docker-compose.yml` e rebuildar o container `api`.
 
 ---
 
 ### [MEL-12] Controle de acesso por papel (RBAC) no frontend
 
-**Status:** `[~] Em andamento - Marco/2026`  
+**Status:** `[x] Concluido - Marco/2026`  
 **Prioridade:** Alta - problema de seguranca identificado.
 
-**O que ja foi feito:**
+**O que foi feito:**
 
-- Criado `RoleGuard` no `App.tsx` para proteger grupos de rotas por papel
-- Portaria, financeiro, manutencao, relatorios, obras, funcionarios, prestadores e area de super admin ja estao protegidos por role
-- Ajustes pontuais no menu lateral para ocultar itens incompatveis com o papel logado
-
-**Ainda pendente:**
-
-- Aplicar `roles` explicito a todos os itens do `Sidebar`
-- Fechar as rotas ainda abertas sem guard especifico, como documentos, areas comuns e partes da comunicacao
-- Separar melhor a experiencia de morador, porteiro e administracao
-- Dashboard simplificado para morador
+- `RoleGuard` no `App.tsx` protege todas as rotas sensiveis por papel
+- Portaria, financeiro, manutencao, relatorios, obras, funcionarios, prestadores e area de super admin protegidos por `RoleGuard`
+- Rotas abertas a todos autenticados (`/areas-comuns`, `/documentos`, `/chamados`, `/galeria`, comunicacao) permitem acesso correto a moradores
+- Sidebar filtra itens por `roles` (moradores nao veem Portaria/Financeiro/Obras/etc.; staff nao vee "Minha Portaria")
+- `ResidentDashboard` separado: morador ve cards de encomendas aguardando, reservas, ocorrencias abertas e **chamados abertos** (com query dedicada), alem de atalhos rapidos para todas as funcionalidades relevantes (Pre-autorizar Visita, Minhas Obras, Reservar Area, Documentos, Ocorrencias, Achados, Chamados, Galeria)
+- DOORMAN ve dashboard operacional completo (visitantes, encomendas, manutencao)
+- Imports nao utilizados (`Car`, `Video`) removidos do Sidebar
 
 **Esforco estimado:** Medio (refatoracao de rotas + sidebar + dashboard condicional)
 
@@ -167,17 +210,17 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ## Ordem de execucao sugerida
 
-| #  | Item                                             | Prioridade   | Esforco     |
-|----|--------------------------------------------------|--------------|-------------|
-| 1  | ~~MEL-01 - Notificacoes email encomendas/visitantes~~ | Concluido    | -           |
-| 2  | ~~MEL-02 - Pre-autorizacao de visitantes~~       | Concluido    | -           |
-| 3  | ~~MEL-09 - PWA~~                                 | Concluido    | -           |
-| 4  | ~~MEL-03 - Manutencao preventiva~~               | Concluido    | Medio-alto  |
-| 5  | ~~MEL-05 - Documentos para download~~            | Concluido    | Medio       |
-| 6  | MEL-04 - Autorizacao de obras                    | Media        | Medio       |
-| 7  | MEL-12 - Controle de acesso por papel (RBAC)     | Alta         | Medio       |
-| 8  | ~~MEL-07 - Controle de estoque~~                 | Concluido    | Medio       |
-| 9  | MEL-06 - Mensagens individuais                   | Media        | Medio-alto  |
-| 10 | MEL-10 - Galeria de fotos                        | Baixa        | Baixo       |
-| 11 | MEL-08 - Boleto bancario integrado               | Alta (valor) | Alto        |
-| 12 | MEL-11 - Assistente IA                           | Diferencial  | Medio       |
+| #   | Item                                                  | Prioridade   | Esforco    |
+| --- | ----------------------------------------------------- | ------------ | ---------- |
+| 1   | ~~MEL-01 - Notificacoes email encomendas/visitantes~~ | Concluido    | -          |
+| 2   | ~~MEL-02 - Pre-autorizacao de visitantes~~            | Concluido    | -          |
+| 3   | ~~MEL-09 - PWA~~                                      | Concluido    | -          |
+| 4   | ~~MEL-03 - Manutencao preventiva~~                    | Concluido    | Medio-alto |
+| 5   | ~~MEL-05 - Documentos para download~~                 | Concluido    | Medio      |
+| 6   | MEL-04 - Autorizacao de obras                         | Media        | Medio      |
+| 7   | ~~MEL-12 - Controle de acesso por papel (RBAC)~~      | Concluido    | Medio      |
+| 8   | ~~MEL-07 - Controle de estoque~~                      | Concluido    | Medio      |
+| 9   | ~~MEL-06 - Mensagens individuais~~                    | Concluido    | Medio-alto |
+| 10  | ~~MEL-10 - Galeria de fotos~~                         | Concluido    | Baixo      |
+| 11  | ~~MEL-08 - Boleto bancario integrado~~                | Concluido    | Alto       |
+| 12  | ~~MEL-11 - Assistente IA~~                            | Concluido    | Medio      |

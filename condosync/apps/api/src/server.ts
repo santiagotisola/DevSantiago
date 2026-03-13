@@ -41,6 +41,9 @@ import lostAndFoundRoutes from "./modules/lost-and-found/lost-and-found.routes";
 import documentRoutes from "./modules/documents/document.routes";
 import renovationRoutes from "./modules/renovations/renovation.routes";
 import stockRoutes from "./modules/stock/stock.routes";
+import ticketRoutes from "./modules/tickets/tickets.routes";
+import galleryRoutes from "./modules/gallery/gallery.routes";
+import aiRoutes from "./modules/ai/ai.routes";
 const app = express();
 const httpServer = createServer(app);
 
@@ -123,6 +126,9 @@ app.use(`${API}/lost-and-found`, lostAndFoundRoutes);
 app.use(`${API}/documents`, documentRoutes);
 app.use(`${API}/renovations`, renovationRoutes);
 app.use(`${API}/stock`, stockRoutes);
+app.use(`${API}/tickets`, ticketRoutes);
+app.use(`${API}/gallery`, galleryRoutes);
+app.use(`${API}/ai`, aiRoutes);
 
 // ─── Error Handlers ───────────────────────────────────────────
 app.use(notFoundHandler);
