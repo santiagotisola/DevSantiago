@@ -1,177 +1,183 @@
-# CondoSync — Roadmap de Melhorias
+# CondoSync - Roadmap de Melhorias
 
-Análise comparativa com concorrente (organizemeucondominio.com.br) — Março 2026
+Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ---
 
-## 🔴 Curto prazo — Alto impacto, baixo esforço
+## Curto prazo - Alto impacto, baixo esforco
 
-### [MEL-01] Notificações automáticas por email em encomendas e visitantes
+### [MEL-01] Notificacoes automaticas por email em encomendas e visitantes
 
-**Status:** `[x] Concluído — Março/2026`  
-**Descrição:** Ao registrar uma nova encomenda ou autorizar um visitante, enviar e-mail automático ao morador da unidade.  
-**Solução:** Adicionado serviço **Mailpit** ao `docker-compose.yml` como servidor SMTP local (porta 1025). As notificações `['inapp', 'email']` já estavam implementadas no código — faltava apenas a configuração SMTP no ambiente.  
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Ao registrar uma nova encomenda ou autorizar um visitante, enviar email automatico ao morador da unidade.  
+**Solucao:** Adicionado servico **Mailpit** ao `docker-compose.yml` como servidor SMTP local (porta 1025). As notificacoes `['inapp', 'email']` ja estavam implementadas no codigo; faltava apenas a configuracao SMTP no ambiente.  
 **Visualizar emails (dev):** `http://localhost:8025`
 
 ---
 
-### [MEL-02] Pré-autorização de visitantes pelos moradores
+### [MEL-02] Pre-autorizacao de visitantes pelos moradores
 
-**Status:** `[x] Concluído — Março/2026`  
-**Descrição:** Morador cadastra antecipadamente visitantes esperados pelo portal. Ao chegar na portaria, o visitante já aparece com status `AUTHORIZED`, eliminando espera.  
-**Solução:** Criada página `MyVisitorsPage` em `/minha-portaria/visitantes`. Morador vê histórico da unidade, pré-autoriza com formulário completo (nome, documento, telefone, motivo, data/hora agendada) e pode cancelar pré-autorizações pendentes. Menu lateral "Minha Portaria" visível apenas para role `RESIDENT`.
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Morador cadastra antecipadamente visitantes esperados pelo portal. Ao chegar na portaria, o visitante ja aparece com status `AUTHORIZED`, eliminando espera.  
+**Solucao:** Criada pagina `MyVisitorsPage` em `/minha-portaria/visitantes`. Morador ve historico da unidade, pre-autoriza com formulario completo (nome, documento, telefone, motivo, data/hora agendada) e pode cancelar pre-autorizacoes pendentes. Menu lateral "Minha Portaria" visivel apenas para role `RESIDENT`.
 
 ---
 
-## 🟡 Médio prazo — Alto impacto, esforço moderado
+## Medio prazo - Alto impacto, esforco moderado
 
-### [MEL-03] Calendário de manutenção preventiva com alertas
+### [MEL-03] Calendario de manutencao preventiva com alertas
 
-**Status:** `[x] Concluído`  
-**Descrição:** Configurar equipamentos do condomínio (elevador, bomba, caixa d'água, AVCB, SPDA) com periodicidade de manutenção. Sistema dispara alertas automáticos antes do vencimento.  
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Configurar equipamentos do condominio (elevador, bomba, caixa d'agua, AVCB, SPDA) com periodicidade de manutencao. Sistema dispara alertas automaticos antes do vencimento.  
 **O que foi feito:**
 
 - Backend: CRUD completo de `MaintenanceSchedule` (POST / GET / PATCH / PATCH `/done` / DELETE soft)
-- Cálculo automático de `nextDueDate` ao marcar como feito (diário / semanal / quinzenal / mensal / trimestral / semestral / anual)
-- Worker BullMQ diário (cron `0 7 * * *`) que enfileira notificações in-app + email para agendamentos vencidos ou com prazo ≤ 7 dias
-- Frontend: aba "Preventiva" na página de Manutenção com badges de status (Vencido / Vence em Nd / Em dia), CRUD de schedules e botão "Marcar como Feita"
+- Calculo automatico de `nextDueDate` ao marcar como feito (diario / semanal / quinzenal / mensal / trimestral / semestral / anual)
+- Worker BullMQ diario (cron `0 7 * * *`) que enfileira notificacoes in-app + email para agendamentos vencidos ou com prazo <= 7 dias
+- Frontend: aba "Preventiva" na pagina de Manutencao com badges de status (Vencido / Vence em Nd / Em dia), CRUD de schedules e botao "Marcar como Feita"
 
-**Esforço estimado:** Médio-alto (novo modelo + scheduler + UI)
+**Esforco estimado:** Medio-alto (novo modelo + scheduler + UI)
 
 ---
 
-### [MEL-04] Autorização de obras e prestadores por unidade
+### [MEL-04] Autorizacao de obras e prestadores por unidade
 
-**Status:** `[x] Concluído — Março/2026`  
-**Descrição:** Morador registra reforma em andamento na sua unidade e lista os prestadores autorizados a entrar. Porteiro só libera acesso aos prestadores previamente registrados.  
+**Status:** `[~] Parcial - Marco/2026`  
+**Descricao:** Morador registra reforma em andamento na sua unidade e lista os prestadores autorizados a entrar. O nucleo de cadastro e aprovacao esta implementado, mas o fluxo operacional da portaria ainda precisa consultar e usar essa autorizacao na entrada.  
 **O que foi feito:**
 
-- Modelos Prisma: `Renovation` (tipo, datas, status PENDING/APPROVED/IN_PROGRESS/COMPLETED/REJECTED, motivo reprovação) + `RenovationProvider` (nome, serviço, CPF/CNPJ, telefone, empresa)
+- Modelos Prisma: `Renovation` (tipo, datas, status PENDING/APPROVED/IN_PROGRESS/COMPLETED/REJECTED, motivo de reprovacao) + `RenovationProvider` (nome, servico, CPF/CNPJ, telefone, empresa)
 - Backend: `POST /renovations`, `GET /renovations/unit/:unitId`, `GET /renovations/condominium/:condominiumId`, `PATCH /renovations/:id/approve`, `PATCH /renovations/:id/status`, `DELETE /renovations/:id`, `POST /renovations/:id/providers`, `DELETE /renovations/:id/providers/:providerId`
-- Frontend morador: `MinhasObrasPage` em `/minha-portaria/obras` — cria solicitação, adiciona/remove prestadores, atualiza status (Iniciar/Concluir)
-- Frontend admin/síndico: `ObrasAdminPage` em `/obras` — lista todas obras com filtros por status, aprovação/reprovação com motivo, accordion com detalhes e prestadores
+- Seguranca: acesso por unidade/condominio validado para morador e administracao; morador so pode operar na propria unidade/obra
+- Frontend morador: `MinhasObrasPage` em `/minha-portaria/obras` cria solicitacao, adiciona/remove prestadores e atualiza status
+- Frontend admin/sindico: `ObrasAdminPage` em `/obras` lista obras com filtros por status, aprovacao/reprovacao com motivo e detalhes dos prestadores
 - Menu "Minhas Obras" adicionado em "Minha Portaria" (RESIDENT); menu "Obras" adicionado para CONDOMINIUM_ADMIN/SYNDIC/SUPER_ADMIN
 
-**Esforço estimado:** Médio (novo modelo `Renovation` + tela portaria + portal morador)
+**Pendente para concluir de fato:**
+
+- Fluxo de portaria para cruzar prestadores autorizados da obra no momento da entrada
+
+**Esforco estimado:** Medio (novo modelo `Renovation` + portal morador + fluxo administrativo)
 
 ---
 
 ### [MEL-05] Documentos para download
 
-**Status:** `[x] Concluído — Março/2026`  
-**Descrição:** Síndico carrega documentos (ata de assembleia, convenção, regulamento interno, boletos) e moradores baixam pelo portal.  
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Sindico carrega documentos (ata de assembleia, convencao, regulamento interno, boletos) e moradores baixam pelo portal.  
 **O que foi feito:**
 
 - Modelo `CondominiumDocument` adicionado ao Prisma schema (title, description, category, fileName, filePath, fileSize, mimeType, uploadedBy)
-- Volume Docker `uploads_data` montado em `/app/uploads` para persistência
-- Backend: `POST /documents/:condominiumId` (upload com multer, admin only), `GET /documents/:condominiumId` (listagem com filtro por categoria), `GET /documents/:condominiumId/:id/download` (streaming autenticado), `DELETE /documents/:condominiumId/:id` (delete físico + registro, admin only)
-- Segurança: tipos permitidos (PDF, Word, Excel, imagens), limite 10 MB, nomes UUID no disco, download exige autenticação
-- Frontend: página `DocumentsPage` com filtros por categoria (ata, convenção, regulamento, boleto, comunicado, outro), lista de documentos com botão "Baixar", modal de upload com drag-drop, exclusão com confirmação
+- Volume Docker `uploads_data` montado em `/app/uploads` para persistencia
+- Backend: `POST /documents/:condominiumId` (upload com multer, admin only), `GET /documents/:condominiumId` (listagem com filtro por categoria), `GET /documents/:condominiumId/:id/download` (streaming autenticado), `DELETE /documents/:condominiumId/:id` (delete fisico + registro, admin only)
+- Seguranca: tipos permitidos (PDF, Word, Excel, imagens), limite 10 MB, nomes UUID no disco, download exige autenticacao
+- Frontend: pagina `DocumentsPage` com filtros por categoria, lista de documentos com botao "Baixar", modal de upload por seletor de arquivo e exclusao com confirmacao
 
-**Esforço estimado:** Médio (CRUD simples + upload de arquivo)
+**Esforco estimado:** Medio (CRUD simples + upload de arquivo)
 
 ---
 
-### [MEL-06] Mensagens individuais morador ↔ administração
+### [MEL-06] Mensagens individuais morador <-> administracao
 
 **Status:** `[ ] Pendente`  
-**Descrição:** Sistema de chamados/tickets onde o morador abre uma solicitação e a administração responde. Diferente dos comunicados em broadcast.  
-**Observação:** `communication/` é só broadcast. Precisaria de um módulo de tickets com thread de mensagens.  
-**Esforço estimado:** Médio-alto (novo módulo completo)
+**Descricao:** Sistema de chamados/tickets onde o morador abre uma solicitacao e a administracao responde. Diferente dos comunicados em broadcast.  
+**Observacao:** `communication/` hoje cobre broadcast; faltaria um modulo de tickets com thread de mensagens.  
+**Esforco estimado:** Medio-alto (novo modulo completo)
 
 ---
 
 ### [MEL-07] Controle de estoque
 
-**Status:** `[ ] Pendente`  
-**Descrição:** Registro de materiais de limpeza, manutenção e outros insumos. Entrada/saída e alertas de estoque baixo.  
-**Esforço estimado:** Médio (CRUD + relatório de consumo)
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Registro de materiais de limpeza, manutencao e outros insumos, com entrada/saida e alerta visual de estoque baixo.
+**O que foi feito:**
+
+- Modelos Prisma: `StockItem` e `StockMovement`
+- Backend: listagem por condominio, criacao, edicao, exclusao, registro de movimentacao (`IN`, `OUT`, `ADJUSTMENT`) e historico por item
+- Seguranca: acesso validado por condominio e por item; operacoes restritas a CONDOMINIUM_ADMIN, SYNDIC e SUPER_ADMIN
+- Frontend: `StockPage` em `/estoque` com filtros por categoria, destaque para estoque baixo, modal de criacao/edicao, movimentacao e historico
+- Navegacao: item "Estoque" adicionado ao menu e rota protegida por `RoleGuard`
+
+**Esforco estimado:** Medio
 
 ---
 
-## 🟢 Longo prazo — Estratégico
+## Longo prazo - Estrategico
 
-### [MEL-08] Integração de boleto bancário (sem remessa/retorno)
+### [MEL-08] Integracao de boleto bancario (sem remessa/retorno)
 
 **Status:** `[ ] Pendente`  
-**Descrição:** Integração com gateway financeiro (ex.: Asaas, PJBank, Inter Empresas) para emissão de boleto registrado diretamente pelo sistema.  
-**Observação:** O módulo `finance/` tem as cobranças. Falta o gateway de pagamento.  
-**Esforço estimado:** Alto (integração com API bancária + conciliação)
+**Descricao:** Integracao com gateway financeiro (ex.: Asaas, PJBank, Inter Empresas) para emissao de boleto registrado diretamente pelo sistema.  
+**Observacao:** O modulo `finance/` tem as cobrancas. Falta o gateway de pagamento.  
+**Esforco estimado:** Alto (integracao com API bancaria + conciliacao)
 
 ---
 
 ### [MEL-09] PWA / App mobile
 
-**Status:** `[x] Concluído — Março/2026`  
-**Descrição:** Frontend transformável em Progressive Web App (instalável no celular/desktop).  
-**Solução:**
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Frontend transformavel em Progressive Web App (instalavel no celular/desktop).  
+**Solucao:**
 
-- `vite-plugin-pwa` já estava configurado e `registerSW` em `main.tsx`
-- Gerados ícones `pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png` e `masked-icon.svg` a partir do logo existente
-- Adicionados `start_url`, `scope` e `runtimeCaching` (NetworkFirst para `/api/v1/*`)
+- `vite-plugin-pwa` ja estava configurado e `registerSW` em `main.tsx`
+- Gerados icones `pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png` e `masked-icon.svg`
+- Adicionados `start_url` e `scope`; cache runtime da API autenticada foi removido para evitar reaproveitamento indevido de dados privados
 - Service worker ativo em `/sw.js`, manifest em `/manifest.webmanifest`
-- Para instalar: abrir `http://localhost` no Chrome/Edge e clicar no ícone de instalação na barra de endereços
+- Para instalar: abrir `http://localhost` no Chrome/Edge e clicar no icone de instalacao na barra de enderecos
 
 ---
 
-### [MEL-10] Galeria de fotos do condomínio
+### [MEL-10] Galeria de fotos do condominio
 
 **Status:** `[ ] Pendente`  
-**Descrição:** Álbum de fotos das áreas comuns, eventos e obras. Organizado por categoria e visível para moradores.  
-**Esforço estimado:** Baixo-médio (upload + galeria)
+**Descricao:** Album de fotos das areas comuns, eventos e obras. Organizado por categoria e visivel para moradores.  
+**Esforco estimado:** Baixo-medio (upload + galeria)
 
 ---
 
-### [MEL-11] Assistente IA para síndico
+### [MEL-11] Assistente IA para sindico
 
 **Status:** `[ ] Pendente`  
-**Descrição:** Integração com OpenAI/Claude para ajudar o síndico a rascunhar comunicados, responder dúvidas e gerar relatórios financeiros em linguagem natural.  
-**Esforço estimado:** Médio (integração API + UI de chat)
+**Descricao:** Integracao com OpenAI/Claude para ajudar o sindico a rascunhar comunicados, responder duvidas e gerar relatorios financeiros em linguagem natural.  
+**Esforco estimado:** Medio (integracao API + UI de chat)
 
 ---
 
-### [MEL-12] Controle de acesso por papel (Role-based Access Control) no frontend
+### [MEL-12] Controle de acesso por papel (RBAC) no frontend
 
-**Status:** `[x] Concluído — Março/2026`  
-**Prioridade:** Alta — problema de segurança identificado. Atualmente o morador (`RESIDENT`) consegue ver e acessar páginas que não são para ele (Portaria, Unidades, Moradores, Financeiro, Relatórios, Manutenção, Áreas Comuns, Comunicação, etc.).
+**Status:** `[~] Em andamento - Marco/2026`  
+**Prioridade:** Alta - problema de seguranca identificado.
 
-**O que deve ser feito:**
+**O que ja foi feito:**
 
-**Frontend — Menu lateral (Sidebar):**
+- Criado `RoleGuard` no `App.tsx` para proteger grupos de rotas por papel
+- Portaria, financeiro, manutencao, relatorios, obras, funcionarios, prestadores e area de super admin ja estao protegidos por role
+- Ajustes pontuais no menu lateral para ocultar itens incompatveis com o papel logado
 
-- Itens sem `roles` definido são visíveis para todos; corrigir aplicando `roles` explícito em cada item
-- Morador deve ver **somente**: Dashboard simplificado, Minha Portaria (Visitantes + Obras), Áreas Comuns (reservas), Comunicação (Avisos + Ocorrências + Achados), Documentos, Perfil
-- Porteiro (`DOORMAN`) deve ver: Portaria (Visitantes + Encomendas + Veículos), Moradores (consulta), Unidades (consulta)
-- Admin/Síndico deve ver tudo exceto Super Admin
+**Ainda pendente:**
 
-**Frontend — Rotas (App.tsx):**
+- Aplicar `roles` explicito a todos os itens do `Sidebar`
+- Fechar as rotas ainda abertas sem guard especifico, como documentos, areas comuns e partes da comunicacao
+- Separar melhor a experiencia de morador, porteiro e administracao
+- Dashboard simplificado para morador
 
-- Criar componente `RoleGuard` que redireciona para `/` se o usuário tentar acessar rota não autorizada
-- Envolver cada grupo de rotas com `RoleGuard` ao invés de deixar todas as rotas abertas para qualquer usuário autenticado
-
-**Backend — já protegido com `authorize()` middleware**; a maioria das rotas já valida o role. Revisar as que não têm `authorize()` explícito.
-
-**Dashboard:**
-
-- Morador deve ter um dashboard simplificado (reservas, avisos, encomendas, visitantes) diferente do dashboard do síndico/admin
-
-**Esforço estimado:** Médio (refatoração de rotas + sidebar + dashboard condicional)
+**Esforco estimado:** Medio (refatoracao de rotas + sidebar + dashboard condicional)
 
 ---
 
-## Ordem de execução sugerida
+## Ordem de execucao sugerida
 
-| #     | Item                                                  | Prioridade   | Esforço        |
-| ----- | ----------------------------------------------------- | ------------ | -------------- |
-| 1     | ~~MEL-01 — Notificações email encomendas/visitantes~~ | ✅ Concluído | —              |
-| 2     | ~~MEL-02 — Pré-autorização de visitantes~~            | ✅ Concluído | —              |
-| 3     | ~~MEL-09 — PWA (push notifications)~~                 | ✅ Concluído | —              |
-| ~~4~~ | ~~MEL-03 — Manutenção preventiva~~                    | ~~Alta~~     | ~~Médio-alto~~ |
-| ~~5~~ | ~~MEL-05 — Documentos para download~~                 | ~~Média~~    | ~~Médio~~      |
-| ~~6~~ | ~~MEL-04 — Autorização de obras~~                     | ~~Média~~    | ~~Médio~~      |
-| 7     | ~~**MEL-12 — Controle de acesso por papel (RBAC)**~~  | ~~**Alta**~~ | ~~Médio~~      |
-| 8     | MEL-07 — Controle de estoque                          | Média        | Médio          |
-| 9     | MEL-06 — Mensagens individuais                        | Média        | Médio-alto     |
-| 10    | MEL-10 — Galeria de fotos                             | Baixa        | Baixo          |
-| 11    | MEL-08 — Boleto bancário integrado                    | Alta (valor) | Alto           |
-| 12    | MEL-11 — Assistente IA                                | Diferencial  | Médio          |
+| #  | Item                                             | Prioridade   | Esforco     |
+|----|--------------------------------------------------|--------------|-------------|
+| 1  | ~~MEL-01 - Notificacoes email encomendas/visitantes~~ | Concluido    | -           |
+| 2  | ~~MEL-02 - Pre-autorizacao de visitantes~~       | Concluido    | -           |
+| 3  | ~~MEL-09 - PWA~~                                 | Concluido    | -           |
+| 4  | ~~MEL-03 - Manutencao preventiva~~               | Concluido    | Medio-alto  |
+| 5  | ~~MEL-05 - Documentos para download~~            | Concluido    | Medio       |
+| 6  | MEL-04 - Autorizacao de obras                    | Media        | Medio       |
+| 7  | MEL-12 - Controle de acesso por papel (RBAC)     | Alta         | Medio       |
+| 8  | ~~MEL-07 - Controle de estoque~~                 | Concluido    | Medio       |
+| 9  | MEL-06 - Mensagens individuais                   | Media        | Medio-alto  |
+| 10 | MEL-10 - Galeria de fotos                        | Baixa        | Baixo       |
+| 11 | MEL-08 - Boleto bancario integrado               | Alta (valor) | Alto        |
+| 12 | MEL-11 - Assistente IA                           | Diferencial  | Medio       |

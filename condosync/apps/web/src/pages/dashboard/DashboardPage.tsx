@@ -1,19 +1,50 @@
-import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../../store/authStore';
-import { api } from '../../services/api';
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "../../store/authStore";
+import { api } from "../../services/api";
 import {
-  Users, Package, Wrench, DollarSign, AlertTriangle,
-  TrendingUp, Home, Shield, Calendar, ChevronRight,
-  Loader2, Building2, Video, HardHat, FileText
-} from 'lucide-react';
-import { formatCurrency, formatRelativeTime } from '../../lib/utils';
-import { Link } from 'react-router-dom';
+  Users,
+  Package,
+  Wrench,
+  DollarSign,
+  AlertTriangle,
+  TrendingUp,
+  Home,
+  Shield,
+  Calendar,
+  ChevronRight,
+  Loader2,
+  Building2,
+  Video,
+  HardHat,
+  FileText,
+} from "lucide-react";
+import { formatCurrency, formatRelativeTime } from "../../lib/utils";
+import { Link } from "react-router-dom";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend
-} from 'recharts';
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
-function StatCard({ title, value, subtitle, icon: Icon, color, trend, to }: {
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+  trend,
+  to,
+}: {
   title: string;
   value: string | number;
   subtitle?: string;
@@ -23,16 +54,23 @@ function StatCard({ title, value, subtitle, icon: Icon, color, trend, to }: {
   to?: string;
 }) {
   const content = (
-    <div className={`bg-white rounded-xl border p-5 hover:shadow-md transition-shadow ${to ? 'cursor-pointer' : ''}`}>
+    <div
+      className={`bg-white rounded-xl border p-5 hover:shadow-md transition-shadow ${to ? "cursor-pointer" : ""}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
           <p className="text-3xl font-bold mt-1">{value}</p>
-          {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          )}
           {trend && (
-            <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div
+              className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend.value >= 0 ? "text-green-600" : "text-red-600"}`}
+            >
               <TrendingUp className="w-3 h-3" />
-              {trend.value >= 0 ? '+' : ''}{trend.value}% {trend.label}
+              {trend.value >= 0 ? "+" : ""}
+              {trend.value}% {trend.label}
             </div>
           )}
         </div>
@@ -46,17 +84,33 @@ function StatCard({ title, value, subtitle, icon: Icon, color, trend, to }: {
   return to ? <Link to={to}>{content}</Link> : content;
 }
 
-function ResidentDashboard({ d, user, selectedCondominiumId }: { d: any; user: any; selectedCondominiumId: string | null }) {
+function ResidentDashboard({
+  d,
+  user,
+  selectedCondominiumId,
+}: {
+  d: any;
+  user: any;
+  selectedCondominiumId: string | null;
+}) {
   const condominium = user?.condominiumUsers?.find(
-    (cu: any) => cu.condominium.id === selectedCondominiumId
+    (cu: any) => cu.condominium.id === selectedCondominiumId,
   )?.condominium;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! 👋</h1>
+        <h1 className="text-2xl font-bold">
+          Olá, {user?.name.split(" ")[0]}! 👋
+        </h1>
         <p className="text-muted-foreground">
-          {condominium?.name} · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {condominium?.name} ·{" "}
+          {new Date().toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
         </p>
       </div>
 
@@ -90,18 +144,30 @@ function ResidentDashboard({ d, user, selectedCondominiumId }: { d: any; user: a
         <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700">Comunicados</h3>
-            <Link to="/comunicacao/avisos" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+            <Link
+              to="/comunicacao/avisos"
+              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+            >
               Ver todos <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="space-y-3 flex-1">
             {d?.recentAnnouncements?.length > 0 ? (
               d.recentAnnouncements.slice(0, 5).map((a: any) => (
-                <div key={a.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? 'bg-blue-500' : 'bg-gray-400'}`} />
+                <div
+                  key={a.id}
+                  className="flex gap-3 p-3 bg-gray-50 rounded-lg"
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? "bg-blue-500" : "bg-gray-400"}`}
+                  />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{formatRelativeTime(a.publishedAt)}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {a.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatRelativeTime(a.publishedAt)}
+                    </p>
                   </div>
                 </div>
               ))
@@ -118,12 +184,42 @@ function ResidentDashboard({ d, user, selectedCondominiumId }: { d: any; user: a
           <h3 className="font-semibold text-gray-700 mb-4">Acesso Rápido</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Pré-autorizar Visita', to: '/minha-portaria/visitantes', icon: Shield, color: 'text-purple-600 bg-purple-50' },
-              { label: 'Minhas Obras', to: '/minha-portaria/obras', icon: HardHat, color: 'text-orange-600 bg-orange-50' },
-              { label: 'Reservar Área', to: '/areas-comuns', icon: Calendar, color: 'text-teal-600 bg-teal-50' },
-              { label: 'Documentos', to: '/documentos', icon: FileText, color: 'text-blue-600 bg-blue-50' },
-              { label: 'Relatar Ocorrência', to: '/comunicacao/ocorrencias', icon: AlertTriangle, color: 'text-yellow-600 bg-yellow-50' },
-              { label: 'Achados e Perdidos', to: '/comunicacao/achados-e-perdidos', icon: Users, color: 'text-gray-600 bg-gray-50' },
+              {
+                label: "Pré-autorizar Visita",
+                to: "/minha-portaria/visitantes",
+                icon: Shield,
+                color: "text-purple-600 bg-purple-50",
+              },
+              {
+                label: "Minhas Obras",
+                to: "/minha-portaria/obras",
+                icon: HardHat,
+                color: "text-orange-600 bg-orange-50",
+              },
+              {
+                label: "Reservar Área",
+                to: "/areas-comuns",
+                icon: Calendar,
+                color: "text-teal-600 bg-teal-50",
+              },
+              {
+                label: "Documentos",
+                to: "/documentos",
+                icon: FileText,
+                color: "text-blue-600 bg-blue-50",
+              },
+              {
+                label: "Relatar Ocorrência",
+                to: "/comunicacao/ocorrencias",
+                icon: AlertTriangle,
+                color: "text-yellow-600 bg-yellow-50",
+              },
+              {
+                label: "Achados e Perdidos",
+                to: "/comunicacao/achados-e-perdidos",
+                icon: Users,
+                color: "text-gray-600 bg-gray-50",
+              },
             ].map((item) => (
               <Link
                 key={item.to}
@@ -145,7 +241,7 @@ export function DashboardPage() {
   const { selectedCondominiumId, user } = useAuthStore();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', selectedCondominiumId],
+    queryKey: ["dashboard", selectedCondominiumId],
     queryFn: async () => {
       const res = await api.get(`/dashboard/${selectedCondominiumId}`);
       return res.data.data;
@@ -155,7 +251,7 @@ export function DashboardPage() {
   });
 
   const condominium = user?.condominiumUsers?.find(
-    (cu) => cu.condominium.id === selectedCondominiumId
+    (cu) => cu.condominium.id === selectedCondominiumId,
   )?.condominium;
 
   if (!selectedCondominiumId) {
@@ -177,8 +273,14 @@ export function DashboardPage() {
 
   const d = data;
 
-  if (user?.role === 'RESIDENT') {
-    return <ResidentDashboard d={d} user={user} selectedCondominiumId={selectedCondominiumId} />;
+  if (user?.role === "RESIDENT") {
+    return (
+      <ResidentDashboard
+        d={d}
+        user={user}
+        selectedCondominiumId={selectedCondominiumId}
+      />
+    );
   }
 
   // Séries temporais do backend
@@ -187,8 +289,16 @@ export function DashboardPage() {
   const financeMonths = d?.financial?.financeStats || [];
 
   const maintenanceStatus = [
-    { name: 'Abertos', value: d?.maintenance?.openOrders || 0, color: '#3B82F6' },
-    { name: 'Urgentes', value: d?.maintenance?.urgentOrders || 0, color: '#EF4444' },
+    {
+      name: "Abertos",
+      value: d?.maintenance?.openOrders || 0,
+      color: "#3B82F6",
+    },
+    {
+      name: "Urgentes",
+      value: d?.maintenance?.urgentOrders || 0,
+      color: "#EF4444",
+    },
   ];
 
   return (
@@ -196,10 +306,16 @@ export function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">
-          Olá, {user?.name.split(' ')[0]}! 👋
+          Olá, {user?.name.split(" ")[0]}! 👋
         </h1>
         <p className="text-muted-foreground">
-          {condominium?.name} · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {condominium?.name} ·{" "}
+          {new Date().toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
         </p>
       </div>
 
@@ -272,18 +388,40 @@ export function DashboardPage() {
         {/* Visitantes por dia */}
         <div className="bg-white rounded-xl border p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Visitantes — Últimos 7 dias</h3>
-            <Link to="/portaria/visitantes" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+            <h3 className="font-semibold text-gray-700">
+              Visitantes — Últimos 7 dias
+            </h3>
+            <Link
+              to="/portaria/visitantes"
+              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+            >
               Ver detalhes <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={visitorsWeek}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f5f5f5"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "none",
+                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                }}
               />
               <Bar dataKey="visitantes" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -294,19 +432,49 @@ export function DashboardPage() {
         <div className="bg-white rounded-xl border p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700">Fluxo de Encomendas</h3>
-            <Link to="/portaria/encomendas" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+            <Link
+              to="/portaria/encomendas"
+              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+            >
               Gestão <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={parcelWeek}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f5f5f5"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
+              <Tooltip contentStyle={{ borderRadius: "8px", border: "none" }} />
               <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Line type="monotone" dataKey="recebidas" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="entregues" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              <Line
+                type="monotone"
+                dataKey="recebidas"
+                stroke="#F59E0B"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="entregues"
+                stroke="#10B981"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -317,20 +485,48 @@ export function DashboardPage() {
         {/* Saúde Financeira */}
         <div className="lg:col-span-2 bg-white rounded-xl border p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Saúde Financeira — Últimos 6 meses</h3>
-            <Link to="/financeiro" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+            <h3 className="font-semibold text-gray-700">
+              Saúde Financeira — Últimos 6 meses
+            </h3>
+            <Link
+              to="/financeiro"
+              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+            >
               Relatórios <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={financeMonths}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#f5f5f5"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#6B7280" }}
+              />
               <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Legend verticalAlign="top" height={36} />
-              <Bar dataKey="receitas" name="Receitas" fill="#10B981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="despesas" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="receitas"
+                name="Receitas"
+                fill="#10B981"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="despesas"
+                name="Despesas"
+                fill="#EF4444"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -339,18 +535,30 @@ export function DashboardPage() {
         <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-700">Comunicados</h3>
-            <Link to="/comunicacao/avisos" className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+            <Link
+              to="/comunicacao/avisos"
+              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+            >
               Ver todos <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="space-y-3 flex-1 overflow-auto">
             {d?.recentAnnouncements?.length > 0 ? (
               d.recentAnnouncements.map((a: any) => (
-                <div key={a.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-gray-400'}`} />
+                <div
+                  key={a.id}
+                  className="flex gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-gray-400"}`}
+                  />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{a.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{formatRelativeTime(a.publishedAt)}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {a.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatRelativeTime(a.publishedAt)}
+                    </p>
                   </div>
                 </div>
               ))
@@ -369,13 +577,48 @@ export function DashboardPage() {
         <h3 className="font-semibold mb-4">Acesso Rápido</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Registrar Visita', to: '/portaria/visitantes', icon: Shield, color: 'text-purple-600 bg-purple-50' },
-            { label: 'Registrar Encomenda', to: '/portaria/encomendas', icon: Package, color: 'text-orange-600 bg-orange-50' },
-            { label: 'Abrir Chamado', to: '/manutencao', icon: Wrench, color: 'text-red-600 bg-red-50' },
-            { label: 'Nova Cobrança', to: '/financeiro/cobranças', icon: DollarSign, color: 'text-green-600 bg-green-50' },
-            { label: 'Reservar Área', to: '/areas-comuns', icon: Calendar, color: 'text-teal-600 bg-teal-50' },
-            { label: 'Novo Comunicado', to: '/comunicacao/avisos', icon: Users, color: 'text-blue-600 bg-blue-50' },
-            { label: 'Assembleias', to: '/assembleias', icon: Video, color: 'text-indigo-600 bg-indigo-50' },
+            {
+              label: "Registrar Visita",
+              to: "/portaria/visitantes",
+              icon: Shield,
+              color: "text-purple-600 bg-purple-50",
+            },
+            {
+              label: "Registrar Encomenda",
+              to: "/portaria/encomendas",
+              icon: Package,
+              color: "text-orange-600 bg-orange-50",
+            },
+            {
+              label: "Abrir Chamado",
+              to: "/manutencao",
+              icon: Wrench,
+              color: "text-red-600 bg-red-50",
+            },
+            {
+              label: "Nova Cobrança",
+              to: "/financeiro/cobranças",
+              icon: DollarSign,
+              color: "text-green-600 bg-green-50",
+            },
+            {
+              label: "Reservar Área",
+              to: "/areas-comuns",
+              icon: Calendar,
+              color: "text-teal-600 bg-teal-50",
+            },
+            {
+              label: "Novo Comunicado",
+              to: "/comunicacao/avisos",
+              icon: Users,
+              color: "text-blue-600 bg-blue-50",
+            },
+            {
+              label: "Assembleias",
+              to: "/assembleias",
+              icon: Video,
+              color: "text-indigo-600 bg-indigo-50",
+            },
           ].map((item) => (
             <Link
               key={item.to}
@@ -383,7 +626,9 @@ export function DashboardPage() {
               className={`flex flex-col items-center gap-2 p-4 rounded-xl ${item.color} hover:opacity-80 transition-opacity text-center`}
             >
               <item.icon className="w-6 h-6" />
-              <span className="text-xs font-medium leading-tight">{item.label}</span>
+              <span className="text-xs font-medium leading-tight">
+                {item.label}
+              </span>
             </Link>
           ))}
         </div>

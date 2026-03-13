@@ -40,6 +40,7 @@ import petRoutes from "./modules/pets/pet.routes";
 import lostAndFoundRoutes from "./modules/lost-and-found/lost-and-found.routes";
 import documentRoutes from "./modules/documents/document.routes";
 import renovationRoutes from "./modules/renovations/renovation.routes";
+import stockRoutes from "./modules/stock/stock.routes";
 const app = express();
 const httpServer = createServer(app);
 
@@ -121,6 +122,7 @@ app.use(`${API}/pets`, petRoutes);
 app.use(`${API}/lost-and-found`, lostAndFoundRoutes);
 app.use(`${API}/documents`, documentRoutes);
 app.use(`${API}/renovations`, renovationRoutes);
+app.use(`${API}/stock`, stockRoutes);
 
 // ─── Error Handlers ───────────────────────────────────────────
 app.use(notFoundHandler);

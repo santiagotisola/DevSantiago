@@ -38,7 +38,7 @@ interface NavItem {
 }
 
 const STAFF_ROLES = ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"];
-const MGMT_ROLES  = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+const MGMT_ROLES = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -91,8 +91,14 @@ const navItems: NavItem[] = [
       { label: "Assembleias", to: "/assembleias", roles: MGMT_ROLES },
     ],
   },
-  { label: "Relatórios", to: "/relatorios", icon: BarChart3, roles: MGMT_ROLES },
+  {
+    label: "Relatórios",
+    to: "/relatorios",
+    icon: BarChart3,
+    roles: MGMT_ROLES,
+  },
   { label: "Documentos", to: "/documentos", icon: FileText },
+  { label: "Estoque", to: "/estoque", icon: Package, roles: MGMT_ROLES },
   {
     label: "Funcionários",
     to: "/funcionarios",
@@ -255,22 +261,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
                     {isExpanded && (
                       <div className="ml-7 mt-1 space-y-1">
-                        {item.children.filter((c) => !c.roles || c.roles.includes(user?.role ?? "")).map((child) => (
-                          <NavLink
-                            key={child.to}
-                            to={child.to}
-                            className={({ isActive }) =>
-                              cn(
-                                "block px-3 py-2 rounded-lg text-sm transition-colors",
-                                isActive
-                                  ? "bg-blue-600 text-white"
-                                  : "text-slate-400 hover:text-white hover:bg-slate-800",
-                              )
-                            }
-                          >
-                            {child.label}
-                          </NavLink>
-                        ))}
+                        {item.children
+                          .filter(
+                            (c) =>
+                              !c.roles || c.roles.includes(user?.role ?? ""),
+                          )
+                          .map((child) => (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              className={({ isActive }) =>
+                                cn(
+                                  "block px-3 py-2 rounded-lg text-sm transition-colors",
+                                  isActive
+                                    ? "bg-blue-600 text-white"
+                                    : "text-slate-400 hover:text-white hover:bg-slate-800",
+                                )
+                              }
+                            >
+                              {child.label}
+                            </NavLink>
+                          ))}
                       </div>
                     )}
                   </div>
