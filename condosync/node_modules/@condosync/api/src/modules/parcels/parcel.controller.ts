@@ -10,6 +10,10 @@ const registerSchema = z.object({
   trackingCode: z.string().optional(),
   photoUrl: z.string().url().optional(),
   storageLocation: z.string().optional(),
+  deliveryPersonName: z.string().optional(),
+  deliveryPersonDoc: z.string().optional(),
+  vehiclePlate: z.string().optional(),
+  hasPackageDamage: z.boolean().optional(),
   notes: z.string().optional(),
 });
 
@@ -28,6 +32,10 @@ const updateSchema = z.object({
   trackingCode: z.string().optional(),
   photoUrl: z.string().url().optional(),
   storageLocation: z.string().optional(),
+  deliveryPersonName: z.string().optional(),
+  deliveryPersonDoc: z.string().optional(),
+  vehiclePlate: z.string().optional(),
+  hasPackageDamage: z.boolean().optional(),
   notes: z.string().optional(),
 });
 

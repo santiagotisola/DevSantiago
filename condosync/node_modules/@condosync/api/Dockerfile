@@ -21,9 +21,12 @@ WORKDIR /app/apps/api
 RUN npx prisma generate
 
 # Compilar TypeScript → dist/
-# tsconfig.json já tem "noEmitOnError": false — emite JS mesmo com erros de tipo
-RUN npx tsc 2>&1 || true
-RUN test -f dist/server.js || (echo "ERRO: dist/server.js não foi gerado" && exit 1)
+# --noCheck (TS 5.5+) transpila sem checar tipos — sempre gera dist/
+RUN /app/node_modules/.bin/tsc --noCheck 2>&1 || true
+RUN test -f dist/server.js || /app/node_modules/.bin/tsc --noEmitOnError false 2>&1 || true
+# Debug: mostrar o que existe em dist/
+RUN ls dist/ 2>&1 || echo "dist/ vazio ou inexistente"
+RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:20-alpine AS production
