@@ -98,6 +98,26 @@ router.post('/transactions', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
   res.status(201).json({ success: true, data: { transaction } });
 });
 
+// Cobrança individual (com campos de pagamento)
+router.get('/charges/:id/detail', async (req: Request, res: Response) => {
+  const charge = await financeService.getChargeById(req.params.id);
+  if (!charge) return res.status(404).json({ success: false, message: 'Cobrança não encontrada' });
+  res.json({ success: true, data: { charge } });
+});
+
+// Sincronização manual com gateway
+router.post('/charges/:id/sync', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const charge = await financeService.forceSyncWithGateway(req.params.id);
+  res.json({ success: true, data: { charge } });
+});
+
+// Configurar gateway na conta financeira
+router.patch('/accounts/:accountId/gateway', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const { gatewayType, gatewayKey, gatewayConfig } = req.body;
+  const account = await financeService.configureGateway(req.params.accountId, { gatewayType, gatewayKey, gatewayConfig });
+  res.json({ success: true, data: { account } });
+});
+
 // Relatórios
 router.get('/balance/:condominiumId/yearly/:year', async (req: Request, res: Response) => {
   const data = await financeService.getMonthlyBalance(req.params.condominiumId, Number(req.params.year));

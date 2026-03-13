@@ -216,8 +216,56 @@ export class FinanceService {
     }
   }
 
-  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {
+  async getChargeById(chargeId: string) {
+    return prisma.charge.findUnique({
+      where: { id: chargeId },
+      include: {
+        unit: { select: { identifier: true, block: true, condominiumId: true } },
+        category: { select: { name: true } },
+      },
+    });
+  }
+
+  async forceSyncWithGateway(chargeId: string) {
+    const charge = await prisma.charge.findUnique({
+      where: { id: chargeId },
+      include: { account: true },
+    });
+    if (!charge) throw new AppError('Cobrança não encontrada', 404);
+    if (charge.status !== 'PENDING') throw new AppError('Apenas cobranças pendentes podem ser sincronizadas');
+    if (!charge.account.gatewayKey) throw new AppError('Conta financeira não possui gateway configurado');
+
+    const gateway = GatewayFactory.getService(charge.account.gatewayType);
+    if (!gateway) throw new AppError('Gateway não suportado');
+
+    const response = await gateway.createPayment(charge, { apiKey: charge.account.gatewayKey, config: charge.account.gatewayConfig });
     return prisma.charge.update({
+      where: { id: chargeId },
+      data: {
+        gatewayId: response.gatewayId,
+        gatewayStatus: response.gatewayStatus,
+        paymentLink: response.paymentLink,
+        pixQrCode: response.pixQrCode,
+        pixCopyPaste: response.pixCopyPaste,
+        boletoUrl: response.boletoUrl,
+        boletoCode: response.boletoCode,
+      },
+    });
+  }
+
+  async configureGateway(accountId: string, config: { gatewayType: string; gatewayKey: string; gatewayConfig?: any }) {
+    return prisma.financialAccount.update({
+      where: { id: accountId },
+      data: {
+        gatewayType: config.gatewayType as any,
+        gatewayKey: config.gatewayKey,
+        gatewayConfig: config.gatewayConfig ?? undefined,
+      },
+      select: { id: true, name: true, gatewayType: true },
+    });
+  }
+
+  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {    return prisma.charge.update({
       where: { id: chargeId },
       data: { status: ChargeStatus.PAID, paidAmount, paidAt: paidAt || new Date() },
     });

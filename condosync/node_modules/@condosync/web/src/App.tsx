@@ -38,6 +38,9 @@ import MinhasObrasPage from "./pages/minha-portaria/MinhasObrasPage";
 import ObrasAdminPage from "./pages/obras/ObrasAdminPage";
 import { DocumentsPage } from "./pages/documents/DocumentsPage";
 import StockPage from "./pages/stock/StockPage";
+import TicketsPage from "./pages/tickets/TicketsPage";
+import GalleryPage from "./pages/gallery/GalleryPage";
+import MyChargesPage from "./pages/finance/MyChargesPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -51,6 +54,13 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 const STAFF = ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"];
 const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+const COMMUNITY = [
+  "RESIDENT",
+  "DOORMAN",
+  "CONDOMINIUM_ADMIN",
+  "SYNDIC",
+  "SUPER_ADMIN",
+];
 
 function RoleGuard({
   children,
@@ -176,14 +186,39 @@ export default function App() {
           />
 
           {/* Áreas Comuns */}
-          <Route path="areas-comuns" element={<CommonAreasPage />} />
+          <Route
+            path="areas-comuns"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <CommonAreasPage />
+              </RoleGuard>
+            }
+          />
 
           {/* Comunicação */}
-          <Route path="comunicacao/avisos" element={<AnnouncementsPage />} />
-          <Route path="comunicacao/ocorrencias" element={<OccurrencesPage />} />
+          <Route
+            path="comunicacao/avisos"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <AnnouncementsPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="comunicacao/ocorrencias"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <OccurrencesPage />
+              </RoleGuard>
+            }
+          />
           <Route
             path="comunicacao/achados-e-perdidos"
-            element={<LostAndFoundPage />}
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <LostAndFoundPage />
+              </RoleGuard>
+            }
           />
           <Route
             path="assembleias"
@@ -277,7 +312,14 @@ export default function App() {
           />
 
           {/* Documentos */}
-          <Route path="documentos" element={<DocumentsPage />} />
+          <Route
+            path="documentos"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <DocumentsPage />
+              </RoleGuard>
+            }
+          />
 
           {/* Estoque */}
           <Route
@@ -285,6 +327,36 @@ export default function App() {
             element={
               <RoleGuard roles={MANAGEMENT}>
                 <StockPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Chamados */}
+          <Route
+            path="chamados"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <TicketsPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Galeria de Fotos */}
+          <Route
+            path="galeria"
+            element={
+              <RoleGuard roles={COMMUNITY}>
+                <GalleryPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Cobranças do morador */}
+          <Route
+            path="minhas-cobranças"
+            element={
+              <RoleGuard roles={["RESIDENT"]}>
+                <MyChargesPage />
               </RoleGuard>
             }
           />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Receipt, Plus, Search, Loader2, CheckCircle, Shuffle } from 'lucide-react';
+import { Receipt, Plus, Search, Loader2, CheckCircle, Shuffle, ExternalLink, Copy, QrCode, RefreshCw } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 
 const chargeStatusLabels: Record<string, { label: string; className: string }> = {
@@ -24,6 +24,7 @@ export function ChargesPage() {
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({ description: '', amount: '', dueDate: '', unitId: '' });
+  const [pixModal, setPixModal] = useState<{ qrCode: string; copyPaste: string } | null>(null);
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: charges, isLoading } = useQuery({
@@ -77,6 +78,11 @@ export function ChargesPage() {
     },
   });
 
+  const syncMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/finance/charges/${id}/sync`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['charges'] }),
+  });
+
   const filtered = ((charges || []) as any[]).filter((c: any) =>
     c.description?.toLowerCase().includes(search.toLowerCase()) || c.unit?.identifier?.includes(search)
   );
@@ -126,12 +132,14 @@ export function ChargesPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Valor</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Vencimento</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Pagamento</th>
                   {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.map((c: any) => {
                   const st = chargeStatusLabels[c.status] || chargeStatusLabels.PENDING;
+                  const hasGateway = !!(c.paymentLink || c.boletoUrl || c.pixCopyPaste);
                   return (
                     <tr key={c.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{c.description}</td>
@@ -139,6 +147,31 @@ export function ChargesPage() {
                       <td className="px-4 py-3 font-semibold">{formatCurrency(c.amount)}</td>
                       <td className="px-4 py-3 text-muted-foreground">{formatDate(c.dueDate)}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.className}`}>{st.label}</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          {c.paymentLink && (
+                            <a href={c.paymentLink} target="_blank" rel="noopener noreferrer" title="Link de pagamento" className="p-1.5 rounded hover:bg-blue-50 text-blue-600">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                          {c.boletoUrl && (
+                            <a href={c.boletoUrl} target="_blank" rel="noopener noreferrer" title="Boleto" className="p-1.5 rounded hover:bg-orange-50 text-orange-600">
+                              <Receipt className="w-4 h-4" />
+                            </a>
+                          )}
+                          {c.pixCopyPaste && (
+                            <button onClick={() => setPixModal({ qrCode: c.pixQrCode, copyPaste: c.pixCopyPaste })} title="PIX" className="p-1.5 rounded hover:bg-green-50 text-green-600">
+                              <QrCode className="w-4 h-4" />
+                            </button>
+                          )}
+                          {isAdmin && c.status === 'PENDING' && !hasGateway && (
+                            <button onClick={() => syncMutation.mutate(c.id)} disabled={syncMutation.isPending} title="Sincronizar com gateway" className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+                              <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                            </button>
+                          )}
+                          {!hasGateway && c.status === 'PENDING' && <span className="text-xs text-gray-400">—</span>}
+                        </div>
+                      </td>
                       {isAdmin && (
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -294,6 +327,36 @@ export function ChargesPage() {
                 {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal PIX */}
+      {pixModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Pagar via PIX</h2>
+            {pixModal.qrCode && (
+              <div className="flex justify-center">
+                <img src={`data:image/png;base64,${pixModal.qrCode}`} alt="QR Code PIX" className="w-48 h-48 border rounded-lg" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-600">Código PIX (copia e cola)</p>
+              <div className="flex gap-2">
+                <input readOnly value={pixModal.copyPaste} className="flex-1 px-3 py-2 border rounded-lg text-xs bg-gray-50 font-mono" />
+                <button
+                  onClick={() => navigator.clipboard.writeText(pixModal.copyPaste)}
+                  className="p-2 border rounded-lg hover:bg-gray-50"
+                  title="Copiar código PIX"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setPixModal(null)} className="w-full px-4 py-2 border rounded-lg text-sm">
+              Fechar
+            </button>
           </div>
         </div>
       )}
