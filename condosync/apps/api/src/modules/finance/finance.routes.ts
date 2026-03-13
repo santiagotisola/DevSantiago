@@ -28,8 +28,31 @@ const ratioSchema = z.object({
   description: z.string().min(3),
   totalAmount: z.number().positive(),
   dueDate: z.string().datetime(),
-  referenceMonth: z.string(),
+  referenceMonth: z.string().optional().default(''),
   method: z.enum(['equal', 'fraction']),
+});
+
+const ratioInstallmentsSchema = z.object({
+  condominiumId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  categoryId: z.string().uuid().optional(),
+  description: z.string().min(3),
+  totalAmount: z.number().positive(),
+  firstDueDate: z.string().datetime(),
+  installments: z.number().int().min(2).max(60),
+  intervalDays: z.number().int().min(7).max(90).default(30),
+  method: z.enum(['equal', 'fraction']),
+});
+
+const chargeInstallmentsSchema = z.object({
+  unitId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  categoryId: z.string().uuid().optional(),
+  description: z.string().min(3),
+  amount: z.number().positive(),
+  firstDueDate: z.string().datetime(),
+  installments: z.number().int().min(2).max(60),
+  intervalDays: z.number().int().min(7).max(90).default(30),
 });
 
 const paySchema = z.object({
@@ -95,9 +118,37 @@ router.post('/charges/ratio', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_AD
 });
 
 router.patch('/charges/:id/pay', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
-  const { paidAmount, paidAt } = validateRequest(paySchema, req.body);
-  const charge = await financeService.markAsPaid(req.params.id, paidAmount, paidAt ? new Date(paidAt) : undefined);
+  const body = req.body && typeof req.body.paidAmount === 'number' ? req.body : { paidAmount: 0 };
+  const charge = await financeService.markAsPaid(
+    req.params.id,
+    body.paidAmount || 0,
+    body.paidAt ? new Date(body.paidAt) : undefined
+  );
   res.json({ success: true, data: { charge } });
+});
+
+router.post('/charges/ratio/installments', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = validateRequest(ratioInstallmentsSchema, req.body);
+  const result = await financeService.ratioChargesInstallments(
+    { ...data, firstDueDate: new Date(data.firstDueDate) },
+    req.user!.userId
+  );
+  res.json({ success: true, data: result });
+});
+
+router.post('/charges/installments', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const data = validateRequest(chargeInstallmentsSchema, req.body);
+  const result = await financeService.createChargeInstallments(
+    { ...data, firstDueDate: new Date(data.firstDueDate) },
+    req.user!.userId
+  );
+  res.status(201).json({ success: true, data: result });
+});
+
+router.get('/charges/ratio/preview', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const { condominiumId, totalAmount, method } = req.query as { condominiumId: string; totalAmount: string; method: string };
+  const preview = await financeService.previewRatio(condominiumId, parseFloat(totalAmount), (method as 'equal' | 'fraction') || 'equal');
+  res.json({ success: true, data: { preview } });
 });
 
 router.delete('/charges/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
