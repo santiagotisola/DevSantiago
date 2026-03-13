@@ -1,38 +1,36 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using condosync_encomendas.src.models;
-using condosync_encomendas.src.repositories;
-using condosync_encomendas.src.interfaces;
+using condosync_encomendas.Models;
+using condosync_encomendas.Interfaces;
+using condosync_encomendas.Dtos;
 
-namespace condosync_encomendas.src.services
+namespace condosync_encomendas.Services
 {
     public class EncomendaService : IEncomendaService
     {
         private readonly IEncomendaRepository _encomendaRepository;
-        private readonly IMoradorRepository _moradorRepository;
 
-        public EncomendaService(IEncomendaRepository encomendaRepository, IMoradorRepository moradorRepository)
+        public EncomendaService(IEncomendaRepository encomendaRepository)
         {
             _encomendaRepository = encomendaRepository;
-            _moradorRepository = moradorRepository;
         }
 
-        public async Task<Encomenda> CriarEncomenda(RegistrarEncomendaDto registrarEncomendaDto)
+        public Task<Encomenda> CriarEncomenda(RegistrarEncomendaDto dto)
         {
             var encomenda = new Encomenda
             {
-                Descricao = registrarEncomendaDto.Descricao,
+                Descricao = dto.Descricao,
                 DataRegistro = DateTime.Now,
-                MoradorId = registrarEncomendaDto.MoradorId
+                MoradorId = dto.MoradorId
             };
-
-            await _encomendaRepository.Adicionar(encomenda);
-            return encomenda;
+            _encomendaRepository.Adicionar(encomenda);
+            return Task.FromResult(encomenda);
         }
 
-        public async Task<List<Encomenda>> ListarEncomendas()
+        public Task<List<Encomenda>> ListarEncomendas()
         {
-            return await _encomendaRepository.ObterTodos();
+            return Task.FromResult(_encomendaRepository.ObterTodas().ToList());
         }
     }
 }

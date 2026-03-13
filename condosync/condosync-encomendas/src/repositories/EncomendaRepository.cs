@@ -21,12 +21,12 @@ namespace condosync_encomendas.Repositories
             _context.SaveChanges();
         }
 
-        public List<Encomenda> ObterTodas()
+        public IEnumerable<Encomenda> ObterTodas()
         {
             return _context.Encomendas.ToList();
         }
 
-        public Encomenda ObterPorId(int id)
+        public Encomenda? ObterPorId(int id)
         {
             return _context.Encomendas.Find(id);
         }

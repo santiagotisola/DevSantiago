@@ -1,6 +1,9 @@
-public class Morador
+namespace condosync_encomendas.Models
 {
-    public int Id { get; set; }
-    public string Nome { get; set; }
-    public string Apartamento { get; set; }
+    public class Morador
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public string Apartamento { get; set; } = string.Empty;
+    }
 }

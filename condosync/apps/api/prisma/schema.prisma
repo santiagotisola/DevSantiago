@@ -402,22 +402,28 @@ model VehicleAccessLog {
 }
 
 model Parcel {
-  id              String       @id @default(uuid())
-  unit            Unit         @relation(fields: [unitId], references: [id])
-  unitId          String
-  senderName      String?
-  carrier         String?
-  trackingCode    String?
-  photoUrl        String?
-  storageLocation String?
-  status          ParcelStatus @default(RECEIVED)
-  receivedAt      DateTime     @default(now())
-  notifiedAt      DateTime?
-  pickedUpAt      DateTime?
-  pickedUpBy      String?      // nome de quem retirou
-  pickupSignature String?      // assinatura digital ou PIN
-  notes           String?
-  registeredBy    String?
+  id                  String       @id @default(uuid())
+  unit                Unit         @relation(fields: [unitId], references: [id])
+  unitId              String
+  senderName          String?
+  carrier             String?
+  trackingCode        String?
+  photoUrl            String?
+  storageLocation     String?
+  // Dados do entregador (Lei 11.442/07 + LGPD Art. 7º IX)
+  deliveryPersonName  String?      // Nome completo do entregador
+  deliveryPersonDoc   String?      // CPF ou RG (apenas números)
+  vehiclePlate        String?      // Placa do veículo (RNTRC/ANTT)
+  // Controle de avaria (Art. 754 Código Civil)
+  hasPackageDamage    Boolean      @default(false)
+  status              ParcelStatus @default(RECEIVED)
+  receivedAt          DateTime     @default(now())
+  notifiedAt          DateTime?
+  pickedUpAt          DateTime?
+  pickedUpBy          String?      // nome de quem retirou
+  pickupSignature     String?      // assinatura digital ou PIN
+  notes               String?
+  registeredBy        String?
 
   @@map("parcels")
 }

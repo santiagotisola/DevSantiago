@@ -20,7 +20,7 @@ namespace condosync_encomendas.Repositories
             return _context.Moradores.ToList();
         }
 
-        public Morador ObterPorId(int id)
+        public Morador? ObterPorId(int id)
         {
             return _context.Moradores.Find(id);
         }

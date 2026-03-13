@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X } from 'lucide-react';
+import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X, AlertTriangle, Truck, User, FileText } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: 'Recebida', color: 'bg-blue-100 text-blue-700' },
@@ -12,8 +12,16 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RETURNED: { label: 'Devolvida', color: 'bg-gray-100 text-gray-700' },
 };
 
-const emptyForm = { unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' };
-const emptyEditForm = { carrier: '', trackingCode: '', storageLocation: '', senderName: '', notes: '' };
+const emptyForm = {
+  unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '',
+  deliveryPersonName: '', deliveryPersonDoc: '', vehiclePlate: '',
+  hasPackageDamage: false, notes: '',
+};
+const emptyEditForm = {
+  carrier: '', trackingCode: '', storageLocation: '', senderName: '',
+  deliveryPersonName: '', deliveryPersonDoc: '', vehiclePlate: '',
+  hasPackageDamage: false, notes: '',
+};
 
 export function ParcelsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -158,6 +166,9 @@ export function ParcelsPage() {
                 <tr className="border-b bg-gray-50">
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Unidade</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Transportadora</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Entregador</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Placa</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Rastreio</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Local</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Recebido em</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
@@ -171,12 +182,25 @@ export function ParcelsPage() {
                       {p.unit?.block ? `${p.unit.block} - ` : ''}{p.unit?.identifier}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{p.carrier || '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <div>{p.deliveryPersonName || '—'}</div>
+                      {p.deliveryPersonDoc && <div className="text-xs text-gray-400">Doc: {p.deliveryPersonDoc}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{p.vehiclePlate || '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{p.trackingCode || '—'}</td>
                     <td className="px-4 py-3 text-muted-foreground">{p.storageLocation || '—'}</td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDateTime(p.receivedAt)}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[p.status]?.color}`}>
-                        {STATUS_LABELS[p.status]?.label}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[p.status]?.color}`}>
+                          {STATUS_LABELS[p.status]?.label}
+                        </span>
+                        {p.hasPackageDamage && (
+                          <span title="Avaria registrada" className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                            <AlertTriangle className="w-3 h-3" /> Avaria
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {canRegister && (
                       <td className="px-4 py-3 text-right">
@@ -192,7 +216,7 @@ export function ParcelsPage() {
                           )}
                           {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
                             <button
-                              onClick={() => { setEditTarget(p); setEditForm({ carrier: p.carrier || '', trackingCode: p.trackingCode || '', storageLocation: p.storageLocation || '', senderName: p.senderName || '', notes: p.notes || '' }); setEditModal(true); }}
+                              onClick={() => { setEditTarget(p); setEditForm({ carrier: p.carrier || '', trackingCode: p.trackingCode || '', storageLocation: p.storageLocation || '', senderName: p.senderName || '', deliveryPersonName: p.deliveryPersonName || '', deliveryPersonDoc: p.deliveryPersonDoc || '', vehiclePlate: p.vehiclePlate || '', hasPackageDamage: p.hasPackageDamage || false, notes: p.notes || '' }); setEditModal(true); }}
                               className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
                             >
                               <Pencil className="w-3 h-3" />
@@ -222,43 +246,121 @@ export function ParcelsPage() {
       {/* Modal de registro */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold">Registrar Encomenda</h2>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Unidade *</label>
-                <select
-                  value={form.unitId}
-                  onChange={(e) => setForm({ ...form, unitId: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecione a unidade...</option>
-                  {(unitsData || []).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.block ? `${u.block} - ` : ''}{u.identifier}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {[
-                { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
-                { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
-                { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },
-                { key: 'senderName', label: 'Remetente', placeholder: 'Nome do remetente' },
-              ].map((f) => (
-                <div key={f.key} className="space-y-1">
-                  <label className="text-sm font-medium">{f.label}</label>
-                  <input
-                    value={(form as any)[f.key]}
-                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={f.placeholder}
-                  />
-                </div>
-              ))}
+
+            {/* Destinatário */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Unidade destinatária *</label>
+              <select
+                value={form.unitId}
+                onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Selecione a unidade...</option>
+                {(unitsData || []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.block ? `${u.block} - ` : ''}{u.identifier}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Transportadora e Rastreio */}
+            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <Truck className="w-3 h-3" /> Dados da Transportadora
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Transportadora</label>
+                  <input value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="Correios, Mercado Envios..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Placa do Veículo</label>
+                  <input value={form.vehiclePlate} onChange={(e) => setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="ABC-1234" maxLength={8} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Código de Rastreio / NF</label>
+                <input value={form.trackingCode} onChange={(e) => setForm({ ...form, trackingCode: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="AA123456789BR ou nº da NF" />
+              </div>
+            </div>
+
+            {/* Entregador */}
+            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <User className="w-3 h-3" /> Identificação do Entregador
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1 col-span-2">
+                  <label className="text-sm font-medium">Nome do Entregador</label>
+                  <input value={form.deliveryPersonName} onChange={(e) => setForm({ ...form, deliveryPersonName: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="Nome completo" />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <label className="text-sm font-medium">Documento (CPF ou RG)</label>
+                  <input value={form.deliveryPersonDoc} onChange={(e) => setForm({ ...form, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="Somente números" maxLength={14} />
+                  <p className="text-xs text-gray-400">Coletado para segurança patrimonial (LGPD Art. 7º, IX)</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Armazenamento e Remetente */}
+            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                <FileText className="w-3 h-3" /> Armazenamento e Observações
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Local de Armazenamento</label>
+                  <input value={form.storageLocation} onChange={(e) => setForm({ ...form, storageLocation: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="Prateleira A-01" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Remetente</label>
+                  <input value={form.senderName} onChange={(e) => setForm({ ...form, senderName: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    placeholder="Nome do remetente" />
+                </div>
+              </div>
+              {/* Avaria */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
+                <input
+                  type="checkbox"
+                  id="hasPackageDamage"
+                  checked={form.hasPackageDamage}
+                  onChange={(e) => setForm({ ...form, hasPackageDamage: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-orange-500"
+                />
+                <label htmlFor="hasPackageDamage" className="text-sm cursor-pointer">
+                  <span className="font-medium text-orange-700 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com avaria visível
+                  </span>
+                  <span className="text-xs text-orange-600 block">Marque se houver danos na embalagem (Art. 754 Cód. Civil)</span>
+                </label>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Observações</label>
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"
+                  placeholder="Descrição da avaria, instruções especiais..." />
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={() => { setShowModal(false); setForm(emptyForm); }} className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
               <button
                 onClick={() => createMutation.mutate(form)}
                 disabled={createMutation.isPending || !form.unitId}
@@ -359,25 +461,72 @@ export function ParcelsPage() {
 
       {editModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold">Editar Encomenda</h2>
             <div className="space-y-3">
-              {[
-                { key: 'carrier', label: 'Transportadora', placeholder: 'Correios, Mercado Envios...' },
-                { key: 'trackingCode', label: 'Código de Rastreio', placeholder: 'AA123456789BR' },
-                { key: 'storageLocation', label: 'Local de Armazenamento', placeholder: 'Prateleira A-01' },
-                { key: 'senderName', label: 'Remetente', placeholder: 'Nome do remetente' },
-              ].map((f) => (
-                <div key={f.key} className="space-y-1">
-                  <label className="text-sm font-medium">{f.label}</label>
-                  <input
-                    value={(editForm as any)[f.key]}
-                    onChange={(e) => setEditForm({ ...editForm, [f.key]: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={f.placeholder}
-                  />
+              <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                  <Truck className="w-3 h-3" /> Transportadora
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Transportadora</label>
+                    <input value={editForm.carrier} onChange={(e) => setEditForm({ ...editForm, carrier: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="Correios, Mercado Envios..." />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Placa do Veículo</label>
+                    <input value={editForm.vehiclePlate} onChange={(e) => setEditForm({ ...editForm, vehiclePlate: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="ABC-1234" maxLength={8} />
+                  </div>
                 </div>
-              ))}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Código de Rastreio / NF</label>
+                    <input value={editForm.trackingCode} onChange={(e) => setEditForm({ ...editForm, trackingCode: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Local de Armazenamento</label>
+                    <input value={editForm.storageLocation} onChange={(e) => setEditForm({ ...editForm, storageLocation: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                  <User className="w-3 h-3" /> Entregador
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Nome do Entregador</label>
+                    <input value={editForm.deliveryPersonName} onChange={(e) => setEditForm({ ...editForm, deliveryPersonName: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Documento (CPF/RG)</label>
+                    <input value={editForm.deliveryPersonDoc} onChange={(e) => setEditForm({ ...editForm, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" maxLength={14} />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
+                <input type="checkbox" id="editHasDamage" checked={editForm.hasPackageDamage}
+                  onChange={(e) => setEditForm({ ...editForm, hasPackageDamage: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-orange-500" />
+                <label htmlFor="editHasDamage" className="text-sm cursor-pointer">
+                  <span className="font-medium text-orange-700 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com avaria visível
+                  </span>
+                </label>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Remetente</label>
+                <input value={editForm.senderName} onChange={(e) => setEditForm({ ...editForm, senderName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Observações</label>
                 <textarea

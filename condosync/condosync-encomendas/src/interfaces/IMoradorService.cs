@@ -1,8 +1,11 @@
-namespace CondosyncEncomendas.Interfaces
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using condosync_encomendas.Dtos;
+
+namespace condosync_encomendas.Interfaces
 {
     public interface IMoradorService
     {
-        IEnumerable<MoradorDto> ListarMoradores();
-        MoradorDto ObterMoradorPorId(int id);
+        Task<List<MoradorDto>> ListarMoradores();
     }
 }

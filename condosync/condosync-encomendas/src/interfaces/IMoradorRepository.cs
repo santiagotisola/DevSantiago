@@ -1,9 +1,11 @@
-namespace CondosyncEncomendas.Interfaces
+using condosync_encomendas.Models;
+
+namespace condosync_encomendas.Interfaces
 {
     public interface IMoradorRepository
     {
         IEnumerable<Morador> ObterTodos();
-        Morador ObterPorId(int id);
+        Morador? ObterPorId(int id);
         void Adicionar(Morador morador);
         void Atualizar(Morador morador);
         void Remover(int id);

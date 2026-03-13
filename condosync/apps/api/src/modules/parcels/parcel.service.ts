@@ -8,6 +8,10 @@ export interface RegisterParcelDTO {
   trackingCode?: string;
   photoUrl?: string;
   storageLocation?: string;
+  deliveryPersonName?: string;
+  deliveryPersonDoc?: string;
+  vehiclePlate?: string;
+  hasPackageDamage?: boolean;
   notes?: string;
 }
 

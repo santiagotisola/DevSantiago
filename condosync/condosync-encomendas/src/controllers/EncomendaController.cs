@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using condosync_encomendas.Models;
-using condosync_encomendas.Services;
+using condosync_encomendas.Interfaces;
 using condosync_encomendas.Dtos;
 
 namespace condosync_encomendas.Controllers
