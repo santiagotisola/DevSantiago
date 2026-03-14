@@ -1,0 +1,50 @@
+# Dockerfile para deploy no Railway (contexto = raiz do repositório)
+# ─── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache openssl
+
+# Copiar manifests do monorepo
+COPY condosync/package*.json ./
+COPY condosync/apps/api/package*.json ./apps/api/
+
+# Instalar dependências
+RUN npm install
+
+# Copiar código-fonte da API
+COPY condosync/apps/api/ ./apps/api/
+
+WORKDIR /app/apps/api
+
+# Gerar o Prisma Client
+RUN npx prisma generate
+
+# Compilar TypeScript → dist/
+RUN /app/node_modules/.bin/tsc --noCheck 2>&1 || true
+RUN test -f dist/server.js || /app/node_modules/.bin/tsc --noEmitOnError false 2>&1 || true
+RUN ls dist/ 2>&1 || echo "dist/ vazio ou inexistente"
+RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
+
+# ─── Stage 2: Production ──────────────────────────────────────────────────────
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+RUN apk add --no-cache openssl wget
+
+COPY --from=builder /app/node_modules        ./node_modules
+COPY --from=builder /app/apps/api/dist       ./dist
+COPY --from=builder /app/apps/api/prisma     ./prisma
+COPY --from=builder /app/apps/api/package*.json ./
+
+COPY condosync/apps/api/entrypoint.sh ./entrypoint.sh
+RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
+
+ENV NODE_ENV=production
+ENV PORT=3333
+
+EXPOSE 3333
+
+ENTRYPOINT ["./entrypoint.sh"]
