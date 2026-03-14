@@ -2,6 +2,10 @@
   "chat.tools.terminal.autoApprove": {
     "docker compose": true,
     "docker cp": true,
-    "Get-NetTCPConnection": true
+    "Get-NetTCPConnection": true,
+    "railway": true,
+    "git add": true,
+    "git commit": true,
+    "git push": true
   }
 }
