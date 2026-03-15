@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
@@ -23,7 +23,7 @@ function addDays(iso: string, days: number): string {
 }
 function toISODateTime(iso: string) { return `${iso}T00:00:00.000Z`; }
 
-// â”€â”€â”€ Modal genÃ©rico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Modal genérico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -248,10 +248,10 @@ export function ChargesPage() {
   return (
     <div className="space-y-6">
 
-      {/* CabeÃ§alho */}
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">CobranÃ§as</h1>
+          <h1 className="text-2xl font-bold">Cobranças</h1>
           <p className="text-muted-foreground">Boletos, taxas condominiais e parcelamentos</p>
         </div>
         {isAdmin && (
@@ -270,7 +270,7 @@ export function ChargesPage() {
             </button>
             <button onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium">
-              <Plus className="w-4 h-4" /> Nova CobranÃ§a
+              <Plus className="w-4 h-4" /> Nova Cobrança
             </button>
           </div>
         )}
@@ -280,7 +280,7 @@ export function ChargesPage() {
       <div className="flex gap-1 border-b">
         <button onClick={() => setTab('charges')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'charges' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-          <Receipt className="w-4 h-4" /> CobranÃ§as
+          <Receipt className="w-4 h-4" /> Cobranças
         </button>
         <button onClick={() => setTab('installments')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'installments' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -291,13 +291,13 @@ export function ChargesPage() {
         </button>
       </div>
 
-      {/* â”€â”€ Tab: CobranÃ§as â”€â”€ */}
+      {/* â”€â”€ Tab: Cobranças â”€â”€ */}
       {tab === 'charges' && (
         <>
           <div className="flex gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por descriÃ§Ã£o ou unidade..."
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por descrição ou unidade..."
                 className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -314,20 +314,20 @@ export function ChargesPage() {
               <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
             ) : charges.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground">
-                <Receipt className="w-10 h-10" /><p>Nenhuma cobranÃ§a encontrada</p>
+                <Receipt className="w-10 h-10" /><p>Nenhuma cobrança encontrada</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">DescriÃ§Ã£o</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Descrição</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">Unidade</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">Valor</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">Vencimento</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">Ref.</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                      {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">AÃ§Ãµes</th>}
+                      {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -367,7 +367,7 @@ export function ChargesPage() {
                                   </button>
                                 )}
                                 {c.status === 'PENDING' && (
-                                  <button onClick={() => window.confirm('Cancelar esta cobranÃ§a?') && cancelMut.mutate(c.id)}
+                                  <button onClick={() => window.confirm('Cancelar esta cobrança?') && cancelMut.mutate(c.id)}
                                     className="px-2 py-1 border border-red-200 text-red-600 rounded text-xs hover:bg-red-50">
                                     <X className="w-3 h-3" />
                                   </button>
@@ -433,7 +433,7 @@ export function ChargesPage() {
                           <th className="text-left px-4 py-2 font-medium text-gray-600">Valor</th>
                           <th className="text-left px-4 py-2 font-medium text-gray-600">Vencimento</th>
                           <th className="text-left px-4 py-2 font-medium text-gray-600">Status</th>
-                          {isAdmin && <th className="text-right px-4 py-2 font-medium text-gray-600">AÃ§Ãµes</th>}
+                          {isAdmin && <th className="text-right px-4 py-2 font-medium text-gray-600">Ações</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -481,11 +481,11 @@ export function ChargesPage() {
         </div>
       )}
 
-      {/* â•â• Modal: Nova CobranÃ§a â•â• */}
+      {/* â•â• Modal: Nova Cobrança â•â• */}
       {showCreate && (
-        <Modal title="Nova CobranÃ§a" onClose={() => setShowCreate(false)}>
+        <Modal title="Nova Cobrança" onClose={() => setShowCreate(false)}>
           <div className="space-y-3">
-            <InputField label="DescriÃ§Ã£o *" value={createForm.description} onChange={v => setCreateForm({ ...createForm, description: v })} />
+            <InputField label="Descrição *" value={createForm.description} onChange={v => setCreateForm({ ...createForm, description: v })} />
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Valor (R$) *" type="number" value={createForm.amount} onChange={v => setCreateForm({ ...createForm, amount: v })} />
               <InputField label="Vencimento *" type="date" value={createForm.dueDate} onChange={v => setCreateForm({ ...createForm, dueDate: v })} />
@@ -520,21 +520,21 @@ export function ChargesPage() {
 
       {/* â•â• Modal: Rateio Simples â•â• */}
       {showRatio && (
-        <Modal title="Rateio de CobranÃ§a" onClose={() => { setShowRatio(false); setRatioPreview(null); }}>
-          <p className="text-sm text-muted-foreground">O valor total serÃ¡ dividido entre <strong>todas as unidades</strong>.</p>
+        <Modal title="Rateio de Cobrança" onClose={() => { setShowRatio(false); setRatioPreview(null); }}>
+          <p className="text-sm text-muted-foreground">O valor total será dividido entre <strong>todas as unidades</strong>.</p>
           <div className="space-y-3">
-            <InputField label="DescriÃ§Ã£o *" value={ratioForm.description} onChange={v => setRatioForm({ ...ratioForm, description: v })} />
+            <InputField label="Descrição *" value={ratioForm.description} onChange={v => setRatioForm({ ...ratioForm, description: v })} />
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Valor Total (R$) *" type="number" value={ratioForm.totalAmount} onChange={v => setRatioForm({ ...ratioForm, totalAmount: v })} />
               <InputField label="Vencimento *" type="date" value={ratioForm.dueDate} onChange={v => setRatioForm({ ...ratioForm, dueDate: v })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium">MÃ©todo de DivisÃ£o</label>
+                <label className="text-sm font-medium">Método de Divisão</label>
                 <select value={ratioForm.method} onChange={e => setRatioForm({ ...ratioForm, method: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="equal">IgualitÃ¡rio</option>
-                  <option value="fraction">Por fraÃ§Ã£o ideal</option>
+                  <option value="equal">Igualitário</option>
+                  <option value="fraction">Por fração ideal</option>
                 </select>
               </div>
               <div className="space-y-1">
@@ -548,7 +548,7 @@ export function ChargesPage() {
             </div>
             <button onClick={() => setRatioPreview(buildRatioPreview())}
               className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-              <Eye className="w-4 h-4" /> Visualizar divisÃ£o por unidade
+              <Eye className="w-4 h-4" /> Visualizar divisão por unidade
             </button>
             {ratioPreview && (
               <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
@@ -577,10 +577,10 @@ export function ChargesPage() {
       {/* â•â• Modal: Rateio Parcelado â•â• */}
       {showRatioInstall && (
         <Modal title="Rateio Parcelado" onClose={() => { setShowRatioInstall(false); setInstallPreview(null); }}>
-          <p className="text-sm text-muted-foreground">Cria <strong>N parcelas</strong> de rateio para todas as unidades, com datas espaÃ§adas.</p>
+          <p className="text-sm text-muted-foreground">Cria <strong>N parcelas</strong> de rateio para todas as unidades, com datas espaçadas.</p>
           <div className="space-y-3">
-            <InputField label="DescriÃ§Ã£o base *" value={installForm.description}
-              onChange={v => setInstallForm({ ...installForm, description: v })} placeholder="Ex: Taxa Extra ManutenÃ§Ã£o" />
+            <InputField label="Descrição base *" value={installForm.description}
+              onChange={v => setInstallForm({ ...installForm, description: v })} placeholder="Ex: Taxa Extra Manutenção" />
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Valor total por parcela (R$) *" type="number" value={installForm.totalAmount}
                 onChange={v => setInstallForm({ ...installForm, totalAmount: v })} />
@@ -601,11 +601,11 @@ export function ChargesPage() {
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">DivisÃ£o</label>
+                <label className="text-sm font-medium">Divisão</label>
                 <select value={installForm.method} onChange={e => setInstallForm({ ...installForm, method: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="equal">IgualitÃ¡rio</option>
-                  <option value="fraction">Por fraÃ§Ã£o</option>
+                  <option value="equal">Igualitário</option>
+                  <option value="fraction">Por fração</option>
                 </select>
               </div>
             </div>
@@ -624,7 +624,7 @@ export function ChargesPage() {
             </button>
             {installPreview && (
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">CalendÃ¡rio de vencimentos</div>
+                <div className="bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">Calendário de vencimentos</div>
                 <div className="divide-y max-h-40 overflow-y-auto">
                   {installPreview.map(p => (
                     <div key={p.installment} className="flex items-center gap-3 px-3 py-2.5">
@@ -651,9 +651,9 @@ export function ChargesPage() {
       {/* â•â• Modal: Parcelas por Unidade â•â• */}
       {showChargeInstall && (
         <Modal title="Parcelas por Unidade" onClose={() => setShowChargeInstall(false)}>
-          <p className="text-sm text-muted-foreground">Gera cobranÃ§as parceladas para uma unidade especÃ­fica.</p>
+          <p className="text-sm text-muted-foreground">Gera cobranças parceladas para uma unidade específica.</p>
           <div className="space-y-3">
-            <InputField label="DescriÃ§Ã£o base *" value={chargeInstallForm.description}
+            <InputField label="Descrição base *" value={chargeInstallForm.description}
               onChange={v => setChargeInstallForm({ ...chargeInstallForm, description: v })} />
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Valor por Parcela (R$) *" type="number" value={chargeInstallForm.amount}
@@ -694,7 +694,7 @@ export function ChargesPage() {
             </div>
             {chargeInstallForm.description && chargeInstallForm.firstDueDate && parseInt(chargeInstallForm.installments) >= 2 && (
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">PrÃ©via do agendamento</div>
+                <div className="bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">Prévia do agendamento</div>
                 <div className="divide-y max-h-40 overflow-y-auto">
                   {buildInstallPreview(chargeInstallForm.description, chargeInstallForm.firstDueDate, chargeInstallForm.installments, chargeInstallForm.intervalDays).map(p => (
                     <div key={p.installment} className="flex items-center gap-3 px-3 py-2">
@@ -725,7 +725,7 @@ export function ChargesPage() {
       {showPay && (
         <Modal title="Confirmar Pagamento" onClose={() => setShowPay(null)}>
           <div className="p-3 bg-gray-50 rounded-lg space-y-1 text-sm">
-            <div><span className="text-gray-500">DescriÃ§Ã£o:</span> <span className="font-medium">{showPay.description}</span></div>
+            <div><span className="text-gray-500">Descrição:</span> <span className="font-medium">{showPay.description}</span></div>
             <div><span className="text-gray-500">Unidade:</span> <span>{showPay.unit?.identifier || 'â€”'}</span></div>
             <div><span className="text-gray-500">Vencimento:</span> <span>{formatDate(showPay.dueDate)}</span></div>
           </div>
@@ -741,11 +741,11 @@ export function ChargesPage() {
         </Modal>
       )}
 
-      {/* â•â• Modal: Editar CobranÃ§a â•â• */}
+      {/* â•â• Modal: Editar Cobrança â•â• */}
       {showEdit && (
-        <Modal title="Editar CobranÃ§a" onClose={() => setShowEdit(null)}>
+        <Modal title="Editar Cobrança" onClose={() => setShowEdit(null)}>
           <div className="space-y-3">
-            <InputField label="DescriÃ§Ã£o *" value={editForm.description} onChange={v => setEditForm({ ...editForm, description: v })} />
+            <InputField label="Descrição *" value={editForm.description} onChange={v => setEditForm({ ...editForm, description: v })} />
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Valor (R$) *" type="number" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} />
               <InputField label="Vencimento *" type="date" value={editForm.dueDate} onChange={v => setEditForm({ ...editForm, dueDate: v })} />

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
@@ -29,19 +29,19 @@ const statusLabels: Record<
     className: "bg-blue-100 text-blue-700",
     next: "COMPLETED",
   },
-  COMPLETED: { label: "ConcluÃ­do", className: "bg-green-100 text-green-700" },
+  COMPLETED: { label: "Concluído", className: "bg-green-100 text-green-700" },
   CANCELED: { label: "Cancelado", className: "bg-gray-100 text-gray-500" },
 };
 
 const priorityLabels: Record<string, { label: string; className: string }> = {
   LOW: { label: "Baixa", className: "bg-gray-100 text-gray-600" },
-  MEDIUM: { label: "MÃ©dia", className: "bg-blue-100 text-blue-700" },
+  MEDIUM: { label: "Média", className: "bg-blue-100 text-blue-700" },
   HIGH: { label: "Alta", className: "bg-orange-100 text-orange-700" },
   URGENT: { label: "Urgente", className: "bg-red-100 text-red-700" },
 };
 
 const FREQUENCIES = [
-  "diÃ¡rio",
+  "diário",
   "semanal",
   "quinzenal",
   "mensal",
@@ -245,9 +245,9 @@ export function MaintenancePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">ManutenÃ§Ã£o</h1>
+          <h1 className="text-2xl font-bold">Manutenção</h1>
           <p className="text-muted-foreground">
-            Ordens de serviÃ§o e manutenÃ§Ãµes preventivas
+            Ordens de serviço e manutenções preventivas
           </p>
         </div>
         {tab === "os" && (
@@ -274,7 +274,7 @@ export function MaintenancePage() {
           onClick={() => setTab("os")}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${tab === "os" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
         >
-          <Wrench className="w-4 h-4" /> Ordens de ServiÃ§o
+          <Wrench className="w-4 h-4" /> Ordens de Serviço
         </button>
         <button
           onClick={() => setTab("preventiva")}
@@ -285,7 +285,7 @@ export function MaintenancePage() {
       </div>
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      {/* TAB: Ordens de ServiÃ§o */}
+      {/* TAB: Ordens de Serviço */}
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {tab === "os" && (
         <>
@@ -351,7 +351,7 @@ export function MaintenancePage() {
                           )}
                           {(o.assignedTo || o.serviceProvider?.name) && (
                             <span>
-                              ResponsÃ¡vel:{" "}
+                              Responsável:{" "}
                               {o.serviceProvider?.name || o.assignedTo}
                             </span>
                           )}
@@ -375,7 +375,7 @@ export function MaintenancePage() {
                                 }
                                 className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
                               >
-                                AvanÃ§ar Status
+                                Avançar Status
                               </button>
                             )}
                             {o.status !== "CANCELED" &&
@@ -401,7 +401,7 @@ export function MaintenancePage() {
                                 onClick={() => {
                                   if (
                                     window.confirm(
-                                      "Cancelar esta ordem de serviÃ§o?",
+                                      "Cancelar esta ordem de serviço?",
                                     )
                                   )
                                     updateStatusMutation.mutate({
@@ -438,7 +438,7 @@ export function MaintenancePage() {
           ) : !schedules || schedules.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
               <CalendarCheck className="w-10 h-10" />
-              <p>Nenhuma manutenÃ§Ã£o preventiva cadastrada</p>
+              <p>Nenhuma manutenção preventiva cadastrada</p>
               {isAdmin && (
                 <button
                   onClick={() => setScheduleModal(true)}
@@ -479,9 +479,9 @@ export function MaintenancePage() {
                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                           {s.category && <span>Categoria: {s.category}</span>}
                           {s.location && <span>Local: {s.location}</span>}
-                          <span>PrÃ³xima: {formatDate(s.nextDueDate)}</span>
+                          <span>Próxima: {formatDate(s.nextDueDate)}</span>
                           {s.lastDoneDate && (
-                            <span>Ãšltima: {formatDate(s.lastDoneDate)}</span>
+                            <span>Última: {formatDate(s.lastDoneDate)}</span>
                           )}
                           {s.estimatedCost && (
                             <span>
@@ -497,7 +497,7 @@ export function MaintenancePage() {
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  "Marcar esta manutenÃ§Ã£o como realizada? A prÃ³xima data serÃ¡ recalculada automaticamente.",
+                                  "Marcar esta manutenção como realizada? A próxima data será recalculada automaticamente.",
                                 )
                               )
                                 markDoneMutation.mutate(s.id);
@@ -537,7 +537,7 @@ export function MaintenancePage() {
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  "Remover esta manutenÃ§Ã£o preventiva?",
+                                  "Remover esta manutenção preventiva?",
                                 )
                               )
                                 deleteScheduleMutation.mutate(s.id);
@@ -561,10 +561,10 @@ export function MaintenancePage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Nova Ordem de ServiÃ§o</h2>
+            <h2 className="text-lg font-semibold">Nova Ordem de Serviço</h2>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium">TÃ­tulo *</label>
+                <label className="text-sm font-medium">Título *</label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -572,7 +572,7 @@ export function MaintenancePage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">DescriÃ§Ã£o</label>
+                <label className="text-sm font-medium">Descrição</label>
                 <textarea
                   value={form.description}
                   onChange={(e) =>
@@ -607,7 +607,7 @@ export function MaintenancePage() {
                       setForm({ ...form, category: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: ElÃ©trico"
+                    placeholder="Ex: Elétrico"
                   />
                 </div>
               </div>
@@ -635,10 +635,10 @@ export function MaintenancePage() {
       {editModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Editar Ordem de ServiÃ§o</h2>
+            <h2 className="text-lg font-semibold">Editar Ordem de Serviço</h2>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium">TÃ­tulo *</label>
+                <label className="text-sm font-medium">Título *</label>
                 <input
                   value={editForm.title}
                   onChange={(e) =>
@@ -648,7 +648,7 @@ export function MaintenancePage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">DescriÃ§Ã£o</label>
+                <label className="text-sm font-medium">Descrição</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) =>
@@ -683,7 +683,7 @@ export function MaintenancePage() {
                       setEditForm({ ...editForm, category: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: ElÃ©trico"
+                    placeholder="Ex: Elétrico"
                   />
                 </div>
               </div>
@@ -717,7 +717,7 @@ export function MaintenancePage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold">
-              Nova ManutenÃ§Ã£o Preventiva
+              Nova Manutenção Preventiva
             </h2>
             <ScheduleForm form={scheduleForm} setForm={setScheduleForm} />
             <div className="flex gap-3">
@@ -753,7 +753,7 @@ export function MaintenancePage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold">
-              Editar ManutenÃ§Ã£o Preventiva
+              Editar Manutenção Preventiva
             </h2>
             <ScheduleForm
               form={editScheduleForm}
@@ -806,16 +806,16 @@ function ScheduleForm({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <label className="text-sm font-medium">TÃ­tulo *</label>
+        <label className="text-sm font-medium">Título *</label>
         <input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Ex: RevisÃ£o bomba d'Ã¡gua"
+          placeholder="Ex: Revisão bomba d'água"
         />
       </div>
       <div className="space-y-1">
-        <label className="text-sm font-medium">DescriÃ§Ã£o</label>
+        <label className="text-sm font-medium">Descrição</label>
         <textarea
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -830,7 +830,7 @@ function ScheduleForm({
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ex: HidrÃ¡ulica"
+            placeholder="Ex: Hidráulica"
           />
         </div>
         <div className="space-y-1">
@@ -839,13 +839,13 @@ function ScheduleForm({
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Ex: Casa de mÃ¡quinas"
+            placeholder="Ex: Casa de máquinas"
           />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-sm font-medium">FrequÃªncia *</label>
+          <label className="text-sm font-medium">Frequência *</label>
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -859,7 +859,7 @@ function ScheduleForm({
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium">PrÃ³xima data *</label>
+          <label className="text-sm font-medium">Próxima data *</label>
           <input
             type="datetime-local"
             value={form.nextDueDate}

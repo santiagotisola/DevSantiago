@@ -123,8 +123,8 @@ export class VisitorService {
       await NotificationService.enqueue({
         userId: actor.userId,
         type: "VISITOR",
-        title: "Visitante prÃ©-autorizado",
-        message: `${data.name} foi prÃ©-autorizado para sua unidade`,
+        title: "Visitante pré-autorizado",
+        message: `${data.name} foi pré-autorizado para sua unidade`,
         data: { visitorId: visitor.id },
         channels: ["inapp", "email"],
       });
@@ -143,7 +143,7 @@ export class VisitorService {
     });
 
     if (visitor.status === VisitorStatus.INSIDE) {
-      throw new ForbiddenError("Visitante jÃ¡ estÃ¡ dentro do condomÃ­nio");
+      throw new ForbiddenError("Visitante já está dentro do condomínio");
     }
 
     const updated = await prisma.visitor.update({
@@ -167,7 +167,7 @@ export class VisitorService {
           userId: u.userId,
           type: "VISITOR",
           title: "Visitante chegou",
-          message: `${visitor.name} entrou no condomÃ­nio`,
+          message: `${visitor.name} entrou no condomínio`,
           data: { visitorId: visitor.id },
           channels: ["inapp", "email"],
         }),
@@ -201,7 +201,7 @@ export class VisitorService {
       visitor.status === VisitorStatus.LEFT
     ) {
       throw new ForbiddenError(
-        "NÃ£o Ã© possÃ­vel alterar um visitante que jÃ¡ entrou ou saiu",
+        "Não é possível alterar um visitante que já entrou ou saiu",
       );
     }
 
@@ -247,7 +247,7 @@ export class VisitorService {
       visitor.status === VisitorStatus.LEFT
     ) {
       throw new ForbiddenError(
-        "NÃ£o Ã© possÃ­vel editar um visitante que jÃ¡ entrou ou saiu",
+        "Não é possível editar um visitante que já entrou ou saiu",
       );
     }
     return prisma.visitor.update({ where: { id }, data });
