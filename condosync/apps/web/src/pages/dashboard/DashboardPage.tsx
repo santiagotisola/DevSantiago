@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Image,
   Video,
+  Briefcase,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
@@ -651,6 +652,12 @@ export function DashboardPage() {
               to: "/assembleias",
               icon: Video,
               color: "text-indigo-600 bg-indigo-50",
+            },
+            {
+              label: "Prestadores",
+              to: "/prestadores",
+              icon: Briefcase,
+              color: "text-amber-600 bg-amber-50",
             },
           ].map((item) => (
             <Link

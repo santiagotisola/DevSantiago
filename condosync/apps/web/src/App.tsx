@@ -41,6 +41,8 @@ import StockPage from "./pages/stock/StockPage";
 import TicketsPage from "./pages/tickets/TicketsPage";
 import GalleryPage from "./pages/gallery/GalleryPage";
 import MyChargesPage from "./pages/finance/MyChargesPage";
+import MarketplaceAdminPage from "./pages/marketplace/MarketplaceAdminPage";
+import LandingPage from "./pages/landing/LandingPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -80,6 +82,9 @@ export default function App() {
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
       <Routes>
+        {/* Landing page */}
+        <Route path="/home" element={<LandingPage />} />
+
         {/* Rotas públicas */}
         <Route
           path="/login"
@@ -357,6 +362,16 @@ export default function App() {
             element={
               <RoleGuard roles={["RESIDENT"]}>
                 <MyChargesPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Marketplace */}
+          <Route
+            path="marketplace"
+            element={
+              <RoleGuard roles={["SUPER_ADMIN"]}>
+                <MarketplaceAdminPage />
               </RoleGuard>
             }
           />

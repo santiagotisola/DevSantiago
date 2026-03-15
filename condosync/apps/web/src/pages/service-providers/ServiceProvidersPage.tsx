@@ -21,13 +21,37 @@ export function ServiceProvidersPage() {
     enabled: !!selectedCondominiumId,
   });
 
+  const maskCnpjCpf = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 11) {
+      return digits
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    return digits
+      .slice(0, 14)
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  };
+
+  const sanitize = (d: typeof form) => ({
+    name: d.name,
+    serviceType: d.serviceType,
+    phone: d.phone || undefined,
+    email: d.email || undefined,
+    cnpj: d.cnpj || undefined,
+  });
+
   const createMutation = useMutation({
-    mutationFn: (d: typeof form) => api.post('/service-providers', { ...d, condominiumId: selectedCondominiumId }),
+    mutationFn: (d: typeof form) => api.post('/service-providers', { ...sanitize(d), condominiumId: selectedCondominiumId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-providers'] }); setShowModal(false); setForm({ name: '', serviceType: '', email: '', phone: '', cnpj: '' }); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (d: typeof editForm) => api.put(`/service-providers/${editTarget?.id}`, d),
+    mutationFn: (d: typeof editForm) => api.put(`/service-providers/${editTarget?.id}`, sanitize(d)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-providers'] });
       setEditModal(false);
@@ -135,12 +159,22 @@ export function ServiceProvidersPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Novo Prestador de Serviço</h2>
             <div className="space-y-3">
-              {[['Nome/Empresa *', 'name'], ['Tipo de Serviço *', 'serviceType'], ['E-mail', 'email'], ['Telefone', 'phone'], ['CNPJ', 'cnpj']].map(([label, key]) => (
+              {[['Nome/Empresa *', 'name'], ['Tipo de Serviço *', 'serviceType'], ['E-mail', 'email'], ['Telefone', 'phone']].map(([label, key]) => (
                 <div key={key} className="space-y-1">
                   <label className="text-sm font-medium">{label}</label>
                   <input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">CNPJ/CPF</label>
+                <input
+                  value={form.cnpj}
+                  onChange={(e) => setForm({ ...form, cnpj: maskCnpjCpf(e.target.value) })}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  maxLength={18}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
@@ -155,7 +189,7 @@ export function ServiceProvidersPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Editar Prestador de Serviço</h2>
             <div className="space-y-3">
-              {[['Nome/Empresa *', 'name'], ['Tipo de Serviço *', 'serviceType'], ['E-mail', 'email'], ['Telefone', 'phone'], ['CNPJ', 'cnpj']].map(([label, key]) => (
+              {[['Nome/Empresa *', 'name'], ['Tipo de Serviço *', 'serviceType'], ['E-mail', 'email'], ['Telefone', 'phone']].map(([label, key]) => (
                 <div key={key} className="space-y-1">
                   <label className="text-sm font-medium">{label}</label>
                   <input
@@ -165,6 +199,16 @@ export function ServiceProvidersPage() {
                   />
                 </div>
               ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">CNPJ/CPF</label>
+                <input
+                  value={editForm.cnpj}
+                  onChange={(e) => setEditForm({ ...editForm, cnpj: maskCnpjCpf(e.target.value) })}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                  maxLength={18}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>

@@ -20,6 +20,13 @@ import {
   ChevronDown,
   Building2,
   X,
+  PawPrint,
+  FileText,
+  Ticket,
+  Image,
+  Vote,
+  PackageSearch,
+  HardHat,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
@@ -41,10 +48,12 @@ const navItems: NavItem[] = [
       { label: 'Visitantes', to: '/portaria/visitantes' },
       { label: 'Encomendas', to: '/portaria/encomendas' },
       { label: 'Veículos', to: '/portaria/veiculos' },
+      { label: 'Prestadores', to: '/prestadores' },
     ],
   },
-  { label: 'Unidades', to: '/unidades', icon: Home },
-  { label: 'Moradores', to: '/moradores', icon: Users },
+  { label: 'Unidades', to: '/unidades', icon: Home, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
+  { label: 'Moradores', to: '/moradores', icon: Users, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
+  { label: 'Pets', to: '/pets', icon: PawPrint, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
   {
     label: 'Financeiro',
     icon: DollarSign,
@@ -61,12 +70,19 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Avisos', to: '/comunicacao/avisos' },
       { label: 'Ocorrências', to: '/comunicacao/ocorrencias' },
+      { label: 'Achados e Perdidos', to: '/comunicacao/achados-e-perdidos' },
+      { label: 'Assembleias', to: '/assembleias' },
     ],
   },
-  { label: 'Relatórios', to: '/relatorios', icon: BarChart3 },
+  { label: 'Documentos', to: '/documentos', icon: FileText },
+  { label: 'Chamados', to: '/chamados', icon: Ticket },
+  { label: 'Galeria', to: '/galeria', icon: Image },
+  { label: 'Estoque', to: '/estoque', icon: Package, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
+  { label: 'Obras', to: '/obras', icon: HardHat, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
+  { label: 'Relatórios', to: '/relatorios', icon: BarChart3, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
   { label: 'Funcionários', to: '/funcionarios', icon: UserCog, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
-  { label: 'Prestadores', to: '/prestadores', icon: Building, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
   { label: 'Condomínios', to: '/admin/condominios', icon: Building2, roles: ['SUPER_ADMIN'] },
+  { label: 'Marketplace', to: '/marketplace', icon: Building, roles: ['SUPER_ADMIN'] },
 ];
 
 interface SidebarProps {
