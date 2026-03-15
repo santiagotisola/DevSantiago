@@ -131,6 +131,42 @@ router.post(
   },
 );
 
+router.patch(
+  "/:id",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const schema = z.object({
+      name: z.string().min(2).optional(),
+      description: z.string().optional(),
+      capacity: z.number().int().positive().optional(),
+      rules: z.string().optional(),
+      requiresApproval: z.boolean().optional(),
+      maxDaysAdvance: z.number().int().min(1).max(90).optional(),
+      openTime: z.string().optional(),
+      closeTime: z.string().optional(),
+      isAvailable: z.boolean().optional(),
+    });
+    const data = validateRequest(schema, req.body);
+    const area = await prisma.commonArea.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json({ success: true, data: { area } });
+  },
+);
+
+router.delete(
+  "/:id",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    await prisma.commonArea.update({
+      where: { id: req.params.id },
+      data: { isActive: false },
+    });
+    res.json({ success: true });
+  },
+);
+
 router.get("/:areaId/reservations", async (req: Request, res: Response) => {
   const { startDate, endDate } = req.query;
   const area = await prisma.commonArea.findUniqueOrThrow({
@@ -225,28 +261,36 @@ router.patch(
   },
 );
 
-router.patch("/reservations/:id/cancel", async (req: Request, res: Response) => {
-  await ensureReservationAccess(req, req.params.id, { residentOwnOnly: true });
-  const reservation = await prisma.reservation.update({
-    where: { id: req.params.id },
-    data: {
-      status: "CANCELED",
-      canceledBy: req.user!.userId,
-      cancelReason: req.body.reason,
-    },
-  });
-  res.json({ success: true, data: { reservation } });
-});
+router.patch(
+  "/reservations/:id/cancel",
+  async (req: Request, res: Response) => {
+    await ensureReservationAccess(req, req.params.id, {
+      residentOwnOnly: true,
+    });
+    const reservation = await prisma.reservation.update({
+      where: { id: req.params.id },
+      data: {
+        status: "CANCELED",
+        canceledBy: req.user!.userId,
+        cancelReason: req.body.reason,
+      },
+    });
+    res.json({ success: true, data: { reservation } });
+  },
+);
 
-router.get("/reservations/unit/:unitId", async (req: Request, res: Response) => {
-  await ensureUnitAccess(req, req.params.unitId);
-  const reservations = await prisma.reservation.findMany({
-    where: { unitId: req.params.unitId },
-    include: { commonArea: { select: { name: true } } },
-    orderBy: { startDate: "desc" },
-  });
-  res.json({ success: true, data: { reservations } });
-});
+router.get(
+  "/reservations/unit/:unitId",
+  async (req: Request, res: Response) => {
+    await ensureUnitAccess(req, req.params.unitId);
+    const reservations = await prisma.reservation.findMany({
+      where: { unitId: req.params.unitId },
+      include: { commonArea: { select: { name: true } } },
+      orderBy: { startDate: "desc" },
+    });
+    res.json({ success: true, data: { reservations } });
+  },
+);
 
 router.get(
   "/reservations/condominium/:condominiumId",

@@ -3,17 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar manifests
-COPY package*.json ./
-COPY apps/web/package*.json ./apps/web/
+# Copiar apenas o package.json do web (sem workspaces que dependem de api)
+COPY apps/web/package*.json ./
 
-# Instala todas as deps na raiz do monorepo
+# Instala deps somente do web
 RUN npm install
 
 # Copiar código fonte
-COPY apps/web/ ./apps/web/
-
-WORKDIR /app/apps/web
+COPY apps/web/ ./
 
 # Build de produção (pula verificação de tipos para não bloquear)
 RUN npx vite build
@@ -28,7 +25,7 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiar o build do Vite
-COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
