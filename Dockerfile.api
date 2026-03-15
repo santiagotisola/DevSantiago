@@ -39,7 +39,7 @@ COPY --from=builder /app/apps/api/dist       ./dist
 COPY --from=builder /app/apps/api/prisma     ./prisma
 COPY --from=builder /app/apps/api/package*.json ./
 
-COPY condosync/apps/api/entrypoint.sh ./entrypoint.sh
+COPY --from=builder /app/apps/api/entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
 
 ENV NODE_ENV=production

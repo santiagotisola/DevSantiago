@@ -41,10 +41,11 @@ import StockPage from "./pages/stock/StockPage";
 import TicketsPage from "./pages/tickets/TicketsPage";
 import GalleryPage from "./pages/gallery/GalleryPage";
 import MyChargesPage from "./pages/finance/MyChargesPage";
+import LandingPage from "./pages/LandingPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/home" replace />;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -80,6 +81,9 @@ export default function App() {
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
       <Routes>
+        {/* Landing page */}
+        <Route path="/home" element={<LandingPage />} />
+
         {/* Rotas públicas */}
         <Route
           path="/login"
