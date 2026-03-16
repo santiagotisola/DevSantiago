@@ -16,14 +16,40 @@ import {
   Pencil,
   Wrench,
   AlertTriangle,
+  Building2,
+  ShieldAlert,
+  UserCheck,
+  MoreHorizontal,
+  Bell,
 } from "lucide-react";
 
+// ─── Skeleton Loading Components ──────────────────────────────────────────
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />;
+}
+
+function VisitorTableSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex gap-4 p-4 border-b">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-6 flex-1" />
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PENDING: { label: "Pendente", color: "bg-yellow-100 text-yellow-700" },
-  AUTHORIZED: { label: "Autorizado", color: "bg-blue-100 text-blue-700" },
-  DENIED: { label: "Negado", color: "bg-red-100 text-red-700" },
-  INSIDE: { label: "Dentro", color: "bg-green-100 text-green-700" },
-  LEFT: { label: "Saiu", color: "bg-gray-100 text-gray-700" },
+  PENDING: { label: "Pendente", color: "bg-amber-100 text-amber-700 border-amber-200" },
+  AUTHORIZED: { label: "Autorizado", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  DENIED: { label: "Negado", color: "bg-red-100 text-red-700 border-red-200" },
+  INSIDE: { label: "Dentro Agora", color: "bg-green-100 text-green-700 border-green-200" },
+  LEFT: { label: "Já Saiu", color: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
 export function VisitorsPage() {
@@ -108,10 +134,11 @@ export function VisitorsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["visitors", selectedCondominiumId, statusFilter],
     queryFn: async () => {
+      const status = statusFilter === "ALL" ? undefined : (statusFilter || undefined);
       const res = await api.get(
         `/visitors/condominium/${selectedCondominiumId}`,
         {
-          params: { status: statusFilter || undefined, limit: 50 },
+          params: { status, limit: 50 },
         },
       );
       return res.data.data;
@@ -156,11 +183,26 @@ export function VisitorsPage() {
     },
   });
 
-  const visitors = (data?.visitors || []).filter(
-    (v: any) =>
+  const rawVisitors = data?.visitors || [];
+  const metrics = {
+    inside: rawVisitors.filter((v: any) => v.status === "INSIDE").length,
+    today: rawVisitors.filter((v: any) => 
+      v.entryAt && new Date(v.entryAt).toDateString() === new Date().toDateString()
+    ).length,
+    pending: rawVisitors.filter((v: any) => v.status === "PENDING").length,
+    denied: rawVisitors.filter((v: any) => v.status === "DENIED").length,
+  };
+
+  const visitors = rawVisitors.filter((v: any) => {
+    const matchesSearch = 
       (v.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (v.unit?.identifier ?? "").toLowerCase().includes(search.toLowerCase()),
-  );
+      (v.unit?.identifier ?? "").toLowerCase().includes(search.toLowerCase());
+    
+    const matchesStatus = 
+      !statusFilter || statusFilter === "ALL" || v.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const canRegisterEntry = [
     "DOORMAN",
@@ -188,41 +230,115 @@ export function VisitorsPage() {
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      {/* Cards de Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+              <Skeleton className="h-12 w-12" />
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-12" />
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center gap-4">
+              <div className="bg-green-100 p-2.5 rounded-lg text-green-600">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">No Condomínio</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.inside}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
+              <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Acessos Hoje</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.today}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm flex items-center gap-4">
+              <div className="bg-amber-100 p-2.5 rounded-lg text-amber-600">
+                <Bell className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Pendentes</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.pending}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm flex items-center gap-4">
+              <div className="bg-red-100 p-2.5 rounded-lg text-red-600">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Negados</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.denied}</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {/* Busca */}
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou unidade..."
-            className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Buscar por nome do visitante ou unidade..."
+            className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Todos os status</option>
-          <option value="PENDING">Pendentes</option>
-          <option value="AUTHORIZED">Autorizados</option>
-          <option value="INSIDE">Dentro</option>
-          <option value="LEFT">Saíram</option>
-          <option value="DENIED">Negados</option>
-        </select>
+
+        {/* Filtros rápidos (Chips) */}
+        <div className="flex flex-wrap items-center gap-2 pb-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">Status:</span>
+          {[
+            { id: "ALL", label: "Tudo", icon: Users },
+            { id: "INSIDE", label: "No Condomínio", icon: Building2 },
+            { id: "AUTHORIZED", label: "Autorizados", icon: UserCheck },
+            { id: "PENDING", label: "Pendentes", icon: Clock },
+            { id: "LEFT", label: "Já Saíram", icon: LogOut },
+            { id: "DENIED", label: "Negados", icon: XCircle, color: "text-red-600" },
+          ].map((chip) => {
+            const Icon = chip.icon;
+            const active = (statusFilter || "ALL") === chip.id;
+            return (
+              <button
+                key={chip.id}
+                onClick={() => setStatusFilter(chip.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                  active 
+                    ? "bg-blue-600 border-blue-600 text-white shadow-md scale-105" 
+                    : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50"
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${active ? "text-white" : chip.color || "text-gray-400"}`} />
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Tabela */}
       <div className="bg-white rounded-xl border overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-          </div>
+          <VisitorTableSkeleton />
         ) : visitors.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground">
-            <Users className="w-10 h-10" />
-            <p>Nenhum visitante encontrado</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-4 text-muted-foreground bg-gray-50/30">
+            <div className="bg-white p-6 rounded-full shadow-sm border border-gray-100">
+              <Users className="w-12 h-12 text-gray-300" />
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-gray-600">Nenhum visitante encontrado</p>
+              <p className="text-sm">Tente ajustar seus filtros ou busca.</p>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -252,21 +368,36 @@ export function VisitorsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {visitors.map((v: any) => (
-                  <tr key={v.id} className="hover:bg-gray-50">
+                {visitors.map((v: any) => {
+                  const isLongStay = v.status === "INSIDE" && 
+                                    v.entryAt && 
+                                    (Date.now() - new Date(v.entryAt).getTime()) > 6 * 60 * 60 * 1000;
+                  
+                  return (
+                    <tr key={v.id} className={`hover:bg-gray-50 transition-colors ${isLongStay ? 'bg-red-50/30' : ''}`}>
                     <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium">{v.name}</p>
-                        {v.company && (
-                          <p className="text-xs text-muted-foreground">
-                            {v.company}
-                          </p>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-800">{v.name}</span>
+                          {v.company && (
+                            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider">
+                              {v.company}
+                            </span>
+                          )}
+                        </div>
+                        {isLongStay && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase">
+                            <Clock className="w-3 h-3" /> Permanência Longa (+6h)
+                          </span>
                         )}
-                        {v.document && (
-                          <p className="text-xs text-muted-foreground">
-                            {v.documentType}: {v.document}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                          {v.document && (
+                            <span>{v.documentType}: {v.document}</span>
+                          )}
+                          {v.phone && (
+                            <span> · Tel: {v.phone}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -290,7 +421,7 @@ export function VisitorsPage() {
                     </td>
                     {canRegisterEntry && (
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center gap-2 justify-end">
+                        <div className="flex items-center gap-1 justify-end">
                           {(v.status === "PENDING" ||
                             v.status === "AUTHORIZED") && (
                             <button
@@ -307,38 +438,46 @@ export function VisitorsPage() {
                                 });
                                 setEditModal(true);
                               }}
-                              className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200 transition-colors"
+                              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Editar visitante"
                             >
-                              <Pencil className="w-3 h-3" />
-                              Editar
+                              <Pencil className="w-4 h-4" />
                             </button>
                           )}
-                          {v.status === "AUTHORIZED" ||
-                          v.status === "PENDING" ? (
+                          {(v.status === "AUTHORIZED" || v.status === "PENDING") && (
                             <button
                               onClick={() => setEntryCheckVisitor(v)}
                               disabled={entryMutation.isPending}
-                              className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors"
+                              title="Registrar Entrada"
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             >
-                              <LogIn className="w-3 h-3" />
-                              Entrada
+                              <LogIn className="w-4 h-4" />
                             </button>
-                          ) : v.status === "INSIDE" ? (
+                          )}
+                          {v.status === "INSIDE" && (
                             <button
-                              onClick={() => exitMutation.mutate(v.id)}
+                              onClick={() => {
+                                if (confirm(`Confirmar saída de ${v.name}?`)) {
+                                  exitMutation.mutate(v.id);
+                                }
+                              }}
                               disabled={exitMutation.isPending}
-                              className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition-colors"
+                              title="Registrar Saída"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
-                              <LogOut className="w-3 h-3" />
-                              Saída
+                              {exitMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <LogOut className="w-4 h-4" />
+                              )}
                             </button>
-                          ) : null}
+                          )}
                         </div>
                       </td>
                     )}
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

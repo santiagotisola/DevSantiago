@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X, AlertTriangle, Truck, User, FileText, Trash2, ClipboardList } from 'lucide-react';
+import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X, AlertTriangle, Truck, User, FileText, Trash2, ClipboardList, Clock, Bell } from 'lucide-react';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 type PreCarrier = { id: string; name: string };
@@ -117,6 +117,27 @@ function DelivererSelect({
   );
 }
 
+// ─── Skeleton Loading Components ──────────────────────────────────────────
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />;
+}
+
+function ParcelTableSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex gap-4 p-4 border-b">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-6 flex-1" />
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Constantes ─────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: 'Recebida', color: 'bg-blue-100 text-blue-700' },
@@ -218,6 +239,13 @@ export function ParcelsPage() {
       setPickupModal(null);
       setPickupName('');
       setPickupResidentId('');
+    },
+  });
+
+  const notifyMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/parcels/${id}/notify`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parcels'] });
     },
   });
 
@@ -349,42 +377,56 @@ export function ParcelsPage() {
 
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
-          <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600">
-            <Package className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Pendentes</p>
-            <p className="text-2xl font-bold text-gray-800">{metrics.pending}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center gap-4">
-          <div className="bg-green-100 p-2.5 rounded-lg text-green-600">
-            <Plus className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Recebidas Hoje</p>
-            <p className="text-2xl font-bold text-gray-800">{metrics.today}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex items-center gap-4">
-          <div className="bg-orange-100 p-2.5 rounded-lg text-orange-600">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Avariadas</p>
-            <p className="text-2xl font-bold text-gray-800">{metrics.damaged}</p>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="bg-gray-100 p-2.5 rounded-lg text-gray-600">
-            <CheckCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Retiradas</p>
-            <p className="text-2xl font-bold text-gray-800">{metrics.pickedUp}</p>
-          </div>
-        </div>
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+              <Skeleton className="h-12 w-12" />
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-12" />
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
+              <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600">
+                <Package className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Pendentes</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.pending}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center gap-4">
+              <div className="bg-green-100 p-2.5 rounded-lg text-green-600">
+                <Plus className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Recebidas Hoje</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.today}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex items-center gap-4">
+              <div className="bg-orange-100 p-2.5 rounded-lg text-orange-600">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Avariadas</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.damaged}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+              <div className="bg-gray-100 p-2.5 rounded-lg text-gray-600">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Retiradas</p>
+                <p className="text-2xl font-bold text-gray-800">{metrics.pickedUp}</p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Aba: Encomendas ── */}
@@ -434,13 +476,16 @@ export function ParcelsPage() {
 
           <div className="bg-white rounded-xl border overflow-hidden">
             {isLoading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-              </div>
+              <ParcelTableSkeleton />
             ) : parcels.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground">
-                <Package className="w-10 h-10" />
-                <p>Nenhuma encomenda encontrada</p>
+              <div className="flex flex-col items-center justify-center py-16 gap-4 text-muted-foreground bg-gray-50/30">
+                <div className="bg-white p-6 rounded-full shadow-sm border border-gray-100">
+                  <Package className="w-12 h-12 text-gray-300" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-600">Nenhuma encomenda encontrada</p>
+                  <p className="text-sm">Tente ajustar seus filtros ou busca.</p>
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -459,72 +504,99 @@ export function ParcelsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {parcels.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">
-                          {p.unit?.block ? `${p.unit.block} - ` : ''}{p.unit?.identifier}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.carrier || '—'}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          <div>{p.deliveryPersonName || '—'}</div>
-                          {p.deliveryPersonDoc && <div className="text-xs text-gray-400">Doc: {p.deliveryPersonDoc}</div>}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{p.vehiclePlate || '—'}</td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{p.trackingCode || '—'}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{p.storageLocation || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDateTime(p.receivedAt)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[p.status]?.color}`}>
-                          {STATUS_LABELS[p.status]?.label}
-                        </span>
-                        {p.hasPackageDamage && (
-                          <span title="Avaria registrada" className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                            <AlertTriangle className="w-3 h-3" /> Avaria
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    {canRegister && (
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => setPickupModal(p.id)}
-                              className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              Retirada
-                            </button>
+                    {parcels.map((p: any) => {
+                      const isOld = (p.status === 'RECEIVED' || p.status === 'NOTIFIED') && 
+                                    (Date.now() - new Date(p.receivedAt).getTime()) > 48 * 60 * 60 * 1000;
+                      
+                      return (
+                        <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${isOld ? 'bg-red-50/30' : ''}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-800">{p.unit?.block ? `${p.unit.block} - ` : ''}{p.unit?.identifier}</span>
+                              {isOld && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase mt-0.5">
+                                  <Clock className="w-3 h-3" /> Pendente há +48h
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{p.carrier || '—'}</td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">
+                            <div className="font-medium text-gray-700">{p.deliveryPersonName || '—'}</div>
+                            {p.deliveryPersonDoc && <div>Doc: {p.deliveryPersonDoc}</div>}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground font-mono text-[10px]">{p.vehiclePlate || '—'}</td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs">{p.trackingCode || '—'}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{p.storageLocation || '—'}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{formatDateTime(p.receivedAt)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_LABELS[p.status]?.color}`}>
+                                {STATUS_LABELS[p.status]?.label}
+                              </span>
+                              {p.hasPackageDamage && (
+                                <span title="Avaria registrada" className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">
+                                  <AlertTriangle className="w-3 h-3" /> Avaria
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          {canRegister && (
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                                  <>
+                                    <button
+                                      onClick={() => setPickupModal(p.id)}
+                                      title="Confirmar Retirada"
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Reenviar notificação para o morador?')) {
+                                          notifyMutation.mutate(p.id);
+                                        }
+                                      }}
+                                      title="Notificar Morador"
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                      {notifyMutation.isPending && notifyMutation.variables === p.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : <Bell className="w-4 h-4" />}
+                                    </button>
+                                  </>
+                                )}
+                                {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                                  <button
+                                    onClick={() => { setEditTarget(p); setEditForm({ carrier: p.carrier || '', trackingCode: p.trackingCode || '', storageLocation: p.storageLocation || '', senderName: p.senderName || '', deliveryPersonName: p.deliveryPersonName || '', deliveryPersonDoc: p.deliveryPersonDoc || '', vehiclePlate: p.vehiclePlate || '', hasPackageDamage: p.hasPackageDamage || false, notes: p.notes || '' }); setEditModal(true); }}
+                                    title="Editar"
+                                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
+                                  <button
+                                    onClick={() => setCancelingId(p.id)}
+                                    title="Cancelar/Devolver"
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                           )}
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => { setEditTarget(p); setEditForm({ carrier: p.carrier || '', trackingCode: p.trackingCode || '', storageLocation: p.storageLocation || '', senderName: p.senderName || '', deliveryPersonName: p.deliveryPersonName || '', deliveryPersonDoc: p.deliveryPersonDoc || '', vehiclePlate: p.vehiclePlate || '', hasPackageDamage: p.hasPackageDamage || false, notes: p.notes || '' }); setEditModal(true); }}
-                              className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
-                            >
-                              <Pencil className="w-3 h-3" />
-                              Editar
-                            </button>
-                          )}
-                          {(p.status === 'RECEIVED' || p.status === 'NOTIFIED') && (
-                            <button
-                              onClick={() => setCancelingId(p.id)}
-                              className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                            >
-                              <X className="w-3 h-3" />
-                              Cancelar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
         </>
       )}
 

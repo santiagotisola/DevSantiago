@@ -19,9 +19,12 @@ import {
   MessageSquare,
   Image,
   Video,
+  Bell,
+  Plus,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   BarChart,
   Bar,
@@ -36,7 +39,29 @@ import {
   Pie,
   Cell,
   Legend,
+  AreaChart,
+  Area,
 } from "recharts";
+
+// ─── Skeleton Loading ──────────────────────────────────────────────────────
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />;
+}
+
+function StatCardSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <div className="flex justify-between">
+        <div className="space-y-3">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <Skeleton className="h-12 w-12 rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
 function StatCard({
   title,
@@ -56,34 +81,38 @@ function StatCard({
   to?: string;
 }) {
   const content = (
-    <div
-      className={`bg-white rounded-xl border p-5 hover:shadow-md transition-shadow ${to ? "cursor-pointer" : ""}`}
+    <motion.div
+      whileHover={{ y: -4 }}
+      className={`bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 h-full ${to ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold mt-1">{value}</p>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{title}</p>
+          <p className="text-3xl font-black text-gray-800 tracking-tight">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            <p className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-gray-300" />
+              {subtitle}
+            </p>
           )}
           {trend && (
             <div
-              className={`flex items-center gap-1 mt-2 text-xs font-medium ${trend.value >= 0 ? "text-green-600" : "text-red-600"}`}
+              className={`flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-wider ${trend.value >= 0 ? "text-emerald-500" : "text-rose-500"}`}
             >
-              <TrendingUp className="w-3 h-3" />
+              <TrendingUp className={`w-3 h-3 ${trend.value < 0 ? 'rotate-180' : ''}`} />
               {trend.value >= 0 ? "+" : ""}
               {trend.value}% {trend.label}
             </div>
           )}
         </div>
-        <div className={`${color} p-3 rounded-xl`}>
+        <div className={`${color} p-3 rounded-2xl shadow-lg shadow-current/10`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 
-  return to ? <Link to={to}>{content}</Link> : content;
+  return to ? <Link to={to} className="block h-full">{content}</Link> : content;
 }
 
 function ResidentDashboard({
@@ -110,157 +139,139 @@ function ResidentDashboard({
     enabled: !!selectedCondominiumId,
   });
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">
-          Olá, {user?.name.split(" ")[0]}! 👋
-        </h1>
-        <p className="text-muted-foreground">
-          {condominium?.name} ·{" "}
-          {new Date().toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </p>
+    <div className="space-y-8 pb-8">
+      {/* Header Premium Resident */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-800 tracking-tight">
+            {greeting}, {user?.name.split(" ")[0]}! 👋
+          </h1>
+          <p className="text-gray-500 font-medium mt-1">
+            {condominium?.name} ·{" "}
+            <span className="text-blue-600">
+              {new Date().toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          Unidade {user?.residentUnits?.[0]?.unit?.number || "—"}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Encomendas Aguardando"
+          title="Minhas Encomendas"
           value={d?.portaria?.parcelsAwaiting ?? 0}
-          subtitle="aguardando retirada na portaria"
+          subtitle="pendentes na portaria"
           icon={Package}
-          color="bg-orange-500"
+          color="bg-amber-500"
+          to="/minha-portaria/encomendas"
         />
         <StatCard
-          title="Próximas Reservas"
+          title="Minhas Reservas"
           value={d?.communication?.upcomingReservations ?? 0}
-          subtitle="áreas comuns reservadas"
+          subtitle="áreas agendadas"
           icon={Calendar}
           color="bg-teal-500"
           to="/areas-comuns"
         />
         <StatCard
-          title="Ocorrências Abertas"
+          title="Eventos / Avisos"
           value={d?.communication?.unreadOccurrences ?? 0}
-          subtitle="aguardando resposta"
-          icon={AlertTriangle}
-          color="bg-yellow-500"
-          to="/comunicacao/ocorrencias"
+          subtitle="não lidos"
+          icon={Bell}
+          color="bg-indigo-500"
+          to="/comunicacao/avisos"
         />
         <StatCard
-          title="Meus Chamados Abertos"
+          title="Meus Chamados"
           value={openTickets?.length ?? 0}
-          subtitle="aguardando resposta da administração"
+          subtitle="em andamento"
           icon={MessageSquare}
           color="bg-blue-500"
           to="/chamados"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Comunicados</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Comunicados Recentes</h3>
+              <p className="text-xs text-gray-400 font-medium">Fique por dentro das novidades</p>
+            </div>
             <Link
               to="/comunicacao/avisos"
-              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold transition-colors border border-gray-100"
             >
-              Ver todos <ChevronRight className="w-3 h-3" />
+              Ver Tudo
             </Link>
           </div>
-          <div className="space-y-3 flex-1">
+          <div className="space-y-4 flex-1 overflow-auto max-h-[450px] pr-2 custom-scrollbar">
             {d?.recentAnnouncements?.length > 0 ? (
-              d.recentAnnouncements.slice(0, 5).map((a: any) => (
+              d.recentAnnouncements.map((a: any) => (
                 <div
                   key={a.id}
-                  className="flex gap-3 p-3 bg-gray-50 rounded-lg"
+                  className="group flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
                 >
-                  <div
-                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? "bg-blue-500" : "bg-gray-400"}`}
-                  />
+                  <div className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}>
+                    <Bell className="w-4 h-4" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
+                    <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">
                       {a.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                      {a.content}
+                    </p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">
                       {formatRelativeTime(a.publishedAt)}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground py-8">
-                <Shield className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-sm">Nenhum comunicado recente</p>
+              <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <Shield className="w-8 h-8 text-gray-200" />
+                </div>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Nenhum aviso no momento</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-700 mb-4">Acesso Rápido</h3>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
+          <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">Acesso Rápido</h3>
+          <div className="grid grid-cols-2 gap-4">
             {[
-              {
-                label: "Pré-autorizar Visita",
-                to: "/minha-portaria/visitantes",
-                icon: Shield,
-                color: "text-purple-600 bg-purple-50",
-              },
-              {
-                label: "Minhas Obras",
-                to: "/minha-portaria/obras",
-                icon: HardHat,
-                color: "text-orange-600 bg-orange-50",
-              },
-              {
-                label: "Reservar Área",
-                to: "/areas-comuns",
-                icon: Calendar,
-                color: "text-teal-600 bg-teal-50",
-              },
-              {
-                label: "Documentos",
-                to: "/documentos",
-                icon: FileText,
-                color: "text-blue-600 bg-blue-50",
-              },
-              {
-                label: "Relatar Ocorrência",
-                to: "/comunicacao/ocorrencias",
-                icon: AlertTriangle,
-                color: "text-yellow-600 bg-yellow-50",
-              },
-              {
-                label: "Achados e Perdidos",
-                to: "/comunicacao/achados-e-perdidos",
-                icon: Users,
-                color: "text-gray-600 bg-gray-50",
-              },
-              {
-                label: "Meus Chamados",
-                to: "/chamados",
-                icon: MessageSquare,
-                color: "text-indigo-600 bg-indigo-50",
-              },
-              {
-                label: "Galeria",
-                to: "/galeria",
-                icon: Image,
-                color: "text-pink-600 bg-pink-50",
-              },
+              { label: "Visita", to: "/minha-portaria/visitantes", icon: Shield, color: "text-purple-600 bg-purple-50" },
+              { label: "Encomenda", to: "/minha-portaria/encomendas", icon: Package, color: "text-amber-600 bg-amber-50" },
+              { label: "Reserva", to: "/areas-comuns", icon: Calendar, color: "text-teal-600 bg-teal-50" },
+              { label: "Chamado", to: "/chamados", icon: MessageSquare, color: "text-blue-600 bg-blue-50" },
+              { label: "Documentos", to: "/documentos", icon: FileText, color: "text-rose-600 bg-rose-50" },
+              { label: "Ocorrência", to: "/comunicacao/ocorrencias", icon: AlertTriangle, color: "text-yellow-600 bg-yellow-50" },
             ].map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-3 p-3 rounded-xl ${item.color} hover:opacity-80 transition-opacity`}
+                className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-gray-50/50 transition-all text-center"
               >
-                <item.icon className="w-5 h-5 shrink-0" />
-                <span className="text-sm font-medium">{item.label}</span>
+                <div className={`${item.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-gray-600">
+                  {item.label}
+                </span>
               </Link>
             ))}
           </div>
@@ -280,7 +291,7 @@ export function DashboardPage() {
       return res.data.data;
     },
     enabled: !!selectedCondominiumId,
-    refetchInterval: 60000, // atualizar a cada 1 min
+    refetchInterval: 60000,
   });
 
   const condominium = user?.condominiumUsers?.find(
@@ -298,8 +309,24 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="space-y-8 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32 rounded-full" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Skeleton className="lg:col-span-2 h-[400px] rounded-3xl" />
+          <Skeleton className="h-[400px] rounded-3xl" />
+        </div>
       </div>
     );
   }
@@ -316,354 +343,200 @@ export function DashboardPage() {
     );
   }
 
-  // Séries temporais do backend
   const visitorsWeek = d?.portaria?.visitorStats || [];
   const parcelWeek = d?.portaria?.parcelStats || [];
   const financeMonths = d?.financial?.financeStats || [];
 
-  const maintenanceStatus = [
-    {
-      name: "Abertos",
-      value: d?.maintenance?.openOrders || 0,
-      color: "#3B82F6",
-    },
-    {
-      name: "Urgentes",
-      value: d?.maintenance?.urgentOrders || 0,
-      color: "#EF4444",
-    },
-  ];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">
-          Olá, {user?.name.split(" ")[0]}! 👋
-        </h1>
-        <p className="text-muted-foreground">
-          {condominium?.name} ·{" "}
-          {new Date().toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </p>
+    <div className="space-y-8 pb-8">
+      {/* Header Premium */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-800 tracking-tight">
+            {greeting}, {user?.name.split(" ")[0]}! 👋
+          </h1>
+          <p className="text-gray-500 font-medium mt-1">
+            {condominium?.name} ·{" "}
+            <span className="text-blue-600">
+              {new Date().toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          Sistema Online
+        </div>
       </div>
 
-      {/* Cards principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Grid de Métricas Visuais */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Unidades Ocupadas"
-          value={`${d?.summary?.occupiedUnits || 0}/${d?.summary?.totalUnits || 0}`}
-          subtitle={`${d?.summary?.occupancyRate || 0}% de ocupação`}
+          title="Ocupação Geral"
+          value={`${d?.summary?.occupiedUnits || 0}`}
+          subtitle={`de ${d?.summary?.totalUnits || 0} unidades`}
           icon={Home}
-          color="bg-blue-500"
+          color="bg-indigo-500"
+          trend={{ value: 2.5, label: "este mês" }}
           to="/unidades"
         />
         <StatCard
-          title="Visitantes Hoje"
-          value={d?.portaria?.visitorsToday || 0}
-          subtitle={`${d?.portaria?.visitorsInside || 0} no momento`}
+          title="Visitantes Ativos"
+          value={d?.portaria?.visitorsInside || 0}
+          subtitle={`${d?.portaria?.visitorsToday || 0} hoje`}
           icon={Users}
-          color="bg-purple-500"
+          color="bg-fuchsia-500"
           to="/portaria/visitantes"
         />
         <StatCard
-          title="Encomendas Pendentes"
+          title="Encomendas"
           value={d?.portaria?.parcelsAwaiting || 0}
-          subtitle="aguardando retirada"
+          subtitle="na portaria"
           icon={Package}
-          color="bg-orange-500"
+          color="bg-amber-500"
+          trend={{ value: -12, label: "vs ontem" }}
           to="/portaria/encomendas"
         />
         <StatCard
-          title="Chamados Abertos"
-          value={d?.maintenance?.openOrders || 0}
-          subtitle={`${d?.maintenance?.urgentOrders || 0} urgentes`}
-          icon={Wrench}
-          color="bg-red-500"
+          title="Incidentes"
+          value={d?.maintenance?.urgentOrders || 0}
+          subtitle={`${d?.maintenance?.openOrders || 0} abertos`}
+          icon={AlertTriangle}
+          color="bg-rose-500"
           to="/manutencao"
         />
       </div>
 
-      {/* Segunda linha */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          title="Cobranças Pendentes"
-          value={d?.financial?.pendingCharges || 0}
-          subtitle={`${d?.financial?.overdueCharges || 0} em atraso`}
-          icon={DollarSign}
-          color="bg-green-500"
-          to="/financeiro/cobranças"
-        />
-        <StatCard
-          title="Ocorrências Abertas"
-          value={d?.communication?.unreadOccurrences || 0}
-          subtitle="aguardando análise"
-          icon={AlertTriangle}
-          color="bg-yellow-500"
-          to="/comunicacao/ocorrencias"
-        />
-        <StatCard
-          title="Reservas Confirmadas"
-          value={d?.communication?.upcomingReservations || 0}
-          subtitle="próximas reservas"
-          icon={Calendar}
-          color="bg-teal-500"
-          to="/areas-comuns"
-        />
-      </div>
-
-      {/* Gráficos Principais */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Visitantes por dia */}
-        <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">
-              Visitantes — Últimos 7 dias
-            </h3>
-            <Link
-              to="/portaria/visitantes"
-              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
-            >
-              Ver detalhes <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={visitorsWeek}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f5f5f5"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "none",
-                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                }}
-              />
-              <Bar dataKey="visitantes" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Encomendas por dia */}
-        <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Fluxo de Encomendas</h3>
-            <Link
-              to="/portaria/encomendas"
-              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
-            >
-              Gestão <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={parcelWeek}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f5f5f5"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <Tooltip contentStyle={{ borderRadius: "8px", border: "none" }} />
-              <Legend verticalAlign="top" height={36} iconType="circle" />
-              <Line
-                type="monotone"
-                dataKey="recebidas"
-                stroke="#F59E0B"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="entregues"
-                stroke="#10B981"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Terceira linha: Financeiro + Comunicados */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Saúde Financeira */}
-        <div className="lg:col-span-2 bg-white rounded-xl border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">
-              Saúde Financeira — Últimos 6 meses
-            </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Saúde Financeira</h3>
+              <p className="text-xs text-gray-400 font-medium">Fluxo de caixa (6 meses)</p>
+            </div>
             <Link
               to="/financeiro"
-              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
+              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold transition-colors border border-gray-100"
             >
-              Relatórios <ChevronRight className="w-3 h-3" />
+              Relatório
             </Link>
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={financeMonths}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f5f5f5"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#6B7280" }}
-              />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Legend verticalAlign="top" height={36} />
-              <Bar
-                dataKey="receitas"
-                name="Receitas"
-                fill="#10B981"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="despesas"
-                name="Despesas"
-                fill="#EF4444"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={financeMonths}>
+                <defs>
+                  <linearGradient id="colorRec" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorDes" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `R$ ${val/1000}k`} />
+                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                <Area type="monotone" dataKey="receitas" stroke="#10B981" strokeWidth={3} fill="url(#colorRec)" />
+                <Area type="monotone" dataKey="despesas" stroke="#EF4444" strokeWidth={3} fill="url(#colorDes)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Comunicados recentes */}
-        <div className="bg-white rounded-xl border p-5 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-700">Comunicados</h3>
-            <Link
-              to="/comunicacao/avisos"
-              className="text-xs text-blue-600 flex items-center gap-1 hover:underline"
-            >
-              Ver todos <ChevronRight className="w-3 h-3" />
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
+          <h3 className="text-lg font-bold text-gray-800 mb-6 font-inter">Ações Rápidas</h3>
+          <div className="grid grid-cols-2 gap-4 flex-1">
+            {[
+              { label: "Visita", to: "/portaria/visitantes", icon: Shield, color: "text-purple-600 bg-purple-50" },
+              { label: "Encomenda", to: "/portaria/encomendas", icon: Package, color: "text-amber-600 bg-amber-50" },
+              { label: "Chamado", to: "/manutencao", icon: Wrench, color: "text-rose-600 bg-rose-50" },
+              { label: "Cobrança", to: "/financeiro/cobrancas", icon: DollarSign, color: "text-emerald-600 bg-emerald-50" },
+              { label: "Áreas", to: "/areas-comuns", icon: Calendar, color: "text-teal-600 bg-teal-50" },
+              { label: "Aviso", to: "/comunicacao/avisos", icon: Bell, color: "text-blue-600 bg-blue-50" },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
+              >
+                <div className={`${item.color} p-3 rounded-xl transform group-hover:scale-110 transition-transform`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-gray-500">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Visitantes (Semana)</h4>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={visitorsWeek}>
+                <defs>
+                  <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area type="step" dataKey="visitantes" stroke="#8B5CF6" fill="url(#colorVis)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Encomendas (Semana)</h4>
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={parcelWeek}>
+                <defs>
+                  <linearGradient id="colorPar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="recebidas" stroke="#F59E0B" fill="url(#colorPar)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-gray-800">Comunicados</h3>
+            <Link to="/comunicacao/avisos" className="text-blue-600 hover:text-blue-700">
+              <Plus className="w-5 h-5" />
             </Link>
           </div>
-          <div className="space-y-3 flex-1 overflow-auto">
+          <div className="space-y-4 flex-1 overflow-auto max-h-[350px] pr-2 custom-scrollbar">
             {d?.recentAnnouncements?.length > 0 ? (
               d.recentAnnouncements.map((a: any) => (
-                <div
-                  key={a.id}
-                  className="flex gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${a.isPinned ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-gray-400"}`}
-                  />
+                <div key={a.id} className="flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                  <div className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}>
+                    <Bell className="w-4 h-4" />
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                      {a.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatRelativeTime(a.publishedAt)}
-                    </p>
+                    <p className="text-sm font-bold text-gray-800 truncate">{a.title}</p>
+                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1">{a.content}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">{formatRelativeTime(a.publishedAt)}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground py-8">
-                <Shield className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-sm">Nenhum comunicado recente</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+                <Shield className="w-8 h-8 mb-4 " />
+                <p className="text-xs font-bold uppercase tracking-widest">Sem avisos</p>
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Acesso rápido */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="font-semibold mb-4">Acesso Rápido</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {[
-            {
-              label: "Registrar Visita",
-              to: "/portaria/visitantes",
-              icon: Shield,
-              color: "text-purple-600 bg-purple-50",
-            },
-            {
-              label: "Registrar Encomenda",
-              to: "/portaria/encomendas",
-              icon: Package,
-              color: "text-orange-600 bg-orange-50",
-            },
-            {
-              label: "Abrir Chamado",
-              to: "/manutencao",
-              icon: Wrench,
-              color: "text-red-600 bg-red-50",
-            },
-            {
-              label: "Nova Cobrança",
-              to: "/financeiro/cobranças",
-              icon: DollarSign,
-              color: "text-green-600 bg-green-50",
-            },
-            {
-              label: "Reservar Área",
-              to: "/areas-comuns",
-              icon: Calendar,
-              color: "text-teal-600 bg-teal-50",
-            },
-            {
-              label: "Novo Comunicado",
-              to: "/comunicacao/avisos",
-              icon: Users,
-              color: "text-blue-600 bg-blue-50",
-            },
-            {
-              label: "Assembleias",
-              to: "/assembleias",
-              icon: Video,
-              color: "text-indigo-600 bg-indigo-50",
-            },
-          ].map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl ${item.color} hover:opacity-80 transition-opacity text-center`}
-            >
-              <item.icon className="w-6 h-6" />
-              <span className="text-xs font-medium leading-tight">
-                {item.label}
-              </span>
-            </Link>
-          ))}
         </div>
       </div>
     </div>
