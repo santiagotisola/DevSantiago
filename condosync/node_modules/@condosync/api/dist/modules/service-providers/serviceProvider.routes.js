@@ -10,12 +10,12 @@ router.use(auth_1.authenticate);
 const schema = zod_1.z.object({
     condominiumId: zod_1.z.string().uuid(),
     name: zod_1.z.string().min(2),
-    cnpj: zod_1.z.string().optional(),
-    cpf: zod_1.z.string().optional(),
+    cnpj: zod_1.z.string().optional().or(zod_1.z.literal('')),
+    cpf: zod_1.z.string().optional().or(zod_1.z.literal('')),
     serviceType: zod_1.z.string().min(2),
-    phone: zod_1.z.string(),
-    email: zod_1.z.string().email().optional(),
-    notes: zod_1.z.string().optional(),
+    phone: zod_1.z.string().optional().or(zod_1.z.literal('')),
+    email: zod_1.z.string().email().optional().or(zod_1.z.literal('')),
+    notes: zod_1.z.string().optional().or(zod_1.z.literal('')),
 });
 router.get('/condominium/:condominiumId', async (req, res) => {
     const providers = await prisma_1.prisma.serviceProvider.findMany({

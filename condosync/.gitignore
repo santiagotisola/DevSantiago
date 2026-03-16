@@ -2,7 +2,3 @@ node_modules/
 dist/
 .env
 *.log
-
-# .NET build artifacts
-condosync-encomendas/obj/
-condosync-encomendas/bin/

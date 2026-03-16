@@ -19,6 +19,8 @@ import {
   MessageSquare,
   Image,
   Video,
+  Bell,
+  Plus,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
@@ -43,7 +45,9 @@ import {
 
 // ─── Skeleton Loading ──────────────────────────────────────────────────────
 function Skeleton({ className }: { className?: string }) {
-  return <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />;
+  return (
+    <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />
+  );
 }
 
 function StatCardSkeleton() {
@@ -85,8 +89,12 @@ function StatCard({
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{title}</p>
-          <p className="text-3xl font-black text-gray-800 tracking-tight">{value}</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            {title}
+          </p>
+          <p className="text-3xl font-black text-gray-800 tracking-tight">
+            {value}
+          </p>
           {subtitle && (
             <p className="text-xs font-medium text-gray-500 flex items-center gap-1.5">
               <span className="w-1 h-1 rounded-full bg-gray-300" />
@@ -97,7 +105,9 @@ function StatCard({
             <div
               className={`flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-wider ${trend.value >= 0 ? "text-emerald-500" : "text-rose-500"}`}
             >
-              <TrendingUp className={`w-3 h-3 ${trend.value < 0 ? 'rotate-180' : ''}`} />
+              <TrendingUp
+                className={`w-3 h-3 ${trend.value < 0 ? "rotate-180" : ""}`}
+              />
               {trend.value >= 0 ? "+" : ""}
               {trend.value}% {trend.label}
             </div>
@@ -110,7 +120,13 @@ function StatCard({
     </motion.div>
   );
 
-  return to ? <Link to={to} className="block h-full">{content}</Link> : content;
+  return to ? (
+    <Link to={to} className="block h-full">
+      {content}
+    </Link>
+  ) : (
+    content
+  );
 }
 
 function ResidentDashboard({
@@ -138,7 +154,8 @@ function ResidentDashboard({
   });
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const greeting =
+    hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   return (
     <div className="space-y-8 pb-8">
@@ -204,8 +221,12 @@ function ResidentDashboard({
         <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Comunicados Recentes</h3>
-              <p className="text-xs text-gray-400 font-medium">Fique por dentro das novidades</p>
+              <h3 className="text-lg font-bold text-gray-800">
+                Comunicados Recentes
+              </h3>
+              <p className="text-xs text-gray-400 font-medium">
+                Fique por dentro das novidades
+              </p>
             </div>
             <Link
               to="/comunicacao/avisos"
@@ -221,7 +242,9 @@ function ResidentDashboard({
                   key={a.id}
                   className="group flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
                 >
-                  <div className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}>
+                  <div
+                    className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}
+                  >
                     <Bell className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
@@ -242,29 +265,65 @@ function ResidentDashboard({
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <Shield className="w-8 h-8 text-gray-200" />
                 </div>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Nenhum aviso no momento</p>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                  Nenhum aviso no momento
+                </p>
               </div>
             )}
           </div>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">Acesso Rápido</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">
+            Acesso Rápido
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             {[
-              { label: "Visita", to: "/minha-portaria/visitantes", icon: Shield, color: "text-purple-600 bg-purple-50" },
-              { label: "Encomenda", to: "/minha-portaria/encomendas", icon: Package, color: "text-amber-600 bg-amber-50" },
-              { label: "Reserva", to: "/areas-comuns", icon: Calendar, color: "text-teal-600 bg-teal-50" },
-              { label: "Chamado", to: "/chamados", icon: MessageSquare, color: "text-blue-600 bg-blue-50" },
-              { label: "Documentos", to: "/documentos", icon: FileText, color: "text-rose-600 bg-rose-50" },
-              { label: "Ocorrência", to: "/comunicacao/ocorrencias", icon: AlertTriangle, color: "text-yellow-600 bg-yellow-50" },
+              {
+                label: "Visita",
+                to: "/minha-portaria/visitantes",
+                icon: Shield,
+                color: "text-purple-600 bg-purple-50",
+              },
+              {
+                label: "Encomenda",
+                to: "/minha-portaria/encomendas",
+                icon: Package,
+                color: "text-amber-600 bg-amber-50",
+              },
+              {
+                label: "Reserva",
+                to: "/areas-comuns",
+                icon: Calendar,
+                color: "text-teal-600 bg-teal-50",
+              },
+              {
+                label: "Chamado",
+                to: "/chamados",
+                icon: MessageSquare,
+                color: "text-blue-600 bg-blue-50",
+              },
+              {
+                label: "Documentos",
+                to: "/documentos",
+                icon: FileText,
+                color: "text-rose-600 bg-rose-50",
+              },
+              {
+                label: "Ocorrência",
+                to: "/comunicacao/ocorrencias",
+                icon: AlertTriangle,
+                color: "text-yellow-600 bg-yellow-50",
+              },
             ].map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-gray-50/50 transition-all text-center"
               >
-                <div className={`${item.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
+                <div
+                  className={`${item.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}
+                >
                   <item.icon className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-bold text-gray-600">
@@ -346,7 +405,8 @@ export function DashboardPage() {
   const financeMonths = d?.financial?.financeStats || [];
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const greeting =
+    hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
   return (
     <div className="space-y-8 pb-8">
@@ -415,8 +475,12 @@ export function DashboardPage() {
         <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Saúde Financeira</h3>
-              <p className="text-xs text-gray-400 font-medium">Fluxo de caixa (6 meses)</p>
+              <h3 className="text-lg font-bold text-gray-800">
+                Saúde Financeira
+              </h3>
+              <p className="text-xs text-gray-400 font-medium">
+                Fluxo de caixa (6 meses)
+              </p>
             </div>
             <Link
               to="/financeiro"
@@ -438,37 +502,105 @@ export function DashboardPage() {
                     <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `R$ ${val / 1000}k`} />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Area type="monotone" dataKey="receitas" stroke="#10B981" strokeWidth={3} fill="url(#colorRec)" />
-                <Area type="monotone" dataKey="despesas" stroke="#EF4444" strokeWidth={3} fill="url(#colorDes)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#F3F4F6"
+                />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: "#9CA3AF" }}
+                  tickFormatter={(val) => `R$ ${val / 1000}k`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "16px",
+                    border: "none",
+                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="receitas"
+                  stroke="#10B981"
+                  strokeWidth={3}
+                  fill="url(#colorRec)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="despesas"
+                  stroke="#EF4444"
+                  strokeWidth={3}
+                  fill="url(#colorDes)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 font-inter">Ações Rápidas</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-6 font-inter">
+            Ações Rápidas
+          </h3>
           <div className="grid grid-cols-2 gap-4 flex-1">
             {[
-              { label: "Visita", to: "/portaria/visitantes", icon: Shield, color: "text-purple-600 bg-purple-50" },
-              { label: "Encomenda", to: "/portaria/encomendas", icon: Package, color: "text-amber-600 bg-amber-50" },
-              { label: "Chamado", to: "/manutencao", icon: Wrench, color: "text-rose-600 bg-rose-50" },
-              { label: "Cobrança", to: "/financeiro/cobrancas", icon: DollarSign, color: "text-emerald-600 bg-emerald-50" },
-              { label: "Áreas", to: "/areas-comuns", icon: Calendar, color: "text-teal-600 bg-teal-50" },
-              { label: "Aviso", to: "/comunicacao/avisos", icon: Bell, color: "text-blue-600 bg-blue-50" },
+              {
+                label: "Visita",
+                to: "/portaria/visitantes",
+                icon: Shield,
+                color: "text-purple-600 bg-purple-50",
+              },
+              {
+                label: "Encomenda",
+                to: "/portaria/encomendas",
+                icon: Package,
+                color: "text-amber-600 bg-amber-50",
+              },
+              {
+                label: "Chamado",
+                to: "/manutencao",
+                icon: Wrench,
+                color: "text-rose-600 bg-rose-50",
+              },
+              {
+                label: "Cobrança",
+                to: "/financeiro/cobrancas",
+                icon: DollarSign,
+                color: "text-emerald-600 bg-emerald-50",
+              },
+              {
+                label: "Áreas",
+                to: "/areas-comuns",
+                icon: Calendar,
+                color: "text-teal-600 bg-teal-50",
+              },
+              {
+                label: "Aviso",
+                to: "/comunicacao/avisos",
+                icon: Bell,
+                color: "text-blue-600 bg-blue-50",
+              },
             ].map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
               >
-                <div className={`${item.color} p-3 rounded-xl transform group-hover:scale-110 transition-transform`}>
+                <div
+                  className={`${item.color} p-3 rounded-xl transform group-hover:scale-110 transition-transform`}
+                >
                   <item.icon className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-bold text-gray-500">{item.label}</span>
+                <span className="text-xs font-bold text-gray-500">
+                  {item.label}
+                </span>
               </Link>
             ))}
           </div>
@@ -478,7 +610,9 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Visitantes (Semana)</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              Visitantes (Semana)
+            </h4>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={visitorsWeek}>
                 <defs>
@@ -487,12 +621,19 @@ export function DashboardPage() {
                     <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="step" dataKey="visitantes" stroke="#8B5CF6" fill="url(#colorVis)" />
+                <Area
+                  type="step"
+                  dataKey="visitantes"
+                  stroke="#8B5CF6"
+                  fill="url(#colorVis)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Encomendas (Semana)</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              Encomendas (Semana)
+            </h4>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={parcelWeek}>
                 <defs>
@@ -501,7 +642,12 @@ export function DashboardPage() {
                     <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <Area type="monotone" dataKey="recebidas" stroke="#F59E0B" fill="url(#colorPar)" />
+                <Area
+                  type="monotone"
+                  dataKey="recebidas"
+                  stroke="#F59E0B"
+                  fill="url(#colorPar)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -510,28 +656,44 @@ export function DashboardPage() {
         <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-800">Comunicados</h3>
-            <Link to="/comunicacao/avisos" className="text-blue-600 hover:text-blue-700">
+            <Link
+              to="/comunicacao/avisos"
+              className="text-blue-600 hover:text-blue-700"
+            >
               <Plus className="w-5 h-5" />
             </Link>
           </div>
           <div className="space-y-4 flex-1 overflow-auto max-h-[350px] pr-2 custom-scrollbar">
             {d?.recentAnnouncements?.length > 0 ? (
               d.recentAnnouncements.map((a: any) => (
-                <div key={a.id} className="flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-                  <div className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}>
+                <div
+                  key={a.id}
+                  className="flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
+                >
+                  <div
+                    className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}
+                  >
                     <Bell className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800 truncate">{a.title}</p>
-                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1">{a.content}</p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">{formatRelativeTime(a.publishedAt)}</p>
+                    <p className="text-sm font-bold text-gray-800 truncate">
+                      {a.title}
+                    </p>
+                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1">
+                      {a.content}
+                    </p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">
+                      {formatRelativeTime(a.publishedAt)}
+                    </p>
                   </div>
                 </div>
               ))
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
                 <Shield className="w-8 h-8 mb-4 " />
-                <p className="text-xs font-bold uppercase tracking-widest">Sem avisos</p>
+                <p className="text-xs font-bold uppercase tracking-widest">
+                  Sem avisos
+                </p>
               </div>
             )}
           </div>

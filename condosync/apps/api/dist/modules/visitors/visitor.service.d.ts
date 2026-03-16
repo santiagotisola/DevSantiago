@@ -1,4 +1,4 @@
-import { VisitorStatus } from '@prisma/client';
+import { UserRole, VisitorStatus } from "@prisma/client";
 export interface CreateVisitorDTO {
     unitId: string;
     name: string;
@@ -10,7 +10,12 @@ export interface CreateVisitorDTO {
     scheduledAt?: Date;
     notes?: string;
 }
+type VisitorActor = {
+    userId: string;
+    role: UserRole;
+};
 export declare class VisitorService {
+    private ensureUnitAccess;
     list(condominiumId: string, filters: {
         unitId?: string;
         status?: VisitorStatus;
@@ -25,12 +30,14 @@ export declare class VisitorService {
             };
         } & {
             status: import(".prisma/client").$Enums.VisitorStatus;
-            id: string;
-            createdAt: Date;
             name: string;
+            id: string;
             phone: string | null;
+            createdAt: Date;
             updatedAt: Date;
             unitId: string;
+            serviceProviderId: string | null;
+            scheduledAt: Date | null;
             notes: string | null;
             photoUrl: string | null;
             document: string | null;
@@ -38,25 +45,25 @@ export declare class VisitorService {
             company: string | null;
             reason: string | null;
             preAuthorizedBy: string | null;
-            scheduledAt: Date | null;
             entryAt: Date | null;
             exitAt: Date | null;
             registeredBy: string | null;
-            serviceProviderId: string | null;
         })[];
         total: number;
         page: number;
         limit: number;
         totalPages: number;
     }>;
-    create(data: CreateVisitorDTO, authorizedBy?: string): Promise<{
+    create(data: CreateVisitorDTO, actor: VisitorActor): Promise<{
         status: import(".prisma/client").$Enums.VisitorStatus;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         phone: string | null;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
         notes: string | null;
         photoUrl: string | null;
         document: string | null;
@@ -64,20 +71,20 @@ export declare class VisitorService {
         company: string | null;
         reason: string | null;
         preAuthorizedBy: string | null;
-        scheduledAt: Date | null;
         entryAt: Date | null;
         exitAt: Date | null;
         registeredBy: string | null;
-        serviceProviderId: string | null;
     }>;
     registerEntry(visitorId: string, registeredBy: string, photoUrl?: string): Promise<{
         status: import(".prisma/client").$Enums.VisitorStatus;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         phone: string | null;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
         notes: string | null;
         photoUrl: string | null;
         document: string | null;
@@ -85,20 +92,20 @@ export declare class VisitorService {
         company: string | null;
         reason: string | null;
         preAuthorizedBy: string | null;
-        scheduledAt: Date | null;
         entryAt: Date | null;
         exitAt: Date | null;
         registeredBy: string | null;
-        serviceProviderId: string | null;
     }>;
     registerExit(visitorId: string, registeredBy: string): Promise<{
         status: import(".prisma/client").$Enums.VisitorStatus;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         phone: string | null;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
         notes: string | null;
         photoUrl: string | null;
         document: string | null;
@@ -106,20 +113,20 @@ export declare class VisitorService {
         company: string | null;
         reason: string | null;
         preAuthorizedBy: string | null;
-        scheduledAt: Date | null;
         entryAt: Date | null;
         exitAt: Date | null;
         registeredBy: string | null;
-        serviceProviderId: string | null;
     }>;
-    authorize(visitorId: string, userId: string, authorized: boolean): Promise<{
+    authorize(visitorId: string, actor: VisitorActor, authorized: boolean): Promise<{
         status: import(".prisma/client").$Enums.VisitorStatus;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         phone: string | null;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
         notes: string | null;
         photoUrl: string | null;
         document: string | null;
@@ -127,26 +134,26 @@ export declare class VisitorService {
         company: string | null;
         reason: string | null;
         preAuthorizedBy: string | null;
-        scheduledAt: Date | null;
         entryAt: Date | null;
         exitAt: Date | null;
         registeredBy: string | null;
-        serviceProviderId: string | null;
     }>;
     findById(id: string): Promise<{
         unit: {
-            identifier: string;
             condominiumId: string;
+            identifier: string;
             block: string | null;
         };
     } & {
         status: import(".prisma/client").$Enums.VisitorStatus;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         phone: string | null;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
         notes: string | null;
         photoUrl: string | null;
         document: string | null;
@@ -154,21 +161,42 @@ export declare class VisitorService {
         company: string | null;
         reason: string | null;
         preAuthorizedBy: string | null;
-        scheduledAt: Date | null;
         entryAt: Date | null;
         exitAt: Date | null;
         registeredBy: string | null;
-        serviceProviderId: string | null;
     }>;
-    historyByUnit(unitId: string, page?: number, limit?: number): Promise<{
+    update(id: string, data: Partial<Pick<CreateVisitorDTO, "name" | "document" | "documentType" | "phone" | "company" | "reason" | "notes" | "scheduledAt">>): Promise<{
+        status: import(".prisma/client").$Enums.VisitorStatus;
+        name: string;
+        id: string;
+        phone: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        unitId: string;
+        serviceProviderId: string | null;
+        scheduledAt: Date | null;
+        notes: string | null;
+        photoUrl: string | null;
+        document: string | null;
+        documentType: string | null;
+        company: string | null;
+        reason: string | null;
+        preAuthorizedBy: string | null;
+        entryAt: Date | null;
+        exitAt: Date | null;
+        registeredBy: string | null;
+    }>;
+    historyByUnit(unitId: string, actor: VisitorActor, page?: number, limit?: number): Promise<{
         visitors: {
             status: import(".prisma/client").$Enums.VisitorStatus;
-            id: string;
-            createdAt: Date;
             name: string;
+            id: string;
             phone: string | null;
+            createdAt: Date;
             updatedAt: Date;
             unitId: string;
+            serviceProviderId: string | null;
+            scheduledAt: Date | null;
             notes: string | null;
             photoUrl: string | null;
             document: string | null;
@@ -176,11 +204,9 @@ export declare class VisitorService {
             company: string | null;
             reason: string | null;
             preAuthorizedBy: string | null;
-            scheduledAt: Date | null;
             entryAt: Date | null;
             exitAt: Date | null;
             registeredBy: string | null;
-            serviceProviderId: string | null;
         }[];
         total: number;
         page: number;
@@ -188,4 +214,5 @@ export declare class VisitorService {
     }>;
 }
 export declare const visitorService: VisitorService;
+export {};
 //# sourceMappingURL=visitor.service.d.ts.map

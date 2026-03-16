@@ -1,4 +1,4 @@
-import { ServiceOrderStatus, ServiceOrderPriority } from '@prisma/client';
+import { ServiceOrderPriority, ServiceOrderStatus, UserRole } from "@prisma/client";
 export interface CreateServiceOrderDTO {
     condominiumId: string;
     unitId?: string;
@@ -11,7 +11,14 @@ export interface CreateServiceOrderDTO {
     estimatedCost?: number;
     scheduledAt?: Date;
 }
+type MaintenanceActor = {
+    userId: string;
+    role: UserRole;
+};
 export declare class MaintenanceService {
+    private ensureCondominiumAccess;
+    private ensureOrderAccess;
+    private ensureScheduleAccess;
     listOrders(condominiumId: string, filters: {
         status?: ServiceOrderStatus;
         priority?: ServiceOrderPriority;
@@ -30,26 +37,26 @@ export declare class MaintenanceService {
             } | null;
         } & {
             status: import(".prisma/client").$Enums.ServiceOrderStatus;
-            id: string;
-            title: string;
-            createdAt: Date;
             priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+            id: string;
+            createdAt: Date;
             updatedAt: Date;
-            condominiumId: string;
             unitId: string | null;
-            scheduledAt: Date | null;
+            condominiumId: string;
+            requestedBy: string;
+            assignedTo: string | null;
             serviceProviderId: string | null;
+            title: string;
             description: string;
             category: string;
             location: string | null;
             photoUrls: string[];
-            resolution: string | null;
-            requestedBy: string;
-            assignedTo: string | null;
             estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
             finalCost: import("@prisma/client/runtime/library").Decimal | null;
+            scheduledAt: Date | null;
             startedAt: Date | null;
             completedAt: Date | null;
+            resolution: string | null;
             rating: number | null;
             feedback: string | null;
         })[];
@@ -58,62 +65,62 @@ export declare class MaintenanceService {
         limit: number;
         totalPages: number;
     }>;
-    create(data: CreateServiceOrderDTO, requestedBy: string): Promise<{
+    create(data: CreateServiceOrderDTO, requestedBy: string, actor: MaintenanceActor): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        id: string;
-        title: string;
-        createdAt: Date;
         priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+        id: string;
+        createdAt: Date;
         updatedAt: Date;
-        condominiumId: string;
         unitId: string | null;
-        scheduledAt: Date | null;
+        condominiumId: string;
+        requestedBy: string;
+        assignedTo: string | null;
         serviceProviderId: string | null;
+        title: string;
         description: string;
         category: string;
         location: string | null;
         photoUrls: string[];
-        resolution: string | null;
-        requestedBy: string;
-        assignedTo: string | null;
         estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
         finalCost: import("@prisma/client/runtime/library").Decimal | null;
+        scheduledAt: Date | null;
         startedAt: Date | null;
         completedAt: Date | null;
+        resolution: string | null;
         rating: number | null;
         feedback: string | null;
     }>;
-    updateStatus(id: string, status: ServiceOrderStatus, extra?: {
+    updateStatus(id: string, status: ServiceOrderStatus, actor: MaintenanceActor, extra?: {
         resolution?: string;
         finalCost?: number;
         rating?: number;
         feedback?: string;
     }): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        id: string;
-        title: string;
-        createdAt: Date;
         priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+        id: string;
+        createdAt: Date;
         updatedAt: Date;
-        condominiumId: string;
         unitId: string | null;
-        scheduledAt: Date | null;
+        condominiumId: string;
+        requestedBy: string;
+        assignedTo: string | null;
         serviceProviderId: string | null;
+        title: string;
         description: string;
         category: string;
         location: string | null;
         photoUrls: string[];
-        resolution: string | null;
-        requestedBy: string;
-        assignedTo: string | null;
         estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
         finalCost: import("@prisma/client/runtime/library").Decimal | null;
+        scheduledAt: Date | null;
         startedAt: Date | null;
         completedAt: Date | null;
+        resolution: string | null;
         rating: number | null;
         feedback: string | null;
     }>;
-    updateOrder(id: string, data: {
+    updateOrder(id: string, actor: MaintenanceActor, data: {
         title?: string;
         description?: string;
         category?: string;
@@ -123,61 +130,61 @@ export declare class MaintenanceService {
         scheduledAt?: Date;
     }): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        id: string;
-        title: string;
-        createdAt: Date;
         priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+        id: string;
+        createdAt: Date;
         updatedAt: Date;
-        condominiumId: string;
         unitId: string | null;
-        scheduledAt: Date | null;
+        condominiumId: string;
+        requestedBy: string;
+        assignedTo: string | null;
         serviceProviderId: string | null;
+        title: string;
         description: string;
         category: string;
         location: string | null;
         photoUrls: string[];
-        resolution: string | null;
-        requestedBy: string;
-        assignedTo: string | null;
         estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
         finalCost: import("@prisma/client/runtime/library").Decimal | null;
+        scheduledAt: Date | null;
         startedAt: Date | null;
         completedAt: Date | null;
+        resolution: string | null;
         rating: number | null;
         feedback: string | null;
     }>;
-    assign(id: string, serviceProviderId?: string, assignedTo?: string): Promise<{
+    assign(id: string, actor: MaintenanceActor, serviceProviderId?: string, assignedTo?: string): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        id: string;
-        title: string;
-        createdAt: Date;
         priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+        id: string;
+        createdAt: Date;
         updatedAt: Date;
-        condominiumId: string;
         unitId: string | null;
-        scheduledAt: Date | null;
+        condominiumId: string;
+        requestedBy: string;
+        assignedTo: string | null;
         serviceProviderId: string | null;
+        title: string;
         description: string;
         category: string;
         location: string | null;
         photoUrls: string[];
-        resolution: string | null;
-        requestedBy: string;
-        assignedTo: string | null;
         estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
         finalCost: import("@prisma/client/runtime/library").Decimal | null;
+        scheduledAt: Date | null;
         startedAt: Date | null;
         completedAt: Date | null;
+        resolution: string | null;
         rating: number | null;
         feedback: string | null;
     }>;
     listSchedules(condominiumId: string): Promise<{
         id: string;
-        title: string;
-        createdAt: Date;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
+        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -186,15 +193,113 @@ export declare class MaintenanceService {
         nextDueDate: Date;
         lastDoneDate: Date | null;
     }[]>;
-    findById(id: string): Promise<{
+    private calcNextDue;
+    createSchedule(actor: MaintenanceActor, data: {
+        condominiumId: string;
+        title: string;
+        description?: string;
+        category: string;
+        location: string;
+        frequency: string;
+        nextDueDate: Date;
+        estimatedCost?: number;
+    }): Promise<{
+        id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        condominiumId: string;
+        title: string;
+        description: string | null;
+        category: string;
+        location: string;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
+        frequency: string;
+        nextDueDate: Date;
+        lastDoneDate: Date | null;
+    }>;
+    updateSchedule(id: string, actor: MaintenanceActor, data: {
+        title?: string;
+        description?: string;
+        category?: string;
+        location?: string;
+        frequency?: string;
+        nextDueDate?: Date;
+        estimatedCost?: number;
+    }): Promise<{
+        id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        condominiumId: string;
+        title: string;
+        description: string | null;
+        category: string;
+        location: string;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
+        frequency: string;
+        nextDueDate: Date;
+        lastDoneDate: Date | null;
+    }>;
+    markScheduleDone(id: string, actor: MaintenanceActor): Promise<{
+        id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        condominiumId: string;
+        title: string;
+        description: string | null;
+        category: string;
+        location: string;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
+        frequency: string;
+        nextDueDate: Date;
+        lastDoneDate: Date | null;
+    }>;
+    deleteSchedule(id: string, actor: MaintenanceActor): Promise<{
+        id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        condominiumId: string;
+        title: string;
+        description: string | null;
+        category: string;
+        location: string;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
+        frequency: string;
+        nextDueDate: Date;
+        lastDoneDate: Date | null;
+    }>;
+    listDueSchedules(daysAhead?: number): Promise<({
+        condominium: {
+            name: string;
+            id: string;
+        };
+    } & {
+        id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        condominiumId: string;
+        title: string;
+        description: string | null;
+        category: string;
+        location: string;
+        estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
+        frequency: string;
+        nextDueDate: Date;
+        lastDoneDate: Date | null;
+    })[]>;
+    findById(id: string, actor: MaintenanceActor): Promise<{
         unit: {
             type: string | null;
             status: import(".prisma/client").$Enums.UnitStatus;
-            identifier: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
+            identifier: string;
             block: string | null;
             street: string | null;
             floor: string | null;
@@ -204,16 +309,16 @@ export declare class MaintenanceService {
             notes: string | null;
         } | null;
         serviceProvider: {
-            email: string | null;
-            id: string;
-            createdAt: Date;
             name: string;
+            id: string;
+            email: string | null;
             cpf: string | null;
             phone: string;
+            createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
-            cnpj: string | null;
             notes: string | null;
+            cnpj: string | null;
             serviceType: string;
             isApproved: boolean;
         } | null;
@@ -227,29 +332,30 @@ export declare class MaintenanceService {
         }[];
     } & {
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        id: string;
-        title: string;
-        createdAt: Date;
         priority: import(".prisma/client").$Enums.ServiceOrderPriority;
+        id: string;
+        createdAt: Date;
         updatedAt: Date;
-        condominiumId: string;
         unitId: string | null;
-        scheduledAt: Date | null;
+        condominiumId: string;
+        requestedBy: string;
+        assignedTo: string | null;
         serviceProviderId: string | null;
+        title: string;
         description: string;
         category: string;
         location: string | null;
         photoUrls: string[];
-        resolution: string | null;
-        requestedBy: string;
-        assignedTo: string | null;
         estimatedCost: import("@prisma/client/runtime/library").Decimal | null;
         finalCost: import("@prisma/client/runtime/library").Decimal | null;
+        scheduledAt: Date | null;
         startedAt: Date | null;
         completedAt: Date | null;
+        resolution: string | null;
         rating: number | null;
         feedback: string | null;
     }>;
 }
 export declare const maintenanceService: MaintenanceService;
+export {};
 //# sourceMappingURL=maintenance.service.d.ts.map

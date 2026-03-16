@@ -7,10 +7,10 @@ export declare class PetService {
             };
         } & {
             type: string;
-            id: string;
-            createdAt: Date;
             name: string;
+            id: string;
             isActive: boolean;
+            createdAt: Date;
             updatedAt: Date;
             unitId: string;
             notes: string | null;
@@ -32,10 +32,10 @@ export declare class PetService {
     }>;
     listByUnit(unitId: string): Promise<{
         type: string;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
         notes: string | null;
@@ -52,11 +52,11 @@ export declare class PetService {
         unit: {
             type: string | null;
             status: import(".prisma/client").$Enums.UnitStatus;
-            identifier: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
+            identifier: string;
             block: string | null;
             street: string | null;
             floor: string | null;
@@ -67,10 +67,10 @@ export declare class PetService {
         };
     } & {
         type: string;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
         notes: string | null;
@@ -85,10 +85,10 @@ export declare class PetService {
     }>;
     create(data: any): Promise<{
         type: string;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
         notes: string | null;
@@ -103,10 +103,10 @@ export declare class PetService {
     }>;
     update(id: string, data: any): Promise<{
         type: string;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
         notes: string | null;
@@ -121,10 +121,10 @@ export declare class PetService {
     }>;
     delete(id: string): Promise<{
         type: string;
-        id: string;
-        createdAt: Date;
         name: string;
+        id: string;
         isActive: boolean;
+        createdAt: Date;
         updatedAt: Date;
         unitId: string;
         notes: string | null;

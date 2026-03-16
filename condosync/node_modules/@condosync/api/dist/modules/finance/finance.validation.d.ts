@@ -16,9 +16,9 @@ export declare const createChargeSchema: z.ZodObject<{
     accountId: string;
     amount: number;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }, {
     unitId: string;
     description: string;
@@ -26,9 +26,9 @@ export declare const createChargeSchema: z.ZodObject<{
     accountId: string;
     amount: number;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }>;
 export declare const updateChargeSchema: z.ZodObject<{
     unitId: z.ZodOptional<z.ZodString>;
@@ -47,9 +47,9 @@ export declare const updateChargeSchema: z.ZodObject<{
     accountId?: string | undefined;
     amount?: number | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }, {
     unitId?: string | undefined;
     description?: string | undefined;
@@ -57,9 +57,9 @@ export declare const updateChargeSchema: z.ZodObject<{
     accountId?: string | undefined;
     amount?: number | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }>;
 export declare const ratioSchema: z.ZodObject<{
     condominiumId: z.ZodString;
@@ -117,8 +117,8 @@ export declare const createTransactionSchema: z.ZodObject<{
     amount: number;
     notes?: string | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     paidAt?: string | undefined;
+    categoryId?: string | undefined;
 }, {
     type: "INCOME" | "EXPENSE";
     description: string;
@@ -127,8 +127,67 @@ export declare const createTransactionSchema: z.ZodObject<{
     amount: number;
     notes?: string | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     paidAt?: string | undefined;
+    categoryId?: string | undefined;
+}>;
+export declare const ratioInstallmentsSchema: z.ZodObject<{
+    condominiumId: z.ZodString;
+    accountId: z.ZodString;
+    categoryId: z.ZodOptional<z.ZodString>;
+    description: z.ZodString;
+    totalAmount: z.ZodNumber;
+    firstDueDate: z.ZodString;
+    installments: z.ZodNumber;
+    intervalDays: z.ZodNumber;
+    method: z.ZodEnum<["equal", "fraction"]>;
+}, "strip", z.ZodTypeAny, {
+    condominiumId: string;
+    description: string;
+    accountId: string;
+    totalAmount: number;
+    method: "fraction" | "equal";
+    firstDueDate: string;
+    installments: number;
+    intervalDays: number;
+    categoryId?: string | undefined;
+}, {
+    condominiumId: string;
+    description: string;
+    accountId: string;
+    totalAmount: number;
+    method: "fraction" | "equal";
+    firstDueDate: string;
+    installments: number;
+    intervalDays: number;
+    categoryId?: string | undefined;
+}>;
+export declare const chargeInstallmentsSchema: z.ZodObject<{
+    unitId: z.ZodString;
+    accountId: z.ZodString;
+    categoryId: z.ZodOptional<z.ZodString>;
+    description: z.ZodString;
+    amount: z.ZodNumber;
+    firstDueDate: z.ZodString;
+    installments: z.ZodNumber;
+    intervalDays: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    unitId: string;
+    description: string;
+    accountId: string;
+    amount: number;
+    firstDueDate: string;
+    installments: number;
+    intervalDays: number;
+    categoryId?: string | undefined;
+}, {
+    unitId: string;
+    description: string;
+    accountId: string;
+    amount: number;
+    firstDueDate: string;
+    installments: number;
+    intervalDays: number;
+    categoryId?: string | undefined;
 }>;
 export type CreateChargeInput = z.infer<typeof createChargeSchema>;
 export type UpdateChargeInput = z.infer<typeof updateChargeSchema>;

@@ -20,14 +20,14 @@ export declare class AssemblyService {
         assemblies: {
             status: import(".prisma/client").$Enums.AssemblyStatus;
             id: string;
-            title: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
-            scheduledAt: Date;
+            title: string;
             description: string | null;
-            createdBy: string;
+            scheduledAt: Date;
             startedAt: Date | null;
+            createdBy: string;
             meetingUrl: string | null;
             finishedAt: Date | null;
             minutesUrl: string | null;
@@ -55,14 +55,14 @@ export declare class AssemblyService {
     } & {
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        scheduledAt: Date;
+        title: string;
         description: string | null;
-        createdBy: string;
+        scheduledAt: Date;
         startedAt: Date | null;
+        createdBy: string;
         meetingUrl: string | null;
         finishedAt: Date | null;
         minutesUrl: string | null;
@@ -78,14 +78,14 @@ export declare class AssemblyService {
     } & {
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        scheduledAt: Date;
+        title: string;
         description: string | null;
-        createdBy: string;
+        scheduledAt: Date;
         startedAt: Date | null;
+        createdBy: string;
         meetingUrl: string | null;
         finishedAt: Date | null;
         minutesUrl: string | null;
@@ -93,14 +93,14 @@ export declare class AssemblyService {
     updateStatus(id: string, status: AssemblyStatus): Promise<{
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        scheduledAt: Date;
+        title: string;
         description: string | null;
-        createdBy: string;
+        scheduledAt: Date;
         startedAt: Date | null;
+        createdBy: string;
         meetingUrl: string | null;
         finishedAt: Date | null;
         minutesUrl: string | null;
@@ -108,8 +108,8 @@ export declare class AssemblyService {
     vote(votingItemId: string, userId: string, optionId: string): Promise<{
         id: string;
         userId: string;
-        votedAt: Date;
         optionId: string;
+        votedAt: Date;
         votingItemId: string;
     }>;
     registerAttendance(assemblyId: string, userId: string): Promise<{

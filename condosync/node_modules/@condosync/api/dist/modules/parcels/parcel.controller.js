@@ -11,6 +11,10 @@ const registerSchema = zod_1.z.object({
     trackingCode: zod_1.z.string().optional(),
     photoUrl: zod_1.z.string().url().optional(),
     storageLocation: zod_1.z.string().optional(),
+    deliveryPersonName: zod_1.z.string().optional(),
+    deliveryPersonDoc: zod_1.z.string().optional(),
+    vehiclePlate: zod_1.z.string().optional(),
+    hasPackageDamage: zod_1.z.boolean().optional(),
     notes: zod_1.z.string().optional(),
 });
 const pickupSchema = zod_1.z.object({
@@ -26,6 +30,10 @@ const updateSchema = zod_1.z.object({
     trackingCode: zod_1.z.string().optional(),
     photoUrl: zod_1.z.string().url().optional(),
     storageLocation: zod_1.z.string().optional(),
+    deliveryPersonName: zod_1.z.string().optional(),
+    deliveryPersonDoc: zod_1.z.string().optional(),
+    vehiclePlate: zod_1.z.string().optional(),
+    hasPackageDamage: zod_1.z.boolean().optional(),
     notes: zod_1.z.string().optional(),
 });
 class ParcelController {

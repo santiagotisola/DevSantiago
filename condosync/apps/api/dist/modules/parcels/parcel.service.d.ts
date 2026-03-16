@@ -6,6 +6,10 @@ export interface RegisterParcelDTO {
     trackingCode?: string;
     photoUrl?: string;
     storageLocation?: string;
+    deliveryPersonName?: string;
+    deliveryPersonDoc?: string;
+    vehiclePlate?: string;
+    hasPackageDamage?: boolean;
     notes?: string;
 }
 export declare class ParcelService {
@@ -112,8 +116,8 @@ export declare class ParcelService {
     }>;
     findById(id: string): Promise<{
         unit: {
-            identifier: string;
             condominiumId: string;
+            identifier: string;
             block: string | null;
         };
     } & {

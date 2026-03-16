@@ -6,7 +6,7 @@ function validateRequest(schema, data) {
     const result = schema.safeParse(data);
     if (!result.success) {
         const errors = result.error.flatten().fieldErrors;
-        throw new errorHandler_1.ValidationError('Dados inválidos', errors);
+        throw new errorHandler_1.ValidationError("Dados inválidos", errors);
     }
     return result.data;
 }

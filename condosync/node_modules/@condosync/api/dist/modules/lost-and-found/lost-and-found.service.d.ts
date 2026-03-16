@@ -3,13 +3,13 @@ export declare class LostAndFoundService {
         items: {
             status: import(".prisma/client").$Enums.LostAndFoundStatus;
             id: string;
-            title: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
-            photoUrl: string | null;
+            title: string;
             description: string | null;
             category: string;
+            photoUrl: string | null;
             place: string | null;
             foundDate: Date | null;
             lostDate: Date | null;
@@ -31,13 +31,13 @@ export declare class LostAndFoundService {
     } & {
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        photoUrl: string | null;
+        title: string;
         description: string | null;
         category: string;
+        photoUrl: string | null;
         place: string | null;
         foundDate: Date | null;
         lostDate: Date | null;
@@ -48,13 +48,13 @@ export declare class LostAndFoundService {
     create(data: any, createdById: string, condominiumId: string): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        photoUrl: string | null;
+        title: string;
         description: string | null;
         category: string;
+        photoUrl: string | null;
         place: string | null;
         foundDate: Date | null;
         lostDate: Date | null;
@@ -65,13 +65,13 @@ export declare class LostAndFoundService {
     update(id: string, data: any): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        photoUrl: string | null;
+        title: string;
         description: string | null;
         category: string;
+        photoUrl: string | null;
         place: string | null;
         foundDate: Date | null;
         lostDate: Date | null;
@@ -82,13 +82,13 @@ export declare class LostAndFoundService {
     delete(id: string): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
-        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        photoUrl: string | null;
+        title: string;
         description: string | null;
         category: string;
+        photoUrl: string | null;
         place: string | null;
         foundDate: Date | null;
         lostDate: Date | null;

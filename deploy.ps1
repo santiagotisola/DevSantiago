@@ -66,25 +66,31 @@ function Deploy-Web {
 # ── Deploy API ───────────────────────────────────────────────
 function Deploy-Api {
     Show-Header "Deployando API (Node + Prisma)"
-    Write-Host ">> Contexto: $Root" -ForegroundColor Yellow
-    Write-Host ">> Serviço : DevSantiago ($API_SERVICE)" -ForegroundColor Yellow
-    Write-Host ">> Dockerfile: Dockerfile.api (multi-stage: tsc + node production)" -ForegroundColor DarkGray
+    Write-Host ">> Contexto: $Condo" -ForegroundColor Yellow
+    Write-Host ">> Servico : DevSantiago ($API_SERVICE)" -ForegroundColor Yellow
+    Write-Host ">> Dockerfile: condosync/Dockerfile.api (via railway.toml + --no-gitignore)" -ForegroundColor DarkGray
     Write-Host ""
 
-    Ensure-ServiceInConfig $Root $API_SERVICE
+    # Cria railway.toml temporario apontando para Dockerfile.api
+    # IMPORTANTE: usa --no-gitignore para que arquivos nao commitados (Dockerfile.api e railway.toml) sejam enviados
+    $tomlPath = Join-Path $Condo "railway.toml"
+    Set-Content $tomlPath -Value "[build]`nbuilder = `"dockerfile`"`ndockerfilePath = `"Dockerfile.api`"" -Encoding UTF8
 
-    Push-Location $Root
+    Ensure-ServiceInConfig $Condo $API_SERVICE
+
+    Push-Location $Condo
     try {
-        railway up --service "DevSantiago"
+        railway up --no-gitignore --service "DevSantiago"
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "`n✅ API deployada com sucesso!" -ForegroundColor Green
+            Write-Host "`n>> API deployada com sucesso!" -ForegroundColor Green
             Write-Host "   URL: https://devsantiago-production.up.railway.app" -ForegroundColor Green
         } else {
-            Write-Host "`n❌ Deploy API falhou. Verifique os logs:" -ForegroundColor Red
+            Write-Host "`n>> Deploy API falhou. Verifique os logs:" -ForegroundColor Red
             Write-Host "   railway logs --service DevSantiago" -ForegroundColor Red
         }
     } finally {
         Pop-Location
+        Remove-Item $tomlPath -ErrorAction SilentlyContinue
     }
 }
 

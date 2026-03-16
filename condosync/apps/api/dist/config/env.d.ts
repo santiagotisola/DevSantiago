@@ -13,8 +13,10 @@ export declare const env: {
     SMTP_FROM: string;
     BCRYPT_ROUNDS: string;
     REDIS_URL: string;
+    OPENAI_MODEL: string;
     SMTP_HOST?: string | undefined;
     SMTP_USER?: string | undefined;
     SMTP_PASS?: string | undefined;
+    OPENAI_API_KEY?: string | undefined;
 };
 //# sourceMappingURL=env.d.ts.map

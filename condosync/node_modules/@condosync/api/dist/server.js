@@ -19,6 +19,7 @@ const errorHandler_1 = require("./middleware/errorHandler");
 const notFoundHandler_1 = require("./middleware/notFoundHandler");
 // Inicializar workers em background
 require("./notifications/notification.worker");
+const maintenance_alerts_worker_1 = require("./modules/maintenance/maintenance.alerts.worker");
 // Rotas
 const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
 const user_routes_1 = __importDefault(require("./modules/users/user.routes"));
@@ -40,25 +41,31 @@ const asaas_routes_1 = __importDefault(require("./modules/webhooks/asaas.routes"
 const assembly_routes_1 = __importDefault(require("./modules/assemblies/assembly.routes"));
 const pet_routes_1 = __importDefault(require("./modules/pets/pet.routes"));
 const lost_and_found_routes_1 = __importDefault(require("./modules/lost-and-found/lost-and-found.routes"));
+const document_routes_1 = __importDefault(require("./modules/documents/document.routes"));
+const renovation_routes_1 = __importDefault(require("./modules/renovations/renovation.routes"));
+const stock_routes_1 = __importDefault(require("./modules/stock/stock.routes"));
+const tickets_routes_1 = __importDefault(require("./modules/tickets/tickets.routes"));
+const gallery_routes_1 = __importDefault(require("./modules/gallery/gallery.routes"));
+const ai_routes_1 = __importDefault(require("./modules/ai/ai.routes"));
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
 // ─── Socket.IO ───────────────────────────────────────────────
 exports.io = new socket_io_1.Server(httpServer, {
     cors: {
-        origin: env_1.env.CORS_ORIGINS.split(','),
-        methods: ['GET', 'POST'],
+        origin: env_1.env.CORS_ORIGINS.split(","),
+        methods: ["GET", "POST"],
         credentials: true,
     },
 });
-exports.io.on('connection', (socket) => {
+exports.io.on("connection", (socket) => {
     logger_1.logger.info(`Socket conectado: ${socket.id}`);
-    socket.on('join:condominium', (condominiumId) => {
+    socket.on("join:condominium", (condominiumId) => {
         socket.join(`condominium:${condominiumId}`);
     });
-    socket.on('join:unit', (unitId) => {
+    socket.on("join:unit", (unitId) => {
         socket.join(`unit:${unitId}`);
     });
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
         logger_1.logger.info(`Socket desconectado: ${socket.id}`);
     });
 });
@@ -66,26 +73,26 @@ exports.io.on('connection', (socket) => {
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, cors_1.default)({
-    origin: env_1.env.CORS_ORIGINS.split(','),
+    origin: env_1.env.CORS_ORIGINS.split(","),
     credentials: true,
 }));
-app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ extended: true }));
-app.use((0, morgan_1.default)('combined', {
+app.use((0, morgan_1.default)("combined", {
     stream: { write: (message) => logger_1.logger.info(message.trim()) },
 }));
 app.use(rateLimiter_1.rateLimiter);
 // ─── Health Check ─────────────────────────────────────────────
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
     res.json({
-        status: 'ok',
+        status: "ok",
         timestamp: new Date().toISOString(),
-        version: process.env.npm_package_version || '1.0.0',
+        version: process.env.npm_package_version || "1.0.0",
         environment: env_1.env.NODE_ENV,
     });
 });
 // ─── Rotas da API ─────────────────────────────────────────────
-const API = '/api/v1';
+const API = "/api/v1";
 app.use(`${API}/auth`, auth_routes_1.default);
 app.use(`${API}/users`, user_routes_1.default);
 app.use(`${API}/condominiums`, condominium_routes_1.default);
@@ -106,15 +113,22 @@ app.use(`${API}/webhooks`, asaas_routes_1.default);
 app.use(`${API}/assemblies`, assembly_routes_1.default);
 app.use(`${API}/pets`, pet_routes_1.default);
 app.use(`${API}/lost-and-found`, lost_and_found_routes_1.default);
+app.use(`${API}/documents`, document_routes_1.default);
+app.use(`${API}/renovations`, renovation_routes_1.default);
+app.use(`${API}/stock`, stock_routes_1.default);
+app.use(`${API}/tickets`, tickets_routes_1.default);
+app.use(`${API}/gallery`, gallery_routes_1.default);
+app.use(`${API}/ai`, ai_routes_1.default);
 // ─── Error Handlers ───────────────────────────────────────────
 app.use(notFoundHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
 // ─── Start Server ─────────────────────────────────────────────
 const PORT = env_1.env.PORT || 3333;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
     logger_1.logger.info(`🚀 CondoSync API rodando na porta ${PORT}`);
     logger_1.logger.info(`📋 Ambiente: ${env_1.env.NODE_ENV}`);
     logger_1.logger.info(`📍 URL: http://localhost:${PORT}`);
+    await (0, maintenance_alerts_worker_1.registerMaintenanceAlertsSchedule)();
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map

@@ -146,6 +146,54 @@ class FinanceService {
             logger_1.logger.error(`Erro ao sincronizar cobrança ${chargeId} com gateway:`, error);
         }
     }
+    async getChargeById(chargeId) {
+        return prisma_1.prisma.charge.findUnique({
+            where: { id: chargeId },
+            include: {
+                unit: { select: { identifier: true, block: true, condominiumId: true } },
+                category: { select: { name: true } },
+            },
+        });
+    }
+    async forceSyncWithGateway(chargeId) {
+        const charge = await prisma_1.prisma.charge.findUnique({
+            where: { id: chargeId },
+            include: { account: true },
+        });
+        if (!charge)
+            throw new errorHandler_1.AppError('Cobrança não encontrada', 404);
+        if (charge.status !== 'PENDING')
+            throw new errorHandler_1.AppError('Apenas cobranças pendentes podem ser sincronizadas');
+        if (!charge.account.gatewayKey)
+            throw new errorHandler_1.AppError('Conta financeira não possui gateway configurado');
+        const gateway = gateway_1.GatewayFactory.getService(charge.account.gatewayType);
+        if (!gateway)
+            throw new errorHandler_1.AppError('Gateway não suportado');
+        const response = await gateway.createPayment(charge, { apiKey: charge.account.gatewayKey, config: charge.account.gatewayConfig });
+        return prisma_1.prisma.charge.update({
+            where: { id: chargeId },
+            data: {
+                gatewayId: response.gatewayId,
+                gatewayStatus: response.gatewayStatus,
+                paymentLink: response.paymentLink,
+                pixQrCode: response.pixQrCode,
+                pixCopyPaste: response.pixCopyPaste,
+                boletoUrl: response.boletoUrl,
+                boletoCode: response.boletoCode,
+            },
+        });
+    }
+    async configureGateway(accountId, config) {
+        return prisma_1.prisma.financialAccount.update({
+            where: { id: accountId },
+            data: {
+                gatewayType: config.gatewayType,
+                gatewayKey: config.gatewayKey,
+                gatewayConfig: config.gatewayConfig ?? undefined,
+            },
+            select: { id: true, name: true, gatewayType: true },
+        });
+    }
     async markAsPaid(chargeId, paidAmount, paidAt) {
         return prisma_1.prisma.charge.update({
             where: { id: chargeId },
@@ -283,6 +331,59 @@ class FinanceService {
             forecastBalance: (0, decimal_1.roundMoney)(expectedRevenue - averageExpense),
             safetyMargin: averageExpense > 0 ? ((expectedRevenue - averageExpense) / averageExpense) * 100 : 100,
         };
+    }
+    // ─── Rateio Parcelado ─────────────────────────────────────────
+    async ratioChargesInstallments(data, createdBy) {
+        const results = [];
+        for (let i = 0; i < data.installments; i++) {
+            const dueDate = new Date(data.firstDueDate);
+            dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
+            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+            const description = `${data.description} (${i + 1}/${data.installments})`;
+            const result = await this.ratioCharges({ ...data, description, dueDate, referenceMonth }, createdBy);
+            results.push({ installment: i + 1, dueDate, ...result });
+        }
+        return { installments: data.installments, totalCharges: results.reduce((s, r) => s + r.count, 0), results };
+    }
+    // ─── Cobranças Parceladas (unidade única) ─────────────────────
+    async createChargeInstallments(data, createdBy) {
+        const charges = [];
+        for (let i = 0; i < data.installments; i++) {
+            const dueDate = new Date(data.firstDueDate);
+            dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
+            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+            charges.push({
+                unitId: data.unitId,
+                accountId: data.accountId,
+                categoryId: data.categoryId,
+                description: `${data.description} (${i + 1}/${data.installments})`,
+                amount: data.amount,
+                dueDate,
+                referenceMonth,
+                interestRate: data.interestRate,
+                penaltyAmount: data.penaltyAmount,
+                status: client_1.ChargeStatus.PENDING,
+                createdBy,
+            });
+        }
+        await prisma_1.prisma.charge.createMany({ data: charges });
+        return { installments: data.installments, count: charges.length };
+    }
+    // ─── Preview de rateio (sem criar) ────────────────────────────
+    async previewRatio(condominiumId, totalAmount, method) {
+        const units = await prisma_1.prisma.unit.findMany({
+            where: { condominiumId, status: 'OCCUPIED' },
+            select: { id: true, identifier: true, block: true, fraction: true },
+        });
+        const totalFraction = units.reduce((s, u) => s + u.fraction, 0);
+        return units.map(u => ({
+            unitId: u.id,
+            identifier: u.identifier,
+            block: u.block,
+            amount: method === 'fraction'
+                ? Math.round((totalAmount * u.fraction / totalFraction) * 100) / 100
+                : Math.round((totalAmount / units.length) * 100) / 100,
+        }));
     }
 }
 exports.FinanceService = FinanceService;

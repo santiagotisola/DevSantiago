@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createTransactionSchema = exports.paySchema = exports.ratioSchema = exports.updateChargeSchema = exports.createChargeSchema = void 0;
+exports.chargeInstallmentsSchema = exports.ratioInstallmentsSchema = exports.createTransactionSchema = exports.paySchema = exports.ratioSchema = exports.updateChargeSchema = exports.createChargeSchema = void 0;
 const zod_1 = require("zod");
 // ─── Cobranças ──────────────────────────────────────────────
 exports.createChargeSchema = zod_1.z.object({
@@ -40,5 +40,27 @@ exports.createTransactionSchema = zod_1.z.object({
     paidAt: zod_1.z.string().datetime().optional(),
     referenceMonth: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
+});
+// ─── Rateio Parcelado ──────────────────────────────────────
+exports.ratioInstallmentsSchema = zod_1.z.object({
+    condominiumId: zod_1.z.string().uuid(),
+    accountId: zod_1.z.string().uuid(),
+    categoryId: zod_1.z.string().uuid().optional(),
+    description: zod_1.z.string().min(3, 'Descrição deve ter no mínimo 3 caracteres'),
+    totalAmount: zod_1.z.number().positive('Valor total deve ser positivo'),
+    firstDueDate: zod_1.z.string().datetime(),
+    installments: zod_1.z.number().int().min(2).max(60),
+    intervalDays: zod_1.z.number().int().min(1),
+    method: zod_1.z.enum(['equal', 'fraction']),
+});
+exports.chargeInstallmentsSchema = zod_1.z.object({
+    unitId: zod_1.z.string().uuid(),
+    accountId: zod_1.z.string().uuid(),
+    categoryId: zod_1.z.string().uuid().optional(),
+    description: zod_1.z.string().min(3, 'Descrição deve ter no mínimo 3 caracteres'),
+    amount: zod_1.z.number().positive('Valor deve ser positivo'),
+    firstDueDate: zod_1.z.string().datetime(),
+    installments: zod_1.z.number().int().min(2).max(60),
+    intervalDays: zod_1.z.number().int().min(1),
 });
 //# sourceMappingURL=finance.validation.js.map
