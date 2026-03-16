@@ -80,6 +80,19 @@ services:
     volumes:
       - redis_data:/data
 
+  # ─── Mobile PWA (React PWA nginx) ────────────────────────────────────────
+  mobile:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+    container_name: condosync-mobile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+
   # ─── Mailpit (capturador de email para desenvolvimento) ───────────────────
   mailpit:
     image: axllent/mailpit:latest

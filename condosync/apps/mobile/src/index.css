@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Safe area for notched phones */
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Bottom nav height including safe area */
+.pb-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Smooth scrolling for content areas */
+.scroll-area {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Active press effect on buttons */
+.btn-press:active { transform: scale(0.97); transition: transform 0.1s; }
+
+/* Badge animation */
+@keyframes badge-pop {
+  0% { transform: scale(0); }
+  80% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.badge-pop { animation: badge-pop 0.2s ease-out; }

@@ -16,6 +16,7 @@ import { notFoundHandler } from "./middleware/notFoundHandler";
 // Inicializar workers em background
 import "./notifications/notification.worker";
 import { registerMaintenanceAlertsSchedule } from "./modules/maintenance/maintenance.alerts.worker";
+import { registerFinanceSchedule } from "./modules/finance/finance.scheduler";
 
 // Rotas
 import authRoutes from "./modules/auth/auth.routes";
@@ -44,6 +45,10 @@ import stockRoutes from "./modules/stock/stock.routes";
 import ticketRoutes from "./modules/tickets/tickets.routes";
 import galleryRoutes from "./modules/gallery/gallery.routes";
 import aiRoutes from "./modules/ai/ai.routes";
+import recurrenceRoutes from "./modules/visitors/recurrence.routes";
+import panicRoutes from "./modules/panic/panic.routes";
+import marketplaceRoutes from "./modules/marketplace/marketplace.routes";
+import financeCategoriesRoutes from "./modules/finance/financeCategories.routes";
 const app = express();
 const httpServer = createServer(app);
 
@@ -65,6 +70,10 @@ io.on("connection", (socket) => {
 
   socket.on("join:unit", (unitId: string) => {
     socket.join(`unit:${unitId}`);
+  });
+
+  socket.on("join:user", (userId: string) => {
+    socket.join(`user:${userId}`);
   });
 
   socket.on("disconnect", () => {
@@ -108,10 +117,12 @@ app.use(`${API}/users`, userRoutes);
 app.use(`${API}/condominiums`, condominiumRoutes);
 app.use(`${API}/units`, unitRoutes);
 app.use(`${API}/residents`, residentRoutes);
+app.use(`${API}/visitors/recurrence`, recurrenceRoutes);
 app.use(`${API}/visitors`, visitorRoutes);
 app.use(`${API}/parcels`, parcelRoutes);
 app.use(`${API}/vehicles`, vehicleRoutes);
 app.use(`${API}/communication`, communicationRoutes);
+app.use(`${API}/finance/categories`, financeCategoriesRoutes);
 app.use(`${API}/finance`, financeRoutes);
 app.use(`${API}/maintenance`, maintenanceRoutes);
 app.use(`${API}/common-areas`, commonAreaRoutes);
@@ -129,6 +140,8 @@ app.use(`${API}/stock`, stockRoutes);
 app.use(`${API}/tickets`, ticketRoutes);
 app.use(`${API}/gallery`, galleryRoutes);
 app.use(`${API}/ai`, aiRoutes);
+app.use(`${API}/panic`, panicRoutes);
+app.use(`${API}/marketplace`, marketplaceRoutes);
 
 // ─── Error Handlers ───────────────────────────────────────────
 app.use(notFoundHandler);
@@ -142,6 +155,7 @@ httpServer.listen(PORT, async () => {
   logger.info(`📋 Ambiente: ${env.NODE_ENV}`);
   logger.info(`📍 URL: http://localhost:${PORT}`);
   await registerMaintenanceAlertsSchedule();
+  await registerFinanceSchedule();
 });
 
 export default app;

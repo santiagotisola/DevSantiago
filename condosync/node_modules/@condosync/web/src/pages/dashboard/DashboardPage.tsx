@@ -19,8 +19,6 @@ import {
   MessageSquare,
   Image,
   Video,
-  Bell,
-  Plus,
 } from "lucide-react";
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
@@ -432,17 +430,17 @@ export function DashboardPage() {
               <AreaChart data={financeMonths}>
                 <defs>
                   <linearGradient id="colorRec" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorDes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `R$ ${val/1000}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} tickFormatter={(val) => `R$ ${val / 1000}k`} />
                 <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                 <Area type="monotone" dataKey="receitas" stroke="#10B981" strokeWidth={3} fill="url(#colorRec)" />
                 <Area type="monotone" dataKey="despesas" stroke="#EF4444" strokeWidth={3} fill="url(#colorDes)" />
@@ -485,8 +483,8 @@ export function DashboardPage() {
               <AreaChart data={visitorsWeek}>
                 <defs>
                   <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area type="step" dataKey="visitantes" stroke="#8B5CF6" fill="url(#colorVis)" />
@@ -499,8 +497,8 @@ export function DashboardPage() {
               <AreaChart data={parcelWeek}>
                 <defs>
                   <linearGradient id="colorPar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area type="monotone" dataKey="recebidas" stroke="#F59E0B" fill="url(#colorPar)" />
@@ -537,6 +535,68 @@ export function DashboardPage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Acesso rápido */}
+      <div className="bg-white rounded-xl border p-5">
+        <h3 className="font-semibold mb-4">Acesso Rápido</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          {[
+            {
+              label: "Registrar Visita",
+              to: "/portaria/visitantes",
+              icon: Shield,
+              color: "text-purple-600 bg-purple-50",
+            },
+            {
+              label: "Registrar Encomenda",
+              to: "/portaria/encomendas",
+              icon: Package,
+              color: "text-orange-600 bg-orange-50",
+            },
+            {
+              label: "Abrir Chamado",
+              to: "/manutencao",
+              icon: Wrench,
+              color: "text-red-600 bg-red-50",
+            },
+            {
+              label: "Nova Cobrança",
+              to: "/financeiro/cobranças",
+              icon: DollarSign,
+              color: "text-green-600 bg-green-50",
+            },
+            {
+              label: "Reservar Área",
+              to: "/areas-comuns",
+              icon: Calendar,
+              color: "text-teal-600 bg-teal-50",
+            },
+            {
+              label: "Novo Comunicado",
+              to: "/comunicacao/avisos",
+              icon: Users,
+              color: "text-blue-600 bg-blue-50",
+            },
+            {
+              label: "Assembleias",
+              to: "/assembleias",
+              icon: Video,
+              color: "text-indigo-600 bg-indigo-50",
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl ${item.color} hover:opacity-80 transition-opacity text-center`}
+            >
+              <item.icon className="w-6 h-6" />
+              <span className="text-xs font-medium leading-tight">
+                {item.label}
+              </span>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

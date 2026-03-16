@@ -10,12 +10,12 @@ router.use(authenticate);
 const schema = z.object({
   condominiumId: z.string().uuid(),
   name: z.string().min(2),
-  cnpj: z.string().optional(),
-  cpf: z.string().optional(),
+  cnpj: z.string().optional().or(z.literal('')),
+  cpf: z.string().optional().or(z.literal('')),
   serviceType: z.string().min(2),
-  phone: z.string(),
-  email: z.string().email().optional(),
-  notes: z.string().optional(),
+  phone: z.string().optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  notes: z.string().optional().or(z.literal('')),
 });
 
 router.get('/condominium/:condominiumId', async (req: Request, res: Response) => {

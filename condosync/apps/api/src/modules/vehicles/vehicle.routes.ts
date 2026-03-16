@@ -31,12 +31,31 @@ router.get("/unit/:unitId", async (req: Request, res: Response) => {
 
 router.post("/", async (req: Request, res: Response) => {
   const data = validateRequest(vehicleSchema, req.body);
+
+  // Residents can only add vehicles to their own unit
+  const user = req.user!;
+  if (user.role === 'RESIDENT' && user.unitId !== data.unitId) {
+    res.status(403).json({ success: false, message: 'Proibido: você só pode cadastrar veículos na sua unidade.' });
+    return;
+  }
+
   const vehicle = await prisma.vehicle.create({ data });
   res.status(201).json({ success: true, data: { vehicle } });
 });
 
 router.put("/:id", async (req: Request, res: Response) => {
   const data = validateRequest(vehicleSchema.partial(), req.body);
+
+  // Ensure vehicle belongs to the user's unit if RESIDENT
+  const user = req.user!;
+  if (user.role === 'RESIDENT') {
+    const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
+    if (!existing || existing.unitId !== user.unitId) {
+      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para editar este veículo.' });
+      return;
+    }
+  }
+
   const vehicle = await prisma.vehicle.update({
     where: { id: req.params.id },
     data,
@@ -45,6 +64,16 @@ router.put("/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/:id", async (req: Request, res: Response) => {
+  // Ensure vehicle belongs to the user's unit if RESIDENT
+  const user = req.user!;
+  if (user.role === 'RESIDENT') {
+    const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
+    if (!existing || existing.unitId !== user.unitId) {
+      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para remover este veículo.' });
+      return;
+    }
+  }
+
   await prisma.vehicle.update({
     where: { id: req.params.id },
     data: { isActive: false },

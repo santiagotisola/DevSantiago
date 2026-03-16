@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import { financeService } from './finance.service';
 import { authenticate, authorize } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
+import { prisma } from '../../config/prisma';
+import { z } from 'zod';
 import {
   createChargeSchema,
   updateChargeSchema,
@@ -156,6 +158,127 @@ router.get('/balance/:condominiumId/yearly/:year', async (req: Request, res: Res
 router.get('/forecast/:condominiumId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const data = await financeService.getFinancialForecast(req.params.condominiumId);
   res.json({ success: true, data });
+});
+
+// ─── Fundo de Reserva ─────────────────────────────────────────
+router.get('/reserve-fund/:condominiumId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN', 'RESIDENT'), async (req: Request, res: Response) => {
+  const entries = await prisma.reserveFundEntry.findMany({
+    where: { condominiumId: req.params.condominiumId },
+    orderBy: { month: 'desc' },
+    take: 24,
+  });
+  const total = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+  res.json({ success: true, data: { entries, total } });
+});
+
+router.post('/reserve-fund', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const schema = z.object({
+    condominiumId: z.string().uuid(),
+    month: z.string().regex(/^\d{4}-\d{2}$/),
+    amount: z.number().positive(),
+    description: z.string().optional(),
+  });
+  const data = validateRequest(schema, req.body);
+  const entry = await prisma.reserveFundEntry.create({ data: { ...data, createdBy: req.user!.userId } });
+  res.status(201).json({ success: true, data: entry });
+});
+
+// ─── Projetos Financeiros ─────────────────────────────────────
+router.get('/projects/:condominiumId', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN', 'RESIDENT'), async (req: Request, res: Response) => {
+  const projects = await prisma.financialProject.findMany({
+    where: { condominiumId: req.params.condominiumId },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ success: true, data: projects });
+});
+
+router.post('/projects', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const schema = z.object({
+    condominiumId: z.string().uuid(),
+    name: z.string().min(2),
+    description: z.string().optional(),
+    budget: z.number().positive(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+  });
+  const data = validateRequest(schema, req.body);
+  const project = await prisma.financialProject.create({
+    data: {
+      ...data,
+      budget: data.budget,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      createdBy: req.user!.userId,
+    },
+  });
+  res.status(201).json({ success: true, data: project });
+});
+
+router.patch('/projects/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
+  const schema = z.object({
+    name: z.string().min(2).optional(),
+    description: z.string().optional(),
+    budget: z.number().positive().optional(),
+    spent: z.number().min(0).optional(),
+    status: z.enum(['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+  });
+  const data = validateRequest(schema, req.body);
+  const project = await prisma.financialProject.update({
+    where: { id: req.params.id },
+    data: {
+      ...data,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
+    },
+  });
+  res.json({ success: true, data: project });
+});
+
+// ─── Balancete Mensal (detalhado) ─────────────────────────────
+router.get('/balancete/:condominiumId/:year/:month', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN', 'RESIDENT'), async (req: Request, res: Response) => {
+  const { condominiumId, year, month } = req.params;
+  const ym = `${year}-${month.padStart(2, '0')}`;
+
+  const accounts = await prisma.financialAccount.findMany({ where: { condominiumId } });
+  const accountIds = accounts.map((a) => a.id);
+
+  const [income, expense, charges] = await Promise.all([
+    prisma.financialTransaction.findMany({
+      where: { accountId: { in: accountIds }, type: 'INCOME', referenceMonth: ym },
+      include: { category: true },
+    }),
+    prisma.financialTransaction.findMany({
+      where: { accountId: { in: accountIds }, type: 'EXPENSE', referenceMonth: ym },
+      include: { category: true },
+    }),
+    prisma.charge.findMany({
+      where: { condominiumId, dueDate: { gte: new Date(`${ym}-01`), lt: new Date(`${year}-${String(Number(month) + 1).padStart(2, '0')}-01`) } },
+      include: { unit: true },
+    }),
+  ]);
+
+  const totalIncome = income.reduce((s, t) => s + Number(t.amount), 0);
+  const totalExpense = expense.reduce((s, t) => s + Number(t.amount), 0);
+
+  res.json({
+    success: true,
+    data: {
+      period: ym,
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      income,
+      expense,
+      charges: {
+        total: charges.length,
+        paid: charges.filter((c) => c.status === 'PAID').length,
+        overdue: charges.filter((c) => c.status === 'OVERDUE').length,
+        pending: charges.filter((c) => c.status === 'PENDING').length,
+      },
+    },
+  });
 });
 
 export default router;
