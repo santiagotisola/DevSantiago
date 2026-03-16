@@ -44,7 +44,7 @@ export function ResidentsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (d: typeof editForm) => api.patch(`/residents/${editTarget.id}`, { ...d, unitId: d.unitId || null }),
+    mutationFn: (d: typeof editForm) => api.patch(`/residents/${editTarget.id}`, d),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setEditTarget(null); },
   });
 
@@ -191,9 +191,9 @@ export function ResidentsPage() {
                 </div>
               ))}
               <div className="space-y-1">
-                <label className="text-sm font-medium">Unidade</label>
-                <select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Selecione...</option>
+                <label className="text-sm font-medium">Unidade *</label>
+                <select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option value="">Selecione uma unidade...</option>
                   {((units || []) as any[]).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.identifier}{u.block ? ' / Bloco ' + u.block : ''}</option>
                   ))}
@@ -203,7 +203,7 @@ export function ResidentsPage() {
             {createMutation.isError && <p className="text-sm text-red-600">Erro ao cadastrar. Verifique os dados.</p>}
             <div className="flex gap-3">
               <button onClick={() => { setShowModal(false); setForm({ ...emptyForm }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.email || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+              <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.email || !form.unitId || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                 {createMutation.isPending ? 'Criando...' : 'Criar'}
               </button>
             </div>
@@ -224,9 +224,9 @@ export function ResidentsPage() {
                 </div>
               ))}
               <div className="space-y-1">
-                <label className="text-sm font-medium">Unidade</label>
-                <select value={editForm.unitId} onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Sem unidade</option>
+                <label className="text-sm font-medium">Unidade *</label>
+                <select value={editForm.unitId} onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option value="">Selecione uma unidade...</option>
                   {((units || []) as any[]).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.identifier}{u.block ? ' / Bloco ' + u.block : ''}</option>
                   ))}
@@ -235,7 +235,7 @@ export function ResidentsPage() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={() => updateMutation.mutate(editForm)} disabled={updateMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+              <button onClick={() => updateMutation.mutate(editForm)} disabled={!editForm.unitId || updateMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                 {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
               </button>
             </div>

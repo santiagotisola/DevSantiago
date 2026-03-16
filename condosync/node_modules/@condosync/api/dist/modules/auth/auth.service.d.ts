@@ -13,36 +13,36 @@ export declare class AuthService {
     private generateTokens;
     register(data: RegisterDTO): Promise<{
         user: {
-            name: string;
-            id: string;
             email: string;
+            id: string;
+            createdAt: Date;
+            name: string;
             phone: string | null;
             role: import(".prisma/client").$Enums.UserRole;
-            createdAt: Date;
         };
     }>;
     login(data: LoginDTO, ipAddress?: string): Promise<{
         user: {
-            name: string;
-            id: string;
             email: string;
+            id: string;
+            name: string;
             avatarUrl: string | null;
             role: import(".prisma/client").$Enums.UserRole;
             isActive: boolean;
             condominiumUsers: ({
                 condominium: {
-                    name: string;
                     id: string;
+                    name: string;
                     logoUrl: string | null;
                 };
             } & {
                 id: string;
+                userId: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 isActive: boolean;
-                unitId: string | null;
                 condominiumId: string;
-                userId: string;
                 joinedAt: Date;
+                unitId: string | null;
             })[];
         };
         accessToken: any;

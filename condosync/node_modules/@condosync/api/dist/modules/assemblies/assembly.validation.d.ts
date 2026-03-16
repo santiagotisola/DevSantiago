@@ -12,23 +12,23 @@ export declare const createAssemblySchema: z.ZodObject<{
                 id: z.ZodString;
                 text: z.ZodString;
             }, "strip", z.ZodTypeAny, {
-                text: string;
                 id: string;
+                text: string;
             }, {
-                text: string;
                 id: string;
+                text: string;
             }>, "many">;
         }, "strip", z.ZodTypeAny, {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
         }, {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
@@ -37,58 +37,58 @@ export declare const createAssemblySchema: z.ZodObject<{
         title: string;
         scheduledAt: string;
         description?: string | undefined;
+        meetingUrl?: string | undefined;
         votingItems?: {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
         }[] | undefined;
-        meetingUrl?: string | undefined;
     }, {
         title: string;
         scheduledAt: string;
         description?: string | undefined;
+        meetingUrl?: string | undefined;
         votingItems?: {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
         }[] | undefined;
-        meetingUrl?: string | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     body: {
         title: string;
         scheduledAt: string;
         description?: string | undefined;
+        meetingUrl?: string | undefined;
         votingItems?: {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
         }[] | undefined;
-        meetingUrl?: string | undefined;
     };
 }, {
     body: {
         title: string;
         scheduledAt: string;
         description?: string | undefined;
+        meetingUrl?: string | undefined;
         votingItems?: {
             options: {
-                text: string;
                 id: string;
+                text: string;
             }[];
             title: string;
             description?: string | undefined;
         }[] | undefined;
-        meetingUrl?: string | undefined;
     };
 }>;
 export declare const updateAssemblyStatusSchema: z.ZodObject<{

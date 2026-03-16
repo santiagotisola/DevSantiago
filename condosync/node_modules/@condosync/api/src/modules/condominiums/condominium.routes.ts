@@ -2,7 +2,9 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
+import { UserRole } from '@prisma/client';
 import { z } from 'zod';
+import { residentService } from '../residents/resident.service';
 
 const router = Router();
 router.use(authenticate);
@@ -64,12 +66,22 @@ router.put('/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), asyn
 
 // Adicionar membro ao condomínio
 router.post('/:id/members', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
-  const schema = z.object({ userId: z.string().uuid(), role: z.string(), unitId: z.string().uuid().optional() });
+  const schema = z.object({
+    userId: z.string().uuid(),
+    role: z.nativeEnum(UserRole),
+    unitId: z.string().uuid().optional(),
+  });
   const { userId, role, unitId } = validateRequest(schema, req.body);
+
+  residentService.assertResidentRoleRequiresUnit(role, unitId);
+  if (role === UserRole.RESIDENT) {
+    await residentService.assertResidentUnitBelongsToCondominium(req.params.id, unitId!);
+  }
+
   const member = await prisma.condominiumUser.upsert({
     where: { userId_condominiumId: { userId, condominiumId: req.params.id } },
-    update: { role: role as any, unitId, isActive: true },
-    create: { userId, condominiumId: req.params.id, role: role as any, unitId },
+    update: { role, unitId, isActive: true },
+    create: { userId, condominiumId: req.params.id, role, unitId },
   });
   res.status(201).json({ success: true, data: { member } });
 });

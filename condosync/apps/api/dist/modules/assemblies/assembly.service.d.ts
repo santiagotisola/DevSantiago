@@ -20,10 +20,10 @@ export declare class AssemblyService {
         assemblies: {
             status: import(".prisma/client").$Enums.AssemblyStatus;
             id: string;
+            title: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
-            title: string;
             description: string | null;
             scheduledAt: Date;
             startedAt: Date | null;
@@ -55,10 +55,10 @@ export declare class AssemblyService {
     } & {
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
+        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         scheduledAt: Date;
         startedAt: Date | null;
@@ -78,10 +78,10 @@ export declare class AssemblyService {
     } & {
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
+        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         scheduledAt: Date;
         startedAt: Date | null;
@@ -93,10 +93,10 @@ export declare class AssemblyService {
     updateStatus(id: string, status: AssemblyStatus): Promise<{
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
+        title: string;
         createdAt: Date;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         scheduledAt: Date;
         startedAt: Date | null;
@@ -108,8 +108,8 @@ export declare class AssemblyService {
     vote(votingItemId: string, userId: string, optionId: string): Promise<{
         id: string;
         userId: string;
-        optionId: string;
         votedAt: Date;
+        optionId: string;
         votingItemId: string;
     }>;
     registerAttendance(assemblyId: string, userId: string): Promise<{

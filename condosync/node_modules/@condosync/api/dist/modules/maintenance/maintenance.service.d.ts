@@ -37,16 +37,16 @@ export declare class MaintenanceService {
             } | null;
         } & {
             status: import(".prisma/client").$Enums.ServiceOrderStatus;
-            priority: import(".prisma/client").$Enums.ServiceOrderPriority;
             id: string;
+            title: string;
             createdAt: Date;
+            priority: import(".prisma/client").$Enums.ServiceOrderPriority;
             updatedAt: Date;
-            unitId: string | null;
             condominiumId: string;
+            unitId: string | null;
             requestedBy: string;
             assignedTo: string | null;
             serviceProviderId: string | null;
-            title: string;
             description: string;
             category: string;
             location: string | null;
@@ -67,16 +67,16 @@ export declare class MaintenanceService {
     }>;
     create(data: CreateServiceOrderDTO, requestedBy: string, actor: MaintenanceActor): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         id: string;
+        title: string;
         createdAt: Date;
+        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         updatedAt: Date;
-        unitId: string | null;
         condominiumId: string;
+        unitId: string | null;
         requestedBy: string;
         assignedTo: string | null;
         serviceProviderId: string | null;
-        title: string;
         description: string;
         category: string;
         location: string | null;
@@ -97,16 +97,16 @@ export declare class MaintenanceService {
         feedback?: string;
     }): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         id: string;
+        title: string;
         createdAt: Date;
+        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         updatedAt: Date;
-        unitId: string | null;
         condominiumId: string;
+        unitId: string | null;
         requestedBy: string;
         assignedTo: string | null;
         serviceProviderId: string | null;
-        title: string;
         description: string;
         category: string;
         location: string | null;
@@ -130,16 +130,16 @@ export declare class MaintenanceService {
         scheduledAt?: Date;
     }): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         id: string;
+        title: string;
         createdAt: Date;
+        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         updatedAt: Date;
-        unitId: string | null;
         condominiumId: string;
+        unitId: string | null;
         requestedBy: string;
         assignedTo: string | null;
         serviceProviderId: string | null;
-        title: string;
         description: string;
         category: string;
         location: string | null;
@@ -155,16 +155,16 @@ export declare class MaintenanceService {
     }>;
     assign(id: string, actor: MaintenanceActor, serviceProviderId?: string, assignedTo?: string): Promise<{
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         id: string;
+        title: string;
         createdAt: Date;
+        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         updatedAt: Date;
-        unitId: string | null;
         condominiumId: string;
+        unitId: string | null;
         requestedBy: string;
         assignedTo: string | null;
         serviceProviderId: string | null;
-        title: string;
         description: string;
         category: string;
         location: string | null;
@@ -180,11 +180,11 @@ export declare class MaintenanceService {
     }>;
     listSchedules(condominiumId: string): Promise<{
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -205,11 +205,11 @@ export declare class MaintenanceService {
         estimatedCost?: number;
     }): Promise<{
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -228,11 +228,11 @@ export declare class MaintenanceService {
         estimatedCost?: number;
     }): Promise<{
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -243,11 +243,11 @@ export declare class MaintenanceService {
     }>;
     markScheduleDone(id: string, actor: MaintenanceActor): Promise<{
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -258,11 +258,11 @@ export declare class MaintenanceService {
     }>;
     deleteSchedule(id: string, actor: MaintenanceActor): Promise<{
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -273,16 +273,16 @@ export declare class MaintenanceService {
     }>;
     listDueSchedules(daysAhead?: number): Promise<({
         condominium: {
-            name: string;
             id: string;
+            name: string;
         };
     } & {
         id: string;
-        isActive: boolean;
+        title: string;
         createdAt: Date;
+        isActive: boolean;
         updatedAt: Date;
         condominiumId: string;
-        title: string;
         description: string | null;
         category: string;
         location: string;
@@ -295,11 +295,11 @@ export declare class MaintenanceService {
         unit: {
             type: string | null;
             status: import(".prisma/client").$Enums.UnitStatus;
+            identifier: string;
             id: string;
             createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
-            identifier: string;
             block: string | null;
             street: string | null;
             floor: string | null;
@@ -309,12 +309,12 @@ export declare class MaintenanceService {
             notes: string | null;
         } | null;
         serviceProvider: {
-            name: string;
-            id: string;
             email: string | null;
+            id: string;
+            createdAt: Date;
+            name: string;
             cpf: string | null;
             phone: string;
-            createdAt: Date;
             updatedAt: Date;
             condominiumId: string;
             notes: string | null;
@@ -325,23 +325,23 @@ export declare class MaintenanceService {
         checklistItems: {
             id: string;
             notes: string | null;
-            serviceOrderId: string;
             item: string;
+            serviceOrderId: string;
             isDone: boolean;
             doneAt: Date | null;
         }[];
     } & {
         status: import(".prisma/client").$Enums.ServiceOrderStatus;
-        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         id: string;
+        title: string;
         createdAt: Date;
+        priority: import(".prisma/client").$Enums.ServiceOrderPriority;
         updatedAt: Date;
-        unitId: string | null;
         condominiumId: string;
+        unitId: string | null;
         requestedBy: string;
         assignedTo: string | null;
         serviceProviderId: string | null;
-        title: string;
         description: string;
         category: string;
         location: string | null;

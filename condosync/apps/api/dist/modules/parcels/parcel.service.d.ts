@@ -116,8 +116,8 @@ export declare class ParcelService {
     }>;
     findById(id: string): Promise<{
         unit: {
-            condominiumId: string;
             identifier: string;
+            condominiumId: string;
             block: string | null;
         };
     } & {
