@@ -271,7 +271,7 @@ model CondominiumUser {
   isActive      Boolean     @default(true)
   joinedAt      DateTime    @default(now())
 
-  unit          Unit?       @relation(fields: [unitId], references: [id])
+  unit          Unit?       @relation(fields: [unitId], references: [id], onDelete: Restrict)
   unitId        String?
 
   @@unique([userId, condominiumId])

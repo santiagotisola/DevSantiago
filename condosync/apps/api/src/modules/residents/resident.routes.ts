@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
+import { ValidationError } from '../../middleware/errorHandler';
 import { validateRequest } from '../../utils/validateRequest';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { residentService } from './resident.service';
 
 const router = Router();
 router.use(authenticate);
@@ -63,12 +65,13 @@ const createResidentSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   cpf: z.string().optional(),
-  unitId: z.string().uuid().optional(),
+  unitId: z.string().uuid(),
   condominiumId: z.string().uuid(),
 });
 
 router.post('/', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req: Request, res: Response) => {
   const data = validateRequest(createResidentSchema, req.body);
+  await residentService.assertResidentUnitBelongsToCondominium(data.condominiumId, data.unitId);
 
   // Cria ou reutiliza usuário pelo e-mail
   let user = await prisma.user.findUnique({ where: { email: data.email } });
@@ -110,7 +113,7 @@ router.post('/', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async 
     data: {
       userId: user.id,
       condominiumId: data.condominiumId,
-      unitId: data.unitId || null,
+      unitId: data.unitId,
       role: 'RESIDENT',
     },
     include: {
@@ -126,7 +129,7 @@ const updateResidentSchema = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().optional(),
   cpf: z.string().optional(),
-  unitId: z.string().uuid().nullable().optional(),
+  unitId: z.string().uuid(),
 });
 
 // Atualiza dados do morador (user + unidade)
@@ -137,6 +140,17 @@ router.patch('/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), as
     where: { id: req.params.id },
     include: { user: true },
   });
+
+  if (condominiumUser.role !== 'RESIDENT') {
+    throw new ValidationError('Dados invalidos', {
+      id: ['O registro informado nao pertence a um morador.'],
+    });
+  }
+
+  await residentService.assertResidentUnitBelongsToCondominium(
+    condominiumUser.condominiumId,
+    data.unitId,
+  );
 
   // Atualiza dados do usuário
   if (data.name || data.phone !== undefined || data.cpf !== undefined) {
@@ -153,7 +167,7 @@ router.patch('/:id', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), as
   // Atualiza unidade
   const updated = await prisma.condominiumUser.update({
     where: { id: req.params.id },
-    data: { unitId: data.unitId !== undefined ? data.unitId : undefined },
+    data: { unitId: data.unitId },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true, cpf: true } },
       unit: { select: { id: true, identifier: true, block: true } },
