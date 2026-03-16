@@ -46,7 +46,7 @@ import LandingPage from "./pages/landing/LandingPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/home" replace />;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -83,7 +83,14 @@ export default function App() {
     >
       <Routes>
         {/* Landing page */}
-        <Route path="/home" element={<LandingPage />} />
+        <Route
+          path="/home"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Rotas públicas */}
         <Route
