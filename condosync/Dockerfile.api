@@ -18,8 +18,8 @@ COPY apps/api/ ./apps/api/
 
 WORKDIR /app/apps/api
 
-# Gerar o Prisma Client
-RUN npx prisma generate
+# Gerar o Prisma Client (usa a versão instalada pelo npm install, não a latest do npx)
+RUN /app/node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
 
 # Compilar TypeScript → dist/
 RUN /app/node_modules/.bin/tsc --noCheck 2>&1 || true

@@ -13,8 +13,8 @@ RUN npm install
 # Copiar todo o código-fonte da API
 COPY . ./
 
-# Gerar o Prisma Client
-RUN npx prisma generate
+# Gerar o Prisma Client (usa o binário instalado, não baixa versão latest via npx)
+RUN ./node_modules/.bin/prisma generate
 
 # Compilar TypeScript → dist/
 RUN node_modules/.bin/tsc --noCheck 2>&1 || true
