@@ -141,6 +141,7 @@ export function ParcelsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [activeTab, setActiveTab] = useState<'parcels' | 'pre-registration'>('parcels');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -272,10 +273,28 @@ export function ParcelsPage() {
   };
   const removeDeliverer = (id: string) => setPreDeliverers(preDeliverers.filter(d => d.id !== id));
 
-  const parcels = (data?.parcels || []).filter((p: any) =>
-    (p.unit?.identifier ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.carrier || '').toLowerCase().includes(search.toLowerCase())
-  );
+  // Cálculos de Métricas
+  const rawParcels = data?.parcels || [];
+  const metrics = {
+    pending: rawParcels.filter((p: any) => ['RECEIVED', 'NOTIFIED'].includes(p.status)).length,
+    today: rawParcels.filter((p: any) => new Date(p.receivedAt).toDateString() === new Date().toDateString()).length,
+    damaged: rawParcels.filter((p: any) => p.hasPackageDamage).length,
+    pickedUp: rawParcels.filter((p: any) => p.status === 'PICKED_UP').length
+  };
+
+  const parcels = rawParcels.filter((p: any) => {
+    const matchesSearch = 
+      (p.unit?.identifier ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.carrier ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.trackingCode ?? '').toLowerCase().includes(search.toLowerCase());
+    
+    const matchesStatus = 
+      statusFilter === 'ALL' || 
+      (statusFilter === 'DAMAGED' ? p.hasPackageDamage : p.status === statusFilter) ||
+      (statusFilter === 'PENDING' && ['RECEIVED', 'NOTIFIED'].includes(p.status));
+
+    return matchesSearch && matchesStatus;
+  });
 
   const canRegister = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
   const canAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
@@ -328,17 +347,89 @@ export function ParcelsPage() {
         </div>
       )}
 
+      {/* Cards de Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
+          <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600">
+            <Package className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Pendentes</p>
+            <p className="text-2xl font-bold text-gray-800">{metrics.pending}</p>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center gap-4">
+          <div className="bg-green-100 p-2.5 rounded-lg text-green-600">
+            <Plus className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Recebidas Hoje</p>
+            <p className="text-2xl font-bold text-gray-800">{metrics.today}</p>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex items-center gap-4">
+          <div className="bg-orange-100 p-2.5 rounded-lg text-orange-600">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Avariadas</p>
+            <p className="text-2xl font-bold text-gray-800">{metrics.damaged}</p>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="bg-gray-100 p-2.5 rounded-lg text-gray-600">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Retiradas</p>
+            <p className="text-2xl font-bold text-gray-800">{metrics.pickedUp}</p>
+          </div>
+        </div>
+      </div>
+
       {/* ── Aba: Encomendas ── */}
       {activeTab === 'parcels' && (
         <>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por unidade ou transportadora..."
-              className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por unidade, transportadora ou código de rastreio..."
+                className="w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+              />
+            </div>
+
+            {/* Filtros rápidos (Chips) */}
+            <div className="flex flex-wrap items-center gap-2 pb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">Filtrar por:</span>
+              {[
+                { id: 'ALL', label: 'Tudo', icon: Package },
+                { id: 'PENDING', label: 'Pendentes', icon: Loader2 },
+                { id: 'RECEIVED', label: 'Recebidas', icon: Truck },
+                { id: 'NOTIFIED', label: 'Notificadas', icon: AlertTriangle },
+                { id: 'PICKED_UP', label: 'Retiradas', icon: CheckCircle },
+                { id: 'DAMAGED', label: 'Com Avaria', icon: AlertTriangle, color: 'text-orange-600' },
+              ].map((chip) => {
+                const Icon = chip.icon;
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                      active 
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105' 
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : chip.color || 'text-gray-400'}`} />
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border overflow-hidden">
@@ -637,150 +728,198 @@ export function ParcelsPage() {
       {/* Modal de registro */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold">Registrar Encomenda</h2>
-
-            {/* Destinatário */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Unidade destinatária *</label>
-              <select
-                value={form.unitId}
-                onChange={(e) => setForm({ ...form, unitId: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Cabeçalho Fixo */}
+            <div className="p-4 border-b shrink-0 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-2 text-blue-600">
+                <Package className="w-5 h-5" />
+                <h2 className="text-lg font-semibold text-gray-800">Registrar Encomenda</h2>
+              </div>
+              <button 
+                onClick={() => { setShowModal(false); setForm(emptyForm); }}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
-                <option value="">Selecione a unidade...</option>
-                {(unitsData || []).map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.block ? `${u.block} - ` : ''}{u.identifier}
-                  </option>
-                ))}
-              </select>
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Transportadora e Rastreio */}
-            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                <Truck className="w-3 h-3" /> Dados da Transportadora
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Transportadora</label>
-                  <Combobox
-                    value={form.carrier}
-                    onChange={v => setForm({ ...form, carrier: v })}
-                    suggestions={carrierSuggestions}
-                    placeholder="Correios, Mercado Envios..."
-                  />
+            {/* Conteúdo Rolável */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
+              {/* Unidade e Remetente */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                    Unidade destinatária <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.unitId}
+                    onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-shadow"
+                  >
+                    <option value="">Selecione a unidade...</option>
+                    {(unitsData || []).map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.block ? `${u.block} - ` : ''}{u.identifier}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Placa do Veículo</label>
-                  <input value={form.vehiclePlate} onChange={(e) => setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    placeholder="ABC-1234" maxLength={8} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Código de Rastreio / NF</label>
-                <input value={form.trackingCode} onChange={(e) => setForm({ ...form, trackingCode: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  placeholder="AA123456789BR ou nº da NF" />
-              </div>
-            </div>
-
-            {/* Entregador */}
-            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                <User className="w-3 h-3" /> Identificação do Entregador
-              </p>
-              {preDeliverers.length > 0 && (
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-blue-700">Selecionar pré-cadastrado</label>
-                  <DelivererSelect
-                    value={form.deliveryPersonName}
-                    onSelect={d => setForm({
-                      ...form,
-                      deliveryPersonName: d.name ?? form.deliveryPersonName,
-                      deliveryPersonDoc: d.doc ?? form.deliveryPersonDoc,
-                      vehiclePlate: d.plate ?? form.vehiclePlate,
-                      carrier: d.company ?? form.carrier,
-                    })}
-                    deliverers={preDeliverers}
-                  />
-                  <p className="text-xs text-blue-500">Selecionando um entregador os campos abaixo são preenchidos automaticamente.</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1 col-span-2">
-                  <label className="text-sm font-medium">Nome do Entregador</label>
-                  <input value={form.deliveryPersonName} onChange={(e) => setForm({ ...form, deliveryPersonName: e.target.value })}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Remetente</label>
+                  <input 
+                    value={form.senderName} 
+                    onChange={(e) => setForm({ ...form, senderName: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    placeholder="Nome completo" />
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <label className="text-sm font-medium">Documento (CPF ou RG)</label>
-                  <input value={form.deliveryPersonDoc} onChange={(e) => setForm({ ...form, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    placeholder="Somente números" maxLength={14} />
-                  <p className="text-xs text-gray-400">Coletado para segurança patrimonial (LGPD Art. 7º, IX)</p>
+                    placeholder="Quem enviou?" 
+                  />
                 </div>
               </div>
-            </div>
 
-            {/* Armazenamento e Remetente */}
-            <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                <FileText className="w-3 h-3" /> Armazenamento e Observações
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Local de Armazenamento</label>
+              {/* Transportadora */}
+              <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <Truck className="w-3.5 h-3.5" /> Dados da Entrega
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Transportadora</label>
+                    <Combobox
+                      value={form.carrier}
+                      onChange={v => setForm({ ...form, carrier: v })}
+                      suggestions={carrierSuggestions}
+                      placeholder="Ex: Correios, Loggi..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Placa do Veículo</label>
+                    <input 
+                      value={form.vehiclePlate} 
+                      onChange={(e) => setForm({ ...form, vehiclePlate: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="ABC-1234" maxLength={8} 
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-xs font-semibold text-gray-600">Código de Rastreio / NF</label>
+                    <input 
+                      value={form.trackingCode} 
+                      onChange={(e) => setForm({ ...form, trackingCode: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="AA123456789BR ou nº da nota fiscal" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Entregador */}
+              <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <User className="w-3.5 h-3.5" /> Identificação do Entregador
+                </p>
+                
+                {preDeliverers.length > 0 && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <label className="text-xs font-bold text-blue-700 uppercase mb-1.5 block">Atalho: Entregador Frequente</label>
+                    <DelivererSelect
+                      value={form.deliveryPersonName}
+                      onSelect={d => setForm({
+                        ...form,
+                        deliveryPersonName: d.name ?? form.deliveryPersonName,
+                        deliveryPersonDoc: d.doc ?? form.deliveryPersonDoc,
+                        vehiclePlate: d.plate ?? form.vehiclePlate,
+                        carrier: d.company ?? form.carrier,
+                      })}
+                      deliverers={preDeliverers}
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Nome do Entregador</label>
+                    <input 
+                      value={form.deliveryPersonName} 
+                      onChange={(e) => setForm({ ...form, deliveryPersonName: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="Nome completo" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Documento (CPF ou RG)</label>
+                    <input 
+                      value={form.deliveryPersonDoc} 
+                      onChange={(e) => setForm({ ...form, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      placeholder="Apenas números" maxLength={14} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Armazenamento e Avaria */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                    <ClipboardList className="w-3.5 h-3.5" /> Local de Armazenamento
+                  </label>
                   <Combobox
                     value={form.storageLocation}
                     onChange={v => setForm({ ...form, storageLocation: v })}
                     suggestions={storageLocationSuggestions}
-                    placeholder="Prateleira A-01"
+                    placeholder="Ex: Prateleira A-01"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Remetente</label>
-                  <input value={form.senderName} onChange={(e) => setForm({ ...form, senderName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    placeholder="Nome do remetente" />
+                <div className="flex flex-col justify-end">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer" onClick={() => setForm({ ...form, hasPackageDamage: !form.hasPackageDamage })}>
+                    <input
+                      type="checkbox"
+                      id="hasPackageDamage"
+                      checked={form.hasPackageDamage}
+                      onChange={(e) => setForm({ ...form, hasPackageDamage: e.target.checked })}
+                      className="h-4 w-4 accent-orange-500 rounded cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <label htmlFor="hasPackageDamage" className="text-sm cursor-pointer flex flex-col">
+                      <span className="font-bold text-orange-700 flex items-center gap-1 text-xs uppercase">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com Avaria
+                      </span>
+                      <span className="text-[10px] text-orange-600 leading-tight">Danos visíveis (Art. 754 CC)</span>
+                    </label>
+                  </div>
                 </div>
               </div>
-              {/* Avaria */}
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
-                <input
-                  type="checkbox"
-                  id="hasPackageDamage"
-                  checked={form.hasPackageDamage}
-                  onChange={(e) => setForm({ ...form, hasPackageDamage: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 accent-orange-500"
-                />
-                <label htmlFor="hasPackageDamage" className="text-sm cursor-pointer">
-                  <span className="font-medium text-orange-700 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com avaria visível
-                  </span>
-                  <span className="text-xs text-orange-600 block">Marque se houver danos na embalagem (Art. 754 Cód. Civil)</span>
-                </label>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Observações</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase">Observações Internas</label>
+                <textarea 
+                  value={form.notes} 
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"
-                  placeholder="Descrição da avaria, instruções especiais..." />
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white font-sans"
+                  placeholder="Instruções de segurança ou detalhes sobre a avaria..." 
+                />
               </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button onClick={() => { setShowModal(false); setForm(emptyForm); }} className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
+            {/* Rodapé Fixo */}
+            <div className="p-4 border-t shrink-0 flex gap-3 bg-gray-50 rounded-b-xl">
+              <button 
+                onClick={() => { setShowModal(false); setForm(emptyForm); }}
+                className="flex-1 px-4 py-2 border bg-white rounded-lg text-sm font-medium hover:bg-gray-50 transition-all text-gray-600"
+              >
+                Cancelar
+              </button>
               <button
                 onClick={() => createMutation.mutate(form)}
                 disabled={createMutation.isPending || !form.unitId}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
               >
-                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Registrar'}
+                {createMutation.isPending ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Registrando...</span>
+                  </div>
+                ) : 'Confirmar Registro'}
               </button>
             </div>
           </div>
@@ -875,38 +1014,68 @@ export function ParcelsPage() {
 
       {editModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold">Editar Encomenda</h2>
-            <div className="space-y-3">
-              <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                  <Truck className="w-3 h-3" /> Transportadora
+          <div className="bg-white rounded-xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Cabeçalho Fixo */}
+            <div className="p-4 border-b shrink-0 flex items-center justify-between bg-white text-blue-600">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" />
+                <h2 className="text-lg font-semibold text-gray-800">Editar Encomenda</h2>
+              </div>
+              <button 
+                onClick={() => { setEditModal(false); setEditTarget(null); }}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo Rolável */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center gap-3">
+                <div className="bg-blue-600 text-white p-2 rounded-lg">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Unidade</p>
+                  <p className="text-sm font-bold text-gray-800">
+                    {editTarget.unit?.block ? `${editTarget.unit.block} - ` : ''}{editTarget.unit?.identifier}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <Truck className="w-3.5 h-3.5" /> Dados da Entrega
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Transportadora</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Transportadora</label>
                     <Combobox
                       value={editForm.carrier}
                       onChange={v => setEditForm({ ...editForm, carrier: v })}
                       suggestions={carrierSuggestions}
-                      placeholder="Correios, Mercado Envios..."
+                      placeholder="Ex: Correios..."
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Placa do Veículo</label>
-                    <input value={editForm.vehiclePlate} onChange={(e) => setEditForm({ ...editForm, vehiclePlate: e.target.value.toUpperCase() })}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Placa do Veículo</label>
+                    <input 
+                      value={editForm.vehiclePlate} 
+                      onChange={(e) => setEditForm({ ...editForm, vehiclePlate: e.target.value.toUpperCase() })}
                       className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      placeholder="ABC-1234" maxLength={8} />
+                      placeholder="ABC-1234" maxLength={8} 
+                    />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Código de Rastreio / NF</label>
-                    <input value={editForm.trackingCode} onChange={(e) => setEditForm({ ...editForm, trackingCode: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Código de Rastreio / NF</label>
+                    <input 
+                      value={editForm.trackingCode} 
+                      onChange={(e) => setEditForm({ ...editForm, trackingCode: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                    />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Local de Armazenamento</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Local de Armazenamento</label>
                     <Combobox
                       value={editForm.storageLocation}
                       onChange={v => setEditForm({ ...editForm, storageLocation: v })}
@@ -916,64 +1085,92 @@ export function ParcelsPage() {
                   </div>
                 </div>
               </div>
-              <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                  <User className="w-3 h-3" /> Entregador
+
+              <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <User className="w-3.5 h-3.5" /> Identificação do Entregador
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Nome do Entregador</label>
-                    <input value={editForm.deliveryPersonName} onChange={(e) => setEditForm({ ...editForm, deliveryPersonName: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Nome do Entregador</label>
+                    <input 
+                      value={editForm.deliveryPersonName} 
+                      onChange={(e) => setEditForm({ ...editForm, deliveryPersonName: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                    />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Documento (CPF/RG)</label>
-                    <input value={editForm.deliveryPersonDoc} onChange={(e) => setEditForm({ ...editForm, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" maxLength={14} />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Documento (CPF/RG)</label>
+                    <input 
+                      value={editForm.deliveryPersonDoc} 
+                      onChange={(e) => setEditForm({ ...editForm, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" maxLength={14} 
+                    />
                   </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50">
-                <input type="checkbox" id="editHasDamage" checked={editForm.hasPackageDamage}
-                  onChange={(e) => setEditForm({ ...editForm, hasPackageDamage: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 accent-orange-500" />
-                <label htmlFor="editHasDamage" className="text-sm cursor-pointer">
-                  <span className="font-medium text-orange-700 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com avaria visível
-                  </span>
-                </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Remetente</label>
+                  <input 
+                    value={editForm.senderName} 
+                    onChange={(e) => setEditForm({ ...editForm, senderName: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                  />
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-orange-200 bg-orange-50/50 hover:bg-orange-50 transition-colors cursor-pointer" onClick={() => setEditForm({ ...editForm, hasPackageDamage: !editForm.hasPackageDamage })}>
+                  <input 
+                    type="checkbox" 
+                    id="editHasDamage" 
+                    checked={editForm.hasPackageDamage}
+                    onChange={(e) => setEditForm({ ...editForm, hasPackageDamage: e.target.checked })}
+                    className="h-4 w-4 accent-orange-500 cursor-pointer rounded"
+                    onClick={(e) => e.stopPropagation()} 
+                  />
+                  <label htmlFor="editHasDamage" className="text-sm cursor-pointer flex flex-col">
+                    <span className="font-bold text-orange-700 flex items-center gap-1 text-xs uppercase">
+                      <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com Avaria
+                    </span>
+                    <span className="text-[10px] text-orange-600 leading-tight">Marque se houver danos visíveis</span>
+                  </label>
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Remetente</label>
-                <input value={editForm.senderName} onChange={(e) => setEditForm({ ...editForm, senderName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Observações</label>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase">Observações</label>
                 <textarea
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"
+                  placeholder="Detalhes adicionais..."
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+
+            {/* Rodapé Fixo */}
+            <div className="p-4 border-t shrink-0 flex gap-3 bg-gray-50 rounded-b-xl">
               <button
                 onClick={() => {
                   setEditModal(false);
                   setEditTarget(null);
                 }}
-                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+                className="flex-1 px-4 py-2 border bg-white rounded-lg text-sm font-medium hover:bg-gray-50 transition-all text-gray-600"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => updateMutation.mutate({ ...editForm, id: editTarget.id })}
                 disabled={updateMutation.isPending}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
               >
-                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+                {updateMutation.isPending ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Salvando...</span>
+                  </div>
+                ) : 'Salvar Alterações'}
               </button>
             </div>
           </div>
