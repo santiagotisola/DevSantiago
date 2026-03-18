@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { User, Save, Loader2, Lock } from 'lucide-react';
+import { maskPhone, validatePhone, validateName } from '../../lib/utils';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ name: user?.name || '', phone: '' });
+  const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwError, setPwError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -65,7 +67,12 @@ export function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-sm font-medium">Nome completo</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-400' : ''}`}
+              />
+              {formErrors.name && <p className="text-xs text-red-500 mt-0.5">{formErrors.name}</p>}
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">E-mail</label>
@@ -73,11 +80,27 @@ export function ProfilePage() {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Telefone</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: maskPhone(e.target.value) })}
+                placeholder="(11) 99999-9999"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-400' : ''}`}
+              />
+              {formErrors.phone && <p className="text-xs text-red-500 mt-0.5">{formErrors.phone}</p>}
             </div>
           </div>
           <button
-            onClick={() => updateMutation.mutate(form)}
+            onClick={() => {
+              const errs: Record<string, string> = {};
+              const nameErr = validateName(form.name);
+              if (nameErr) errs.name = nameErr;
+              const phoneErr = validatePhone(form.phone);
+              if (phoneErr) errs.phone = phoneErr;
+              if (Object.keys(errs).length) { setFormErrors(errs); return; }
+              setFormErrors({});
+              updateMutation.mutate(form);
+            }}
             disabled={updateMutation.isPending}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           >

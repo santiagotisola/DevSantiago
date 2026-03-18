@@ -69,6 +69,7 @@ export function UnitsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [selectedResidentId, setSelectedResidentId] = useState("");
 
   const [form, setForm] = useState({
     identifier: "",
@@ -85,6 +86,7 @@ export function UnitsPage() {
     floor: "",
     fraction: "",
     type: "",
+    status: "VACANT",
   });
 
   const isAdmin = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"].includes(
@@ -98,6 +100,15 @@ export function UnitsPage() {
       return res.data.data.units;
     },
     enabled: !!selectedCondominiumId,
+  });
+
+  const { data: allResidents } = useQuery({
+    queryKey: ["residents", selectedCondominiumId],
+    queryFn: async () => {
+      const res = await api.get(`/residents/condominium/${selectedCondominiumId}`);
+      return res.data.data.residents as any[];
+    },
+    enabled: !!selectedCondominiumId && editModal,
   });
 
   // ─── Computed Data ──────────────────────────────────────────────────
@@ -177,6 +188,16 @@ export function UnitsPage() {
         status: unit.status === "BLOCKED" ? "VACANT" : "BLOCKED",
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["units"] }),
+  });
+
+  const assignResidentMutation = useMutation({
+    mutationFn: ({ residentId, unitId }: { residentId: string; unitId: string }) =>
+      api.patch(`/residents/${residentId}`, { unitId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+      queryClient.invalidateQueries({ queryKey: ["residents"] });
+      setSelectedResidentId("");
+    },
   });
 
   return (
@@ -380,7 +401,9 @@ export function UnitsPage() {
                           floor: u.floor ?? "",
                           fraction: u.fraction ? String(u.fraction) : "",
                           type: u.type ?? "",
+                          status: u.status ?? "VACANT",
                         });
+                        setSelectedResidentId("");
                         setEditTarget(u);
                         setEditModal(true);
                       }}
@@ -649,13 +672,76 @@ export function UnitsPage() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
-                  <Info className="w-5 h-5 text-blue-500" />
-                  <div className="text-xs text-blue-700">
-                    Ao alterar o identificador ou bloco, certifique-se de avisar
-                    os moradores e atualizar possíveis documentos vinculados.
-                  </div>
+                {/* Status */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">
+                    Status da Unidade
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="VACANT">Vaga</option>
+                    <option value="OCCUPIED">Ocupada</option>
+                    <option value="UNDER_RENOVATION">Em Reforma</option>
+                    <option value="BLOCKED">Bloqueada</option>
+                  </select>
                 </div>
+
+                {/* Morador atual */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">
+                    Morador Atual
+                  </label>
+                  {editTarget?.residents?.[0]?.user ? (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                      <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-blue-800 truncate">{editTarget.residents[0].user.name}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Nenhum morador vinculado</p>
+                  )}
+                </div>
+
+                {/* Vincular morador */}
+                {isAdmin && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase">
+                      Vincular Morador a Esta Unidade
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedResidentId}
+                        onChange={(e) => setSelectedResidentId(e.target.value)}
+                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">Selecionar morador...</option>
+                        {(allResidents ?? []).map((r: any) => (
+                          <option key={r.id} value={r.id}>
+                            {r.user?.name}{r.unit ? ` (Unid. ${r.unit.identifier})` : " (sem unidade)"}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          if (selectedResidentId && editTarget) {
+                            assignResidentMutation.mutate({ residentId: selectedResidentId, unitId: editTarget.id });
+                          }
+                        }}
+                        disabled={!selectedResidentId || assignResidentMutation.isPending}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0 transition-colors"
+                      >
+                        {assignResidentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Vincular"}
+                      </button>
+                    </div>
+                    {assignResidentMutation.isSuccess && (
+                      <p className="text-xs text-green-600">Morador vinculado com sucesso!</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="p-4 border-t shrink-0 flex gap-3 bg-gray-50 rounded-b-xl">

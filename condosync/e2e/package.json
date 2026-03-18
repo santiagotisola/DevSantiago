@@ -1,0 +1,13 @@
+{
+  "name": "condosync-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test --config=playwright.config.ts",
+    "test:headed": "playwright test --config=playwright.config.ts --headed",
+    "test:ui": "playwright test --config=playwright.config.ts --ui",
+    "report": "playwright show-report playwright-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

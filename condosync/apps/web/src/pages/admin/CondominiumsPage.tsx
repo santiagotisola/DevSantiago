@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { Building2, Plus, Loader2, Users, Home, UserPlus, Trash2, UserCog } from 'lucide-react';
+import { maskPhone, validatePhone, validateEmail } from '../../lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
@@ -45,7 +46,8 @@ function isCnpjComplete(value: string) {
 export function CondominiumsPage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '' });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
 
   const { data: condominiums, isLoading } = useQuery({
     queryKey: ['condominiums'],
@@ -60,7 +62,8 @@ export function CondominiumsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['condominiums'] });
       setShowModal(false);
-      setForm({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' } as any);
+      setFormErrors({});
+      setForm({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
     },
   });
 
@@ -150,23 +153,36 @@ export function CondominiumsPage() {
                     value={(form as any)[key]}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const nextValue = key === 'cnpj' ? formatCnpj(value) : value;
+                      const nextValue =
+                        key === 'cnpj' ? formatCnpj(value)
+                        : key === 'phone' ? maskPhone(value)
+                        : value;
                       setForm({ ...form, [key]: nextValue });
                     }}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[key] ? 'border-red-400' : ''}`}
                   />
                   {key === 'cnpj' && form.cnpj && !isCnpjComplete(form.cnpj) && (
                     <p className="text-xs text-red-600">CNPJ incompleto. Preencha os 14 dígitos.</p>
                   )}
+                  {formErrors[key] && <p className="text-xs text-red-500 mt-0.5">{formErrors[key]}</p>}
                 </div>
               ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+              <button onClick={() => { setShowModal(false); setFormErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
                 Cancelar
               </button>
               <button
-                onClick={() => createMutation.mutate(form)}
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  const phoneErr = validatePhone(form.phone);
+                  if (phoneErr) errs.phone = phoneErr;
+                  const emailErr = validateEmail(form.email);
+                  if (emailErr) errs.email = emailErr;
+                  if (Object.keys(errs).length) { setFormErrors(errs); return; }
+                  setFormErrors({});
+                  createMutation.mutate(form);
+                }}
                 disabled={!form.name || createMutation.isPending || !isCnpjComplete(form.cnpj)}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >

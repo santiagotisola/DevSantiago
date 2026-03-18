@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { HardHat, Plus, Search, Loader2, Mail, Phone } from 'lucide-react';
+import { maskPhone, validatePhone, validateEmail, validateName } from '../../lib/utils';
 
 export function EmployeesPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -13,6 +14,8 @@ export function EmployeesPage() {
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({ name: '', role: '', email: '', phone: '' });
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: employees, isLoading } = useQuery({
@@ -23,7 +26,7 @@ export function EmployeesPage() {
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/employees', { ...d, condominiumId: selectedCondominiumId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['employees'] }); setShowModal(false); setForm({ name: '', role: '', email: '', phone: '', shiftType: 'MORNING' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['employees'] }); setShowModal(false); setForm({ name: '', role: '', email: '', phone: '', shiftType: 'MORNING' }); setCreateErrors({}); },
   });
 
   const updateMutation = useMutation({
@@ -32,6 +35,7 @@ export function EmployeesPage() {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       setEditModal(false);
       setEditTarget(null);
+      setEditErrors({});
     },
   });
 
@@ -127,12 +131,44 @@ export function EmployeesPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Novo Funcionário</h2>
             <div className="grid grid-cols-2 gap-3">
-              {[['Nome *', 'name'], ['Cargo *', 'role'], ['E-mail', 'email'], ['Telefone', 'phone']].map(([label, key]) => (
-                <div key={key} className={`space-y-1 ${key === 'name' ? 'col-span-2' : ''}`}>
-                  <label className="text-sm font-medium">{label}</label>
-                  <input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Nome *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.name ? 'border-red-400' : ''}`}
+                />
+                {createErrors.name && <p className="text-xs text-red-500 mt-0.5">{createErrors.name}</p>}
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Cargo *</label>
+                <input
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">E-mail</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.email ? 'border-red-400' : ''}`}
+                />
+                {createErrors.email && <p className="text-xs text-red-500 mt-0.5">{createErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Telefone</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: maskPhone(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.phone ? 'border-red-400' : ''}`}
+                  placeholder="(11) 99999-0000"
+                />
+                {createErrors.phone && <p className="text-xs text-red-500 mt-0.5">{createErrors.phone}</p>}
+              </div>
               <div className="space-y-1 col-span-2">
                 <label className="text-sm font-medium">Turno</label>
                 <select value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -145,8 +181,20 @@ export function EmployeesPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.role || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">Cadastrar</button>
+              <button onClick={() => { setShowModal(false); setCreateErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  const nameErr = validateName(form.name); if (nameErr) errs.name = nameErr;
+                  const emailErr = validateEmail(form.email); if (emailErr) errs.email = emailErr;
+                  const phoneErr = validatePhone(form.phone); if (phoneErr) errs.phone = phoneErr;
+                  if (Object.keys(errs).length) { setCreateErrors(errs); return; }
+                  setCreateErrors({});
+                  createMutation.mutate(form);
+                }}
+                disabled={!form.name || !form.role || createMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >Cadastrar</button>
             </div>
           </div>
         </div>
@@ -157,21 +205,57 @@ export function EmployeesPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Editar Funcionário</h2>
             <div className="grid grid-cols-2 gap-3">
-              {[['Nome *', 'name'], ['Cargo *', 'role'], ['E-mail', 'email'], ['Telefone', 'phone']].map(([label, key]) => (
-                <div key={key} className={`space-y-1 ${key === 'name' ? 'col-span-2' : ''}`}>
-                  <label className="text-sm font-medium">{label}</label>
-                  <input
-                    value={(editForm as any)[key]}
-                    onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Nome *</label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
+                />
+                {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
+              </div>
+              <div className="space-y-1 col-span-2">
+                <label className="text-sm font-medium">Cargo *</label>
+                <input
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">E-mail</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.email ? 'border-red-400' : ''}`}
+                />
+                {editErrors.email && <p className="text-xs text-red-500 mt-0.5">{editErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Telefone</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: maskPhone(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.phone ? 'border-red-400' : ''}`}
+                  placeholder="(11) 99999-0000"
+                />
+                {editErrors.phone && <p className="text-xs text-red-500 mt-0.5">{editErrors.phone}</p>}
+              </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setEditModal(false); setEditTarget(null); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button onClick={() => { setEditModal(false); setEditTarget(null); setEditErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
               <button
-                onClick={() => updateMutation.mutate(editForm)}
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  const nameErr = validateName(editForm.name); if (nameErr) errs.name = nameErr;
+                  const emailErr = validateEmail(editForm.email); if (emailErr) errs.email = emailErr;
+                  const phoneErr = validatePhone(editForm.phone); if (phoneErr) errs.phone = phoneErr;
+                  if (Object.keys(errs).length) { setEditErrors(errs); return; }
+                  setEditErrors({});
+                  updateMutation.mutate(editForm);
+                }}
                 disabled={updateMutation.isPending || !editForm.name || !editForm.role}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >

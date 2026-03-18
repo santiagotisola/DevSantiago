@@ -700,67 +700,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Acesso rápido */}
-      <div className="bg-white rounded-xl border p-5">
-        <h3 className="font-semibold mb-4">Acesso Rápido</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {[
-            {
-              label: "Registrar Visita",
-              to: "/portaria/visitantes",
-              icon: Shield,
-              color: "text-purple-600 bg-purple-50",
-            },
-            {
-              label: "Registrar Encomenda",
-              to: "/portaria/encomendas",
-              icon: Package,
-              color: "text-orange-600 bg-orange-50",
-            },
-            {
-              label: "Abrir Chamado",
-              to: "/manutencao",
-              icon: Wrench,
-              color: "text-red-600 bg-red-50",
-            },
-            {
-              label: "Nova Cobrança",
-              to: "/financeiro/cobranças",
-              icon: DollarSign,
-              color: "text-green-600 bg-green-50",
-            },
-            {
-              label: "Reservar Área",
-              to: "/areas-comuns",
-              icon: Calendar,
-              color: "text-teal-600 bg-teal-50",
-            },
-            {
-              label: "Novo Comunicado",
-              to: "/comunicacao/avisos",
-              icon: Users,
-              color: "text-blue-600 bg-blue-50",
-            },
-            {
-              label: "Assembleias",
-              to: "/assembleias",
-              icon: Video,
-              color: "text-indigo-600 bg-indigo-50",
-            },
-          ].map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl ${item.color} hover:opacity-80 transition-opacity text-center`}
-            >
-              <item.icon className="w-6 h-6" />
-              <span className="text-xs font-medium leading-tight">
-                {item.label}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

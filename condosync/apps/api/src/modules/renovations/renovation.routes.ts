@@ -164,7 +164,9 @@ router.get(
   },
 );
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/",
+  authorize("RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
   const data = validateRequest(renovationSchema, req.body);
   const unit = await ensureUnitAccess(req, data.unitId);
 

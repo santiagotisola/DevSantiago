@@ -22,6 +22,7 @@ export default function MinhasVisitas() {
   const { selectedCondominiumId, user } = useAuthStore();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [nameError, setNameError] = useState('');
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
   const [reason, setReason] = useState('');
@@ -55,6 +56,7 @@ export default function MinhasVisitas() {
       toast.success('Visitante pré-autorizado!');
       qc.invalidateQueries({ queryKey: ['my-visitors'] });
       setShowForm(false);
+      setNameError('');
       setName('');
       setDocument('');
       setReason('');
@@ -81,14 +83,23 @@ export default function MinhasVisitas() {
           <div className="bg-white rounded-t-3xl w-full p-6 pb-safe-bottom space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold">Novo visitante</h3>
-              <button onClick={() => setShowForm(false)}>
+              <button onClick={() => { setShowForm(false); setNameError(''); }}>
                 <X size={20} className="text-gray-400" />
               </button>
             </div>
 
-            {[
-              { label: 'Nome *', value: name, setValue: setName, placeholder: 'Nome completo', required: true },
-              { label: 'Documento', value: document, setValue: setDocument, placeholder: 'CPF ou RG' },
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+              <input
+                value={name}
+                onChange={(e) => { setName(e.target.value); if (nameError) setNameError(''); }}
+                placeholder="Nome completo"
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${nameError ? 'border-red-400' : 'border-gray-300'}`}
+              />
+              {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+            </div>
+
+            {[{ label: 'Documento', value: document, setValue: setDocument, placeholder: 'CPF ou RG' },
               { label: 'Motivo', value: reason, setValue: setReason, placeholder: 'Ex: visita familiar' },
             ].map(({ label, value, setValue, placeholder }) => (
               <div key={label}>
@@ -115,7 +126,14 @@ export default function MinhasVisitas() {
             </div>
 
             <button
-              onClick={() => createMutation.mutate()}
+              onClick={() => {
+                if (!name.trim() || name.trim().length < 2) {
+                  setNameError('Nome deve ter pelo menos 2 caracteres');
+                  return;
+                }
+                setNameError('');
+                createMutation.mutate();
+              }}
               disabled={!name.trim() || createMutation.isPending}
               className="btn-press w-full bg-primary-600 text-white rounded-xl py-3 font-semibold disabled:opacity-60"
             >

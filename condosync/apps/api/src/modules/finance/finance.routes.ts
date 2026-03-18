@@ -93,14 +93,11 @@ router.patch(
   "/charges/:id/pay",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const body =
-      req.body && typeof req.body.paidAmount === "number"
-        ? req.body
-        : { paidAmount: 0 };
+    const { paidAmount, paidAt } = validateRequest(paySchema, req.body);
     const charge = await financeService.markAsPaid(
       req.params.id,
-      body.paidAmount || 0,
-      body.paidAt ? new Date(body.paidAt) : undefined,
+      paidAmount,
+      paidAt ? new Date(paidAt) : undefined,
     );
     res.json({ success: true, data: { charge } });
   },

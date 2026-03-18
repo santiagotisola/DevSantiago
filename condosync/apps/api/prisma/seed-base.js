@@ -165,10 +165,10 @@ async function main() {
 
   // Conta financeira
   await prisma.financialAccount.upsert({
-    where: { id: "seed-account-001" },
+    where: { id: "a0000000-0000-4000-8000-000000000001" },
     update: {},
     create: {
-      id: "seed-account-001",
+      id: "a0000000-0000-4000-8000-000000000001",
       condominiumId: condominium.id,
       name: "Conta Principal",
       bankName: "Banco do Brasil",

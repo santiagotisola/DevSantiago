@@ -1,4 +1,4 @@
-import { Menu, Bell, Search, ChevronDown } from 'lucide-react';
+import { Menu, Bell, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
@@ -63,13 +63,6 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Pesquisa */}
-      <button className="hidden md:flex items-center gap-2 px-3 py-2 border rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 text-sm transition-colors">
-        <Search className="w-4 h-4" />
-        <span>Pesquisar...</span>
-        <kbd className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘K</kbd>
-      </button>
 
       {/* Notificações */}
       <button

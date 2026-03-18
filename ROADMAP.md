@@ -118,7 +118,7 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 **O que foi feito:**
 
 - Gateway Asaas ja existia (`AsaasService`) com suporte a boleto, PIX e link de pagamento; webhook de conciliacao automatica tambem existia
-- Adicionado endpoint `GET /finance/charges/:id/detail` para retornar todos os campos de pagamento (boletoUrl, boletoCode, pixQrCode, pixCopyPaste, paymentLink, gatewayId)  
+- Adicionado endpoint `GET /finance/charges/:id/detail` para retornar todos os campos de pagamento (boletoUrl, boletoCode, pixQrCode, pixCopyPaste, paymentLink, gatewayId)
 - Adicionado endpoint `POST /finance/charges/:id/sync` para sincronizacao manual de uma cobranca com o gateway (caso falha no sync automatico)
 - Adicionado endpoint `PATCH /finance/accounts/:accountId/gateway` para configurar tipo e chave do gateway por conta financeira (MGMT apenas)
 - Atualizado `ChargesPage` (admin/sindico): nova coluna "Pagamento" com botoes de link externo, boleto e PIX; botao de re-sync para cobranças sem gateway
@@ -206,19 +206,181 @@ Analise comparativa com concorrente (organizemeucondominio.com.br) - Marco 2026
 
 ---
 
+### [MEL-13] Controle de veiculos na portaria
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Registro e listagem de veiculos de moradores com controle de entrada e saida pela portaria.  
+**O que foi feito:**
+
+- Modulo `vehicles` na API com listagem por condominio e CRUD
+- Frontend: `VehiclesPage` em `/portaria/veiculos` com busca por placa/modelo, registro de veiculo e vinculo a unidade/morador
+- Acesso restrito a DOORMAN, CONDOMINIUM_ADMIN, SYNDIC e SUPER_ADMIN
+
+**Esforco estimado:** Baixo-medio
+
+---
+
+### [MEL-14] Assembleias virtuais com votacao em tempo real
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Criacao e gerenciamento de assembleias com pauta, link de videoconferencia, controle de presenca e votacao online com resultado em tempo real.  
+**O que foi feito:**
+
+- Modulos Prisma: `Assembly`, `AssemblyVotingItem`, `AssemblyVoteOption`, `AssemblyVote`, `AssemblyAttendance`, `FinalizedAssembly`
+- Backend: `GET /assemblies/condominium/:id`, `GET /assemblies/:id`, `POST /assemblies/items/:id/vote`, `POST /assemblies/:id/attendance`, `GET /assemblies/:id/results`
+- Frontend web: `AssemblyList` em `/assembleias` com listagem e badges de status (Agendada / Em andamento / Finalizada / Cancelada)
+- Frontend web: `AssemblyDetail` em `/assembleias/:id` com votacao por item de pauta, registro de presenca automatico ao entrar na sala, resultado grafico atualizado a cada 10 s enquanto assembleia esta em andamento (polling)
+- Acesso restrito a CONDOMINIUM_ADMIN, SYNDIC e SUPER_ADMIN
+
+**Esforco estimado:** Medio-alto
+
+---
+
+### [MEL-15] Cadastro de pets
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Registro de animais de estimacao por unidade (nome, especie, raca, porte, cor, observacoes).  
+**O que foi feito:**
+
+- Modelo `Pet` adicionado ao schema Prisma com vinculo a `Unit`
+- Backend: CRUD (`POST /pets`, `GET /pets/condominium/:id`, `PATCH /pets/:id`, `DELETE /pets/:id`)
+- Frontend web: `PetPage` em `/pets` com busca, filtro por unidade, modal de cadastro/edicao, exclusao com confirmacao e indicadores visuais por especie (cachorro/gato/outro)
+- App mobile: `Pets.tsx` para moradores visualizarem os pets da propria unidade
+- Acesso: admin/sindico ve todos; morador ve apenas seus proprios
+
+**Esforco estimado:** Baixo
+
+---
+
+### [MEL-16] Achados e perdidos
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Mural digital de itens perdidos e encontrados no condominio, com status de devolucao.  
+**O que foi feito:**
+
+- Modelo `LostAndFound` com campos: titulo, descricao, categoria, local, status (`LOST` / `FOUND` / `RETURNED`)
+- Backend: listagem por condominio, criacao, atualizacao de status (devolucao com `returnedTo` e `returnedAt`) e exclusao
+- Frontend web: `LostAndFoundPage` em `/comunicacao/achados-e-perdidos` com filtros por status, busca por titulo, badge de status colorido e fluxo de devolucao
+- Visivel para todos os usuarios autenticados do condominio (COMMUNITY)
+
+**Esforco estimado:** Baixo
+
+---
+
+### [MEL-17] Relatorios com graficos e exportacao PDF
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Painel de relatorios gerenciais com graficos interativos e exportacao de prestacao de contas em PDF.  
+**O que foi feito:**
+
+- Backend: endpoints `/reports/visitors/:id`, `/reports/financial/:id`, `/reports/maintenance/:id`, `/reports/occupancy/:id` e `/reports/financial/:id/pdf` (geracao de PDF com dados do mes)
+- Frontend web: `ReportsPage` em `/relatorios` com 4 abas (Visitantes, Financeiro, Manutencao, Ocupacao)
+- Graficos com `recharts`: BarChart para visitantes e financeiro, PieChart para manutencao e ocupacao
+- Botao "Exportar PDF" com download do arquivo do mes corrente
+- Acesso restrito a CONDOMINIUM_ADMIN, SYNDIC e SUPER_ADMIN
+
+**Esforco estimado:** Medio
+
+---
+
+### [MEL-18] Marketplace / Clube de beneficios
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Plataforma de parceiros e ofertas exclusivas para moradores, gerenciada pelo SUPER_ADMIN.  
+**O que foi feito:**
+
+- Modelos: `MarketplacePartner` e `MarketplaceOffer` com categorias, descontos, cupons e validade
+- Backend: CRUD de parceiros e ofertas (`/marketplace/partners`, `/marketplace/offers`, `/marketplace/categories`); rota admin `/marketplace/partners/admin` so acessivel pelo SUPER_ADMIN
+- Frontend web (admin): `MarketplaceAdminPage` em `/marketplace` com abas Parceiros/Ofertas, ativacao/desativacao de parceiros, criacao de ofertas com cupom e validade
+- App mobile (morador): `MarketplacePage` com listagem de ofertas por categoria, detalhe com cupom copiavel e link externo para o parceiro
+- Acesso admin restrito a SUPER_ADMIN; leitura de ofertas aberta a todos autenticados
+
+**Esforco estimado:** Medio
+
+---
+
+### [MEL-19] Botao de panico
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Botao de emergencia no app mobile que notifica a administracao imediatamente com alerta sonoro/visual.  
+**O que foi feito:**
+
+- Backend: `POST /panic` com envio de notificacao in-app para todos os admins/sindicos do condominio via Socket.IO
+- App mobile: `PanicoPage` tela de fundo vermelho com botao circular gigante, animacao pulsante, confirmacao antes do envio e feedback visual de "alerta enviado"
+- Rota `/panico` no menu de navegacao inferior do mobile (BottomNav)
+
+**Esforco estimado:** Baixo
+
+---
+
+### [MEL-20] Landing page de apresentacao
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Pagina publica de marketing do CondoSync com lista de funcionalidades, depoimentos e chamada para acao.  
+**O que foi feito:**
+
+- `LandingPage` acessivel em `/home` sem autenticacao (redireciona usuarios logados para o dashboard)
+- Secoes: hero com CTA, grid de features (Portaria, Financeiro, Moradores, Areas Comuns, Manutencao, Comunicacao), depoimentos, FAQ em accordion e footer
+- Design moderno com gradiente azul/indigo, responsivo
+
+**Esforco estimado:** Baixo
+
+---
+
+### [MEL-21] Configuracoes do condominio
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Pagina de edicao dos dados cadastrais do condominio (nome, CNPJ, endereco, contato).  
+**O que foi feito:**
+
+- `SettingsPage` em `/configuracoes` com formulario de edicao de todos os campos do condominio
+- Usa `PUT /condominiums/:id` ja existente na API
+- Feedback visual de "Salvo!" apos gravacao bem-sucedida
+
+**Esforco estimado:** Muito baixo
+
+---
+
+### [MEL-22] App mobile dedicado (portaria e morador)
+
+**Status:** `[x] Concluido - Marco/2026`  
+**Descricao:** Aplicativo mobile separado (`apps/mobile`) voltado para porteiros e moradores, com interface otimizada para telas pequenas e touch.  
+**O que foi feito:**
+
+- App React + Vite + Tailwind em `condosync/apps/mobile` com navegacao por `BottomNav`
+- Portaria: `PortariaDashboard`, `VisitantesPortaria`, `EncomendasPortaria`
+- Morador: `HomeGrid`, `MinhasVisitas`, `MinhasCobrancas`, `Avisos`, `Pets`
+- Compartilhado: `PanicoPage`, `MarketplacePage`, `PerfilPage`
+- Autenticacao integrada com a mesma API REST e Zustand
+- Containerizado no `docker-compose.yml`
+
+**Esforco estimado:** Alto
+
+---
+
 ## Ordem de execucao sugerida
 
-| #   | Item                                                  | Prioridade   | Esforco    |
-| --- | ----------------------------------------------------- | ------------ | ---------- |
-| 1   | ~~MEL-01 - Notificacoes email encomendas/visitantes~~ | Concluido    | -          |
-| 2   | ~~MEL-02 - Pre-autorizacao de visitantes~~            | Concluido    | -          |
-| 3   | ~~MEL-09 - PWA~~                                      | Concluido    | -          |
-| 4   | ~~MEL-03 - Manutencao preventiva~~                    | Concluido    | Medio-alto |
-| 5   | ~~MEL-05 - Documentos para download~~                 | Concluido    | Medio      |
-| 6   | ~~MEL-04 - Autorizacao de obras~~                     | Concluido    | Medio      |
-| 7   | ~~MEL-12 - Controle de acesso por papel (RBAC)~~      | Concluido    | Medio      |
-| 8   | ~~MEL-07 - Controle de estoque~~                      | Concluido    | Medio      |
-| 9   | ~~MEL-06 - Mensagens individuais~~                    | Concluido    | Medio-alto |
-| 10  | ~~MEL-10 - Galeria de fotos~~                         | Concluido    | Baixo      |
-| 11  | ~~MEL-08 - Boleto bancario integrado~~                | Concluido    | Alto       |
-| 12  | ~~MEL-11 - Assistente IA~~                            | Concluido    | Medio      |
+| #   | Item                                                  | Prioridade | Esforco     |
+| --- | ----------------------------------------------------- | ---------- | ----------- |
+| 1   | ~~MEL-01 - Notificacoes email encomendas/visitantes~~ | Concluido  | -           |
+| 2   | ~~MEL-02 - Pre-autorizacao de visitantes~~            | Concluido  | -           |
+| 3   | ~~MEL-09 - PWA~~                                      | Concluido  | -           |
+| 4   | ~~MEL-03 - Manutencao preventiva~~                    | Concluido  | Medio-alto  |
+| 5   | ~~MEL-05 - Documentos para download~~                 | Concluido  | Medio       |
+| 6   | ~~MEL-04 - Autorizacao de obras~~                     | Concluido  | Medio       |
+| 7   | ~~MEL-12 - Controle de acesso por papel (RBAC)~~      | Concluido  | Medio       |
+| 8   | ~~MEL-07 - Controle de estoque~~                      | Concluido  | Medio       |
+| 9   | ~~MEL-06 - Mensagens individuais~~                    | Concluido  | Medio-alto  |
+| 10  | ~~MEL-10 - Galeria de fotos~~                         | Concluido  | Baixo       |
+| 11  | ~~MEL-08 - Boleto bancario integrado~~                | Concluido  | Alto        |
+| 12  | ~~MEL-11 - Assistente IA~~                            | Concluido  | Medio       |
+| 13  | ~~MEL-13 - Controle de veiculos~~                     | Concluido  | Baixo-medio |
+| 14  | ~~MEL-14 - Assembleias virtuais com votacao~~         | Concluido  | Medio-alto  |
+| 15  | ~~MEL-15 - Cadastro de pets~~                         | Concluido  | Baixo       |
+| 16  | ~~MEL-16 - Achados e perdidos~~                       | Concluido  | Baixo       |
+| 17  | ~~MEL-17 - Relatorios com graficos e PDF~~            | Concluido  | Medio       |
+| 18  | ~~MEL-18 - Marketplace / Clube de beneficios~~        | Concluido  | Medio       |
+| 19  | ~~MEL-19 - Botao de panico~~                          | Concluido  | Baixo       |
+| 20  | ~~MEL-20 - Landing page de apresentacao~~             | Concluido  | Baixo       |
+| 21  | ~~MEL-21 - Configuracoes do condominio~~              | Concluido  | Muito baixo |
+| 22  | ~~MEL-22 - App mobile dedicado~~                      | Concluido  | Alto        |
