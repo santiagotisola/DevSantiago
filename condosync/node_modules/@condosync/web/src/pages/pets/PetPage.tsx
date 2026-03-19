@@ -297,7 +297,7 @@ export default function PetPage() {
                 Cancelar
               </button>
               <button 
-                onClick={() => editTarget ? updateMutation.mutate({ body: form }) : createMutation.mutate({ body: form })}
+                onClick={() => editTarget ? updateMutation.mutate(form) : createMutation.mutate(form)}
                 disabled={!form.name || !form.unitId || createMutation.isPending || updateMutation.isPending}
                 className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all"
               >

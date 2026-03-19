@@ -16,7 +16,7 @@ const unitSchema = z.object({
   type: z.string().optional(),
   area: z.number().positive().optional(),
   bedrooms: z.number().int().positive().optional(),
-  status: z.enum(["OCCUPIED", "VACANT", "UNDER_RENOVATION"]).optional(),
+  status: z.enum(["OCCUPIED", "VACANT", "UNDER_RENOVATION", "BLOCKED"]).optional(),
   fraction: z.number().positive().optional(),
   notes: z.string().optional(),
 });

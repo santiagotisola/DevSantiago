@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
-import { formatDateTime } from "../../lib/utils";
+import { formatDateTime, maskPhone, validatePhone } from "../../lib/utils";
 import {
   Users,
   Plus,
@@ -80,6 +80,9 @@ export function VisitorsPage() {
     notes: "",
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
   const { data: unitsData } = useQuery({
     queryKey: ["units", selectedCondominiumId],
     queryFn: async () => {
@@ -156,11 +159,17 @@ export function VisitorsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["visitors"] }),
   });
 
+  const denyMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/visitors/${id}/authorize`, { authorized: false }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["visitors"] }),
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: typeof form) => api.post("/visitors", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visitors"] });
       setShowModal(false);
+      setFormErrors({});
       setForm({
         name: "",
         document: "",
@@ -178,6 +187,7 @@ export function VisitorsPage() {
       api.patch(`/visitors/${id}`, d),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["visitors"] });
+      setEditErrors({});
       setEditModal(false);
       setEditTarget(null);
     },
@@ -454,6 +464,20 @@ export function VisitorsPage() {
                               <LogIn className="w-4 h-4" />
                             </button>
                           )}
+                          {(v.status === "AUTHORIZED" || v.status === "PENDING") && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Negar entrada de ${v.name}?`)) {
+                                  denyMutation.mutate(v.id);
+                                }
+                              }}
+                              disabled={denyMutation.isPending}
+                              title="Negar Entrada"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          )}
                           {v.status === "INSIDE" && (
                             <button
                               onClick={() => {
@@ -494,11 +518,13 @@ export function VisitorsPage() {
               <div className="col-span-2 space-y-1">
                 <label className="text-sm font-medium">Nome *</label>
                 <input
+                  required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-400' : ''}`}
                   placeholder="Nome completo"
                 />
+                {formErrors.name && <p className="text-xs text-red-500 mt-0.5">{formErrors.name}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Documento</label>
@@ -528,11 +554,13 @@ export function VisitorsPage() {
               <div className="space-y-1">
                 <label className="text-sm font-medium">Telefone</label>
                 <input
+                  type="tel"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setForm({ ...form, phone: maskPhone(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-400' : ''}`}
                   placeholder="(11) 99999-0000"
                 />
+                {formErrors.phone && <p className="text-xs text-red-500 mt-0.5">{formErrors.phone}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Empresa</label>
@@ -609,13 +637,21 @@ export function VisitorsPage() {
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setFormErrors({}); }}
                 className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
-                onClick={() => createMutation.mutate(form)}
+                onClick={() => {
+                  const errors: Record<string, string> = {};
+                  if (!form.name.trim() || form.name.trim().length < 2) errors.name = 'Nome deve ter pelo menos 2 caracteres';
+                  const phoneErr = validatePhone(form.phone);
+                  if (phoneErr) errors.phone = phoneErr;
+                  if (Object.keys(errors).length) { setFormErrors(errors); return; }
+                  setFormErrors({});
+                  createMutation.mutate(form);
+                }}
                 disabled={
                   createMutation.isPending || !form.name || !form.unitId
                 }
@@ -745,9 +781,10 @@ export function VisitorsPage() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
                   placeholder="Nome completo"
                 />
+                {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Documento</label>
@@ -777,13 +814,15 @@ export function VisitorsPage() {
               <div className="space-y-1">
                 <label className="text-sm font-medium">Telefone</label>
                 <input
+                  type="tel"
                   value={editForm.phone}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, phone: e.target.value })
+                    setEditForm({ ...editForm, phone: maskPhone(e.target.value) })
                   }
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.phone ? 'border-red-400' : ''}`}
                   placeholder="(11) 99999-0000"
                 />
+                {editErrors.phone && <p className="text-xs text-red-500 mt-0.5">{editErrors.phone}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Empresa</label>
@@ -824,15 +863,22 @@ export function VisitorsPage() {
                 onClick={() => {
                   setEditModal(false);
                   setEditTarget(null);
+                  setEditErrors({});
                 }}
                 className="flex-1 px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
               >
                 Cancelar
               </button>
               <button
-                onClick={() =>
-                  updateMutation.mutate({ ...editForm, id: editTarget.id })
-                }
+                onClick={() => {
+                  const errors: Record<string, string> = {};
+                  if (!editForm.name.trim() || editForm.name.trim().length < 2) errors.name = 'Nome deve ter pelo menos 2 caracteres';
+                  const phoneErr = validatePhone(editForm.phone);
+                  if (phoneErr) errors.phone = phoneErr;
+                  if (Object.keys(errors).length) { setEditErrors(errors); return; }
+                  setEditErrors({});
+                  updateMutation.mutate({ ...editForm, id: editTarget.id });
+                }}
                 disabled={updateMutation.isPending || !editForm.name}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >

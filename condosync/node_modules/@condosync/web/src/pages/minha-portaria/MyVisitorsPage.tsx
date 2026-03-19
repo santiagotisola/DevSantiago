@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
-import { formatDateTime } from "../../lib/utils";
+import { formatDateTime, maskPhone, validatePhone } from "../../lib/utils";
 import {
   Users,
   Plus,
@@ -46,6 +46,7 @@ export function MyVisitorsPage() {
   )?.unitId;
 
   const [showModal, setShowModal] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: "",
     document: "",
@@ -87,6 +88,7 @@ export function MyVisitorsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-visitors", unitId] });
       setShowModal(false);
+      setFormErrors({});
       setForm({
         name: "",
         document: "",
@@ -258,6 +260,12 @@ export function MyVisitorsPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                const errors: Record<string, string> = {};
+                if (!form.name.trim() || form.name.trim().length < 2) errors.name = 'Nome deve ter pelo menos 2 caracteres';
+                const phoneErr = validatePhone(form.phone);
+                if (phoneErr) errors.phone = phoneErr;
+                if (Object.keys(errors).length) { setFormErrors(errors); return; }
+                setFormErrors({});
                 createMutation.mutate(form);
               }}
               className="p-5 space-y-4"
@@ -272,9 +280,10 @@ export function MyVisitorsPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
                   }
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-400' : 'border-slate-300'}`}
                   placeholder="Nome completo"
                 />
+                {formErrors.name && <p className="text-xs text-red-500 mt-0.5">{formErrors.name}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -315,13 +324,15 @@ export function MyVisitorsPage() {
                   Telefone
                 </label>
                 <input
+                  type="tel"
                   value={form.phone}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, phone: e.target.value }))
+                    setForm((f) => ({ ...f, phone: maskPhone(e.target.value) }))
                   }
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-400' : 'border-slate-300'}`}
                   placeholder="(11) 99999-9999"
                 />
+                {formErrors.phone && <p className="text-xs text-red-500 mt-0.5">{formErrors.phone}</p>}
               </div>
 
               <div>
@@ -377,7 +388,7 @@ export function MyVisitorsPage() {
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setFormErrors({}); }}
                   className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancelar

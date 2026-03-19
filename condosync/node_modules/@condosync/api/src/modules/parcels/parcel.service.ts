@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { ParcelStatus } from '@prisma/client';
 import { NotificationService } from '../../notifications/notification.service';
+import { ConflictError } from '../../middleware/errorHandler';
 
 export interface RegisterParcelDTO {
   unitId: string;
@@ -87,6 +88,10 @@ export class ParcelService {
   }
 
   async confirmPickup(id: string, pickedUpBy: string, signature?: string) {
+    const parcel = await prisma.parcel.findUniqueOrThrow({ where: { id } });
+    if (parcel.status === ParcelStatus.PICKED_UP || parcel.status === ParcelStatus.RETURNED) {
+      throw new ConflictError(`Encomenda não pode ser retirada com status ${parcel.status}`);
+    }
     return prisma.parcel.update({
       where: { id },
       data: {

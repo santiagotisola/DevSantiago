@@ -70,7 +70,7 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
   }
 
   // Erros do Prisma
-  if (err.name === 'PrismaClientKnownRequestError') {
+  if (err.name === 'PrismaClientKnownRequestError' || err.name === 'NotFoundError') {
     const prismaErr = err as { code?: string; meta?: { field_name?: string; target?: string[] } };
     if (prismaErr.code === 'P2002') {
       return res.status(409).json({
@@ -81,10 +81,16 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
         },
       });
     }
-    if (prismaErr.code === 'P2025') {
+    if (prismaErr.code === 'P2025' || err.name === 'NotFoundError') {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Registro não encontrado' },
+      });
+    }
+    if (prismaErr.code === 'P2003' || prismaErr.code === 'P2014' || prismaErr.code === 'P2023') {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Referência não encontrada' },
       });
     }
   }

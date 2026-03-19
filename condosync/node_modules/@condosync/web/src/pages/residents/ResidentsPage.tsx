@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { Users, Plus, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
 
@@ -18,6 +19,8 @@ export function ResidentsPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [editForm, setEditForm] = useState({ name: '', phone: '', cpf: '', unitId: '' });
   const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '', birthDate: '' });
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: residents, isLoading } = useQuery({
@@ -40,12 +43,12 @@ export function ResidentsPage() {
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/residents', { ...d, condominiumId: selectedCondominiumId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setShowModal(false); setForm({ ...emptyForm }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setShowModal(false); setForm({ ...emptyForm }); setCreateErrors({}); },
   });
 
   const updateMutation = useMutation({
     mutationFn: (d: typeof editForm) => api.patch(`/residents/${editTarget.id}`, d),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setEditTarget(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setEditTarget(null); setEditErrors({}); },
   });
 
   const deleteMutation = useMutation({
@@ -184,12 +187,48 @@ export function ResidentsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Novo Morador</h2>
             <div className="space-y-3">
-              {[['Nome completo *', 'name', 'text'], ['E-mail *', 'email', 'email'], ['Telefone', 'phone', 'tel'], ['CPF', 'cpf', 'text']].map(([label, key, type]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium">{label}</label>
-                  <input type={type} value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Nome completo *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.name ? 'border-red-400' : ''}`}
+                />
+                {createErrors.name && <p className="text-xs text-red-500 mt-0.5">{createErrors.name}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">E-mail *</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.email ? 'border-red-400' : ''}`}
+                />
+                {createErrors.email && <p className="text-xs text-red-500 mt-0.5">{createErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Telefone</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: maskPhone(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.phone ? 'border-red-400' : ''}`}
+                  placeholder="(11) 99999-9999"
+                />
+                {createErrors.phone && <p className="text-xs text-red-500 mt-0.5">{createErrors.phone}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">CPF</label>
+                <input
+                  type="text"
+                  value={form.cpf}
+                  onChange={(e) => setForm({ ...form, cpf: maskCPF(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.cpf ? 'border-red-400' : ''}`}
+                  placeholder="000.000.000-00"
+                />
+                {createErrors.cpf && <p className="text-xs text-red-500 mt-0.5">{createErrors.cpf}</p>}
+              </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Unidade *</label>
                 <select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -202,8 +241,21 @@ export function ResidentsPage() {
             </div>
             {createMutation.isError && <p className="text-sm text-red-600">Erro ao cadastrar. Verifique os dados.</p>}
             <div className="flex gap-3">
-              <button onClick={() => { setShowModal(false); setForm({ ...emptyForm }); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.email || !form.unitId || createMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+              <button onClick={() => { setShowModal(false); setForm({ ...emptyForm }); setCreateErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  const nameErr = validateName(form.name); if (nameErr) errs.name = nameErr;
+                  const emailErr = validateEmail(form.email); if (emailErr) errs.email = emailErr;
+                  const phoneErr = validatePhone(form.phone); if (phoneErr) errs.phone = phoneErr;
+                  const cpfErr = validateCPF(form.cpf); if (cpfErr) errs.cpf = cpfErr;
+                  if (Object.keys(errs).length) { setCreateErrors(errs); return; }
+                  setCreateErrors({});
+                  createMutation.mutate(form);
+                }}
+                disabled={!form.name || !form.email || !form.unitId || createMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
                 {createMutation.isPending ? 'Criando...' : 'Criar'}
               </button>
             </div>
@@ -217,12 +269,38 @@ export function ResidentsPage() {
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Editar Morador</h2>
             <div className="space-y-3">
-              {[['Nome completo', 'name', 'text'], ['Telefone', 'phone', 'tel'], ['CPF', 'cpf', 'text']].map(([label, key, type]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium">{label}</label>
-                  <input type={type} value={(editForm as any)[key]} onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Nome completo</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
+                />
+                {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Telefone</label>
+                <input
+                  type="tel"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: maskPhone(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.phone ? 'border-red-400' : ''}`}
+                  placeholder="(11) 99999-9999"
+                />
+                {editErrors.phone && <p className="text-xs text-red-500 mt-0.5">{editErrors.phone}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">CPF</label>
+                <input
+                  type="text"
+                  value={editForm.cpf}
+                  onChange={(e) => setEditForm({ ...editForm, cpf: maskCPF(e.target.value) })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.cpf ? 'border-red-400' : ''}`}
+                  placeholder="000.000.000-00"
+                />
+                {editErrors.cpf && <p className="text-xs text-red-500 mt-0.5">{editErrors.cpf}</p>}
+              </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Unidade *</label>
                 <select value={editForm.unitId} onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -234,8 +312,20 @@ export function ResidentsPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setEditTarget(null)} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={() => updateMutation.mutate(editForm)} disabled={!editForm.unitId || updateMutation.isPending} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+              <button onClick={() => { setEditTarget(null); setEditErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">Cancelar</button>
+              <button
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  const nameErr = validateName(editForm.name); if (nameErr) errs.name = nameErr;
+                  const phoneErr = validatePhone(editForm.phone); if (phoneErr) errs.phone = phoneErr;
+                  const cpfErr = validateCPF(editForm.cpf); if (cpfErr) errs.cpf = cpfErr;
+                  if (Object.keys(errs).length) { setEditErrors(errs); return; }
+                  setEditErrors({});
+                  updateMutation.mutate(editForm);
+                }}
+                disabled={!editForm.unitId || updateMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
                 {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
               </button>
             </div>

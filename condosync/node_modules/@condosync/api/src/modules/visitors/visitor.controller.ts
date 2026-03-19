@@ -9,7 +9,10 @@ const createSchema = z.object({
   name: z.string().min(2),
   document: z.string().optional(),
   documentType: z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
-  phone: z.string().optional(),
+  phone: z.string().refine(
+    (v) => { const d = v.replace(/\D/g, ''); return d.length >= 10 && d.length <= 11; },
+    'Telefone inválido. Use (XX) XXXXX-XXXX'
+  ).optional(),
   company: z.string().optional(),
   reason: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
@@ -20,7 +23,10 @@ const updateSchema = z.object({
   name: z.string().min(2).optional(),
   document: z.string().optional(),
   documentType: z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
-  phone: z.string().optional(),
+  phone: z.string().refine(
+    (v) => { const d = v.replace(/\D/g, ''); return d.length >= 10 && d.length <= 11; },
+    'Telefone inválido. Use (XX) XXXXX-XXXX'
+  ).optional(),
   company: z.string().optional(),
   reason: z.string().optional(),
   notes: z.string().optional(),
