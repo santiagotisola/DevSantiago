@@ -15,7 +15,9 @@ FROM nginx:1.25-alpine
 
 RUN rm /etc/nginx/conf.d/default.conf
 
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# nginx:alpine processa templates em /etc/nginx/templates/ na inicialização via envsubst
+# API_URL deve ser definida como variável de ambiente (Railway: HTTPS URL, Docker Compose: http://api:3333)
+COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist/ /usr/share/nginx/html/
 
 EXPOSE 80
