@@ -21,8 +21,8 @@ FROM nginx:1.25-alpine AS production
 # Remover config padrão do nginx
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copiar nossa configuração nginx
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Copiar template nginx (envsubst substitui ${API_URL} na inicialização)
+COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Copiar o build do Vite
 COPY --from=builder /app/dist /usr/share/nginx/html

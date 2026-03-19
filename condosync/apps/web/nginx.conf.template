@@ -1,0 +1,48 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Compressão gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+
+    # Cache de assets estáticos (JS/CSS com hash no nome)
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Proxy reverso para a API
+    # API_URL: http://api:3333 (Docker Compose) ou https://devsantiago-production.up.railway.app (Railway)
+    location /api/ {
+        proxy_pass         ${API_URL};
+        proxy_ssl_server_name on;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $proxy_host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 60s;
+    }
+
+    # Proxy para Socket.IO
+    location /socket.io/ {
+        proxy_pass         ${API_URL};
+        proxy_ssl_server_name on;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $proxy_host;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection "upgrade";
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # SPA fallback — todas as outras rotas entregam o index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
