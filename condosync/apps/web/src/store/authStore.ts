@@ -6,6 +6,7 @@ export interface UserInfo {
   name: string;
   email: string;
   role: string;
+  phone?: string;
   avatarUrl?: string;
   condominiumUsers?: Array<{
     condominiumId: string;
