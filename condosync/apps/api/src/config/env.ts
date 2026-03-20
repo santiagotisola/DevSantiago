@@ -23,6 +23,8 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);

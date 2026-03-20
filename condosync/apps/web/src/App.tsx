@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { Toaster } from "./components/ui/toaster";
 import { useAuthStore } from "./store/authStore";
+import { connectRealtime } from "./services/socket";
 
 // Layouts
 import { AuthLayout } from "./components/layouts/AuthLayout";
@@ -41,6 +43,8 @@ import StockPage from "./pages/stock/StockPage";
 import TicketsPage from "./pages/tickets/TicketsPage";
 import GalleryPage from "./pages/gallery/GalleryPage";
 import MyChargesPage from "./pages/finance/MyChargesPage";
+import { FinanceCategoriesPage } from "./pages/finance/FinanceCategoriesPage";
+import { VisitorRecurrencesPage } from "./pages/minha-portaria/VisitorRecurrencesPage";
 import MarketplaceAdminPage from "./pages/marketplace/MarketplaceAdminPage";
 import LandingPage from "./pages/landing/LandingPage";
 
@@ -77,6 +81,16 @@ function RoleGuard({
 }
 
 export default function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const selectedCondominiumId = useAuthStore((s) => s.selectedCondominiumId);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken || !userId) return;
+    return connectRealtime(accessToken, userId, selectedCondominiumId);
+  }, [isAuthenticated, accessToken, userId, selectedCondominiumId]);
+
   return (
     <BrowserRouter
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
@@ -183,6 +197,14 @@ export default function App() {
             element={
               <RoleGuard roles={MANAGEMENT}>
                 <ChargesPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="financeiro/categorias"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <FinanceCategoriesPage />
               </RoleGuard>
             }
           />
@@ -312,6 +334,14 @@ export default function App() {
               </RoleGuard>
             }
           />
+          <Route
+            path="minha-portaria/visitantes-recorrentes"
+            element={
+              <RoleGuard roles={["RESIDENT"]}>
+                <VisitorRecurrencesPage />
+              </RoleGuard>
+            }
+          />
 
           {/* Obras (admin/síndico) */}
           <Route
@@ -365,7 +395,7 @@ export default function App() {
 
           {/* Cobranças do morador */}
           <Route
-            path="minhas-cobranças"
+            path="minhas-cobrancas"
             element={
               <RoleGuard roles={["RESIDENT"]}>
                 <MyChargesPage />

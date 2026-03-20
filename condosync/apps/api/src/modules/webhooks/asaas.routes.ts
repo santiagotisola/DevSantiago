@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
+import { env } from '../../config/env';
 import { ChargeStatus, FinancialTransactionType } from '@prisma/client';
 import { logger } from '../../config/logger';
 
@@ -7,6 +8,15 @@ const router = Router();
 
 // Endpoint: /api/v1/webhooks/asaas
 router.post('/asaas', async (req: Request, res: Response) => {
+  // Validar token do webhook (segurança contra requisições forjadas)
+  if (env.ASAAS_WEBHOOK_TOKEN) {
+    const incomingToken = req.headers['asaas-access-token'] as string;
+    if (incomingToken !== env.ASAAS_WEBHOOK_TOKEN) {
+      logger.warn('Webhook Asaas rejeitado — token inválido');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  }
+
   const { event, payment } = req.body;
 
   logger.info(`Webhook Asaas recebido: ${event} para pagamento ${payment.id}`);

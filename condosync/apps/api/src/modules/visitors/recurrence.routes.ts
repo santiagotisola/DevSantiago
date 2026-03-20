@@ -22,7 +22,13 @@ const recurrenceSchema = z.object({
   validUntil: z.string().datetime().optional(),
 });
 
-// List recurrences for a condominium
+async function getActiveMembership(userId: string, condominiumId: string) {
+  return prisma.condominiumUser.findFirst({
+    where: { userId, condominiumId, isActive: true },
+    select: { role: true, unitId: true },
+  });
+}
+
 router.get(
   '/:condominiumId',
   authorize('RESIDENT', 'DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
@@ -30,21 +36,34 @@ router.get(
     const { condominiumId } = req.params;
     const user = req.user!;
 
+    const membership = user.role === 'SUPER_ADMIN'
+      ? null
+      : await getActiveMembership(user.userId, condominiumId);
+
+    if (user.role !== 'SUPER_ADMIN' && !membership) {
+      res.status(403).json({ success: false, message: 'Acesso negado a este condominio.' });
+      return;
+    }
+
     const where: any = { condominiumId, isActive: true };
-    // Residents only see their own unit's recurrences
-    if (user.role === 'RESIDENT') {
-      where.unitId = user.unitId;
+
+    if (membership?.role === 'RESIDENT') {
+      if (!membership.unitId) {
+        res.status(403).json({ success: false, message: 'Morador sem unidade ativa.' });
+        return;
+      }
+      where.unitId = membership.unitId;
     }
 
     const recurrences = await prisma.visitorRecurrence.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
+
     res.json({ success: true, data: recurrences });
   },
 );
 
-// Create
 router.post(
   '/',
   authorize('RESIDENT', 'DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
@@ -52,9 +71,31 @@ router.post(
     const data = validateRequest(recurrenceSchema, req.body);
     const user = req.user!;
 
-    // Residents can only create for their own unit
-    if (user.role === 'RESIDENT' && data.unitId !== user.unitId) {
-      res.status(403).json({ success: false, message: 'Proibido: unidade inválida.' });
+    const membership = user.role === 'SUPER_ADMIN'
+      ? null
+      : await getActiveMembership(user.userId, data.condominiumId);
+
+    if (user.role !== 'SUPER_ADMIN' && !membership) {
+      res.status(403).json({ success: false, message: 'Acesso negado a este condominio.' });
+      return;
+    }
+
+    if (membership?.role === 'RESIDENT') {
+      if (!membership.unitId || data.unitId !== membership.unitId) {
+        res.status(403).json({ success: false, message: 'Proibido: unidade invalida.' });
+        return;
+      }
+    }
+
+    const unit = await prisma.unit.findFirst({
+      where: { id: data.unitId, condominiumId: data.condominiumId },
+      select: { id: true },
+    });
+    if (!unit) {
+      res.status(422).json({
+        success: false,
+        message: 'Unidade invalida para o condominio informado.',
+      });
       return;
     }
 
@@ -66,11 +107,11 @@ router.post(
         createdBy: user.userId,
       },
     });
+
     res.status(201).json({ success: true, data: recurrence });
   },
 );
 
-// Deactivate
 router.delete(
   '/:id',
   authorize('RESIDENT', 'DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
@@ -79,19 +120,27 @@ router.delete(
     const existing = await prisma.visitorRecurrence.findUnique({ where: { id: req.params.id } });
 
     if (!existing) {
-      res.status(404).json({ success: false, message: 'Recorrência não encontrada.' });
+      res.status(404).json({ success: false, message: 'Recorrencia nao encontrada.' });
       return;
     }
 
-    if (user.role === 'RESIDENT' && existing.unitId !== user.unitId) {
-      res.status(403).json({ success: false, message: 'Proibido.' });
-      return;
+    if (user.role !== 'SUPER_ADMIN') {
+      const membership = await getActiveMembership(user.userId, existing.condominiumId);
+      if (!membership) {
+        res.status(403).json({ success: false, message: 'Acesso negado a este condominio.' });
+        return;
+      }
+      if (membership.role === 'RESIDENT' && existing.unitId !== membership.unitId) {
+        res.status(403).json({ success: false, message: 'Proibido.' });
+        return;
+      }
     }
 
     await prisma.visitorRecurrence.update({
       where: { id: req.params.id },
       data: { isActive: false },
     });
+
     res.json({ success: true });
   },
 );

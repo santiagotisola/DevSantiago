@@ -1,11 +1,15 @@
-import { prisma } from '../../config/prisma';
-import { ChargeStatus, FinancialTransactionType, GatewayType } from '@prisma/client';
-import { AppError } from '../../middleware/errorHandler';
-import { toNumber, roundMoney } from '../../utils/decimal';
-import { GatewayFactory } from '../../services/gateway';
-import { logger } from '../../config/logger';
-import { subMonths, startOfMonth, format } from 'date-fns';
-import { NotificationService } from '../../notifications/notification.service';
+import { prisma } from "../../config/prisma";
+import {
+  ChargeStatus,
+  FinancialTransactionType,
+  GatewayType,
+} from "@prisma/client";
+import { AppError } from "../../middleware/errorHandler";
+import { toNumber, roundMoney } from "../../utils/decimal";
+import { GatewayFactory } from "../../services/gateway";
+import { logger } from "../../config/logger";
+import { subMonths, startOfMonth, format } from "date-fns";
+import { NotificationService } from "../../notifications/notification.service";
 
 export interface CreateChargeDTO {
   unitId: string;
@@ -40,7 +44,7 @@ export interface RatioChargesDTO {
   totalAmount: number;
   dueDate: Date;
   referenceMonth: string;
-  method: 'equal' | 'fraction'; // rateio igual ou por fração ideal
+  method: "equal" | "fraction"; // rateio igual ou por fração ideal
 }
 
 export class FinanceService {
@@ -55,31 +59,50 @@ export class FinanceService {
   }
 
   async getAccountBalance(accountId: string) {
-    const account = await prisma.financialAccount.findUniqueOrThrow({ where: { id: accountId } });
+    const account = await prisma.financialAccount.findUniqueOrThrow({
+      where: { id: accountId },
+    });
 
     const [income, expense] = await prisma.$transaction([
       prisma.financialTransaction.aggregate({
-        where: { accountId, type: FinancialTransactionType.INCOME, paidAt: { not: null } },
+        where: {
+          accountId,
+          type: FinancialTransactionType.INCOME,
+          paidAt: { not: null },
+        },
         _sum: { amount: true },
       }),
       prisma.financialTransaction.aggregate({
-        where: { accountId, type: FinancialTransactionType.EXPENSE, paidAt: { not: null } },
+        where: {
+          accountId,
+          type: FinancialTransactionType.EXPENSE,
+          paidAt: { not: null },
+        },
         _sum: { amount: true },
       }),
     ]);
 
-    const balance = toNumber(income._sum.amount) - toNumber(expense._sum.amount);
-    return { account, balance, totalIncome: toNumber(income._sum.amount), totalExpense: toNumber(expense._sum.amount) };
+    const balance =
+      toNumber(income._sum.amount) - toNumber(expense._sum.amount);
+    return {
+      account,
+      balance,
+      totalIncome: toNumber(income._sum.amount),
+      totalExpense: toNumber(expense._sum.amount),
+    };
   }
 
   // ─── Cobranças ───────────────────────────────────────────────
-  async listCharges(condominiumId: string, filters: {
-    unitId?: string;
-    status?: ChargeStatus;
-    referenceMonth?: string;
-    page?: number;
-    limit?: number;
-  }) {
+  async listCharges(
+    condominiumId: string,
+    filters: {
+      unitId?: string;
+      status?: ChargeStatus;
+      referenceMonth?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     const { page = 1, limit = 20, ...where } = filters;
 
     const [charges, total] = await prisma.$transaction([
@@ -94,14 +117,20 @@ export class FinanceService {
           unit: { select: { identifier: true, block: true } },
           category: { select: { name: true } },
         },
-        orderBy: [{ dueDate: 'asc' }, { status: 'asc' }],
+        orderBy: [{ dueDate: "asc" }, { status: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.charge.count({ where: { unit: { condominiumId } } }),
     ]);
 
-    return { charges, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      charges,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async createCharge(data: CreateChargeDTO, createdBy: string) {
@@ -119,13 +148,17 @@ export class FinanceService {
       unitUsers.map((u) =>
         NotificationService.enqueue({
           userId: u.userId,
-          type: 'FINANCIAL',
-          title: 'Nova cobrança gerada',
-          message: `Uma nova cobrança no valor de R$ ${Number(data.amount).toFixed(2)} foi gerada com vencimento em ${format(new Date(data.dueDate), 'dd/MM/yyyy')}.`,
-          data: { chargeId: charge.id, amount: data.amount, dueDate: data.dueDate },
-          channels: ['inapp', 'email'],
-        })
-      )
+          type: "FINANCIAL",
+          title: "Nova cobrança gerada",
+          message: `Uma nova cobrança no valor de R$ ${Number(data.amount).toFixed(2)} foi gerada com vencimento em ${format(new Date(data.dueDate), "dd/MM/yyyy")}.`,
+          data: {
+            chargeId: charge.id,
+            amount: data.amount,
+            dueDate: data.dueDate,
+          },
+          channels: ["inapp", "email"],
+        }),
+      ),
     );
 
     return charge;
@@ -140,16 +173,20 @@ export class FinanceService {
 
   async ratioCharges(data: RatioChargesDTO, createdBy: string) {
     const units = await prisma.unit.findMany({
-      where: { condominiumId: data.condominiumId, status: 'OCCUPIED' },
+      where: { condominiumId: data.condominiumId, status: "OCCUPIED" },
     });
 
-    if (units.length === 0) throw new AppError('Nenhuma unidade ocupada encontrada');
+    if (units.length === 0)
+      throw new AppError("Nenhuma unidade ocupada encontrada");
 
-    const totalFraction = units.reduce((sum: number, u: any) => sum + u.fraction.toNumber(), 0);
+    const totalFraction = units.reduce(
+      (sum: number, u: any) => sum + u.fraction.toNumber(),
+      0,
+    );
 
     const chargesData = units.map((unit: any) => {
       const amount =
-        data.method === 'fraction'
+        data.method === "fraction"
           ? (data.totalAmount * unit.fraction.toNumber()) / totalFraction
           : data.totalAmount / units.length;
 
@@ -168,12 +205,18 @@ export class FinanceService {
 
     // Usamos transaction individual para poder capturar IDs e sincronizar
     const createdCharges = await prisma.$transaction(
-      chargesData.map((c: any) => prisma.charge.create({ data: c, select: { id: true } }))
+      chargesData.map((c: any) =>
+        prisma.charge.create({ data: c, select: { id: true } }),
+      ),
     );
 
     // Sincronização assíncrona
-    Promise.all(createdCharges.map((c: { id: string }) => this.syncChargeWithGateway(c.id))).catch(e => 
-      logger.error('Erro na sincronização em lote de cobranças:', e)
+    Promise.all(
+      createdCharges.map((c: { id: string }) =>
+        this.syncChargeWithGateway(c.id),
+      ),
+    ).catch((e) =>
+      logger.error("Erro na sincronização em lote de cobranças:", e),
     );
 
     return { count: createdCharges.length, totalAmount: data.totalAmount };
@@ -183,9 +226,9 @@ export class FinanceService {
   async syncChargeWithGateway(chargeId: string) {
     const charge = await prisma.charge.findUnique({
       where: { id: chargeId },
-      include: { 
+      include: {
         account: true,
-      }
+      },
     });
 
     if (!charge || !charge.account.gatewayKey || charge.gatewayId) return;
@@ -194,9 +237,9 @@ export class FinanceService {
     if (!gateway) return;
 
     try {
-      const response = await gateway.createPayment(charge, { 
+      const response = await gateway.createPayment(charge, {
         apiKey: charge.account.gatewayKey,
-        config: charge.account.gatewayConfig 
+        config: charge.account.gatewayConfig,
       });
 
       return prisma.charge.update({
@@ -209,10 +252,13 @@ export class FinanceService {
           pixCopyPaste: response.pixCopyPaste,
           boletoUrl: response.boletoUrl,
           boletoCode: response.boletoCode,
-        }
+        },
       });
     } catch (error) {
-      logger.error(`Erro ao sincronizar cobrança ${chargeId} com gateway:`, error);
+      logger.error(
+        `Erro ao sincronizar cobrança ${chargeId} com gateway:`,
+        error,
+      );
     }
   }
 
@@ -220,7 +266,9 @@ export class FinanceService {
     return prisma.charge.findUnique({
       where: { id: chargeId },
       include: {
-        unit: { select: { identifier: true, block: true, condominiumId: true } },
+        unit: {
+          select: { identifier: true, block: true, condominiumId: true },
+        },
         category: { select: { name: true } },
       },
     });
@@ -231,14 +279,19 @@ export class FinanceService {
       where: { id: chargeId },
       include: { account: true },
     });
-    if (!charge) throw new AppError('Cobrança não encontrada', 404);
-    if (charge.status !== 'PENDING') throw new AppError('Apenas cobranças pendentes podem ser sincronizadas');
-    if (!charge.account.gatewayKey) throw new AppError('Conta financeira não possui gateway configurado');
+    if (!charge) throw new AppError("Cobrança não encontrada", 404);
+    if (charge.status !== "PENDING")
+      throw new AppError("Apenas cobranças pendentes podem ser sincronizadas");
+    if (!charge.account.gatewayKey)
+      throw new AppError("Conta financeira não possui gateway configurado");
 
     const gateway = GatewayFactory.getService(charge.account.gatewayType);
-    if (!gateway) throw new AppError('Gateway não suportado');
+    if (!gateway) throw new AppError("Gateway não suportado");
 
-    const response = await gateway.createPayment(charge, { apiKey: charge.account.gatewayKey, config: charge.account.gatewayConfig });
+    const response = await gateway.createPayment(charge, {
+      apiKey: charge.account.gatewayKey,
+      config: charge.account.gatewayConfig,
+    });
     return prisma.charge.update({
       where: { id: chargeId },
       data: {
@@ -253,7 +306,10 @@ export class FinanceService {
     });
   }
 
-  async configureGateway(accountId: string, config: { gatewayType: string; gatewayKey: string; gatewayConfig?: any }) {
+  async configureGateway(
+    accountId: string,
+    config: { gatewayType: string; gatewayKey: string; gatewayConfig?: any },
+  ) {
     return prisma.financialAccount.update({
       where: { id: accountId },
       data: {
@@ -265,9 +321,14 @@ export class FinanceService {
     });
   }
 
-  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {    return prisma.charge.update({
+  async markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date) {
+    return prisma.charge.update({
       where: { id: chargeId },
-      data: { status: ChargeStatus.PAID, paidAmount, paidAt: paidAt || new Date() },
+      data: {
+        status: ChargeStatus.PAID,
+        paidAmount,
+        paidAt: paidAt || new Date(),
+      },
     });
   }
 
@@ -279,12 +340,15 @@ export class FinanceService {
   }
 
   // ─── Transações ──────────────────────────────────────────────
-  async listTransactions(accountId: string, filters: {
-    type?: FinancialTransactionType;
-    referenceMonth?: string;
-    page?: number;
-    limit?: number;
-  }) {
+  async listTransactions(
+    accountId: string,
+    filters: {
+      type?: FinancialTransactionType;
+      referenceMonth?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     const { page = 1, limit = 20, ...where } = filters;
 
     const [transactions, total] = await prisma.$transaction([
@@ -295,7 +359,7 @@ export class FinanceService {
           ...(where.referenceMonth && { referenceMonth: where.referenceMonth }),
         },
         include: { category: { select: { name: true } } },
-        orderBy: { dueDate: 'desc' },
+        orderBy: { dueDate: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -311,8 +375,9 @@ export class FinanceService {
 
   // ─── Relatórios ──────────────────────────────────────────────
   async getMonthlyBalance(condominiumId: string, year: number) {
-    const months = Array.from({ length: 12 }, (_, i) =>
-      `${year}-${String(i + 1).padStart(2, '0')}`
+    const months = Array.from(
+      { length: 12 },
+      (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`,
     );
 
     const result = await Promise.all(
@@ -323,27 +388,46 @@ export class FinanceService {
         });
         const accountIds = accounts.map((a: { id: string }) => a.id);
 
-        const [income, expense, charged, paid, overdue] = await prisma.$transaction([
-          prisma.financialTransaction.aggregate({
-            where: { accountId: { in: accountIds }, type: 'INCOME', referenceMonth: month, paidAt: { not: null } },
-            _sum: { amount: true },
-          }),
-          prisma.financialTransaction.aggregate({
-            where: { accountId: { in: accountIds }, type: 'EXPENSE', referenceMonth: month, paidAt: { not: null } },
-            _sum: { amount: true },
-          }),
-          prisma.charge.aggregate({
-            where: { unit: { condominiumId }, referenceMonth: month },
-            _sum: { amount: true },
-          }),
-          prisma.charge.aggregate({
-            where: { unit: { condominiumId }, referenceMonth: month, status: 'PAID' },
-            _sum: { paidAmount: true },
-          }),
-          prisma.charge.count({
-            where: { unit: { condominiumId }, referenceMonth: month, status: 'OVERDUE' },
-          }),
-        ]);
+        const [income, expense, charged, paid, overdue] =
+          await prisma.$transaction([
+            prisma.financialTransaction.aggregate({
+              where: {
+                accountId: { in: accountIds },
+                type: "INCOME",
+                referenceMonth: month,
+                paidAt: { not: null },
+              },
+              _sum: { amount: true },
+            }),
+            prisma.financialTransaction.aggregate({
+              where: {
+                accountId: { in: accountIds },
+                type: "EXPENSE",
+                referenceMonth: month,
+                paidAt: { not: null },
+              },
+              _sum: { amount: true },
+            }),
+            prisma.charge.aggregate({
+              where: { unit: { condominiumId }, referenceMonth: month },
+              _sum: { amount: true },
+            }),
+            prisma.charge.aggregate({
+              where: {
+                unit: { condominiumId },
+                referenceMonth: month,
+                status: "PAID",
+              },
+              _sum: { paidAmount: true },
+            }),
+            prisma.charge.count({
+              where: {
+                unit: { condominiumId },
+                referenceMonth: month,
+                status: "OVERDUE",
+              },
+            }),
+          ]);
 
         return {
           month,
@@ -354,7 +438,7 @@ export class FinanceService {
           overdueCount: overdue,
           balance: toNumber(income._sum.amount) - toNumber(expense._sum.amount),
         };
-      })
+      }),
     );
 
     return result;
@@ -369,15 +453,15 @@ export class FinanceService {
         dueDate: { lt: now },
       },
       include: { unit: { select: { identifier: true, block: true } } },
-      orderBy: { dueDate: 'asc' },
+      orderBy: { dueDate: "asc" },
     });
   }
 
   async getChargesByUnit(unitId: string) {
     const [pending, total] = await prisma.$transaction([
       prisma.charge.findMany({
-        where: { unitId, status: { in: ['PENDING', 'OVERDUE'] } },
-        orderBy: { dueDate: 'asc' },
+        where: { unitId, status: { in: ["PENDING", "OVERDUE"] } },
+        orderBy: { dueDate: "asc" },
       }),
       prisma.charge.aggregate({ where: { unitId }, _sum: { amount: true } }),
     ]);
@@ -392,7 +476,7 @@ export class FinanceService {
     const expenses = await prisma.financialTransaction.findMany({
       where: {
         account: { condominiumId },
-        type: 'EXPENSE',
+        type: "EXPENSE",
         paidAt: { gte: sixMonthsAgo },
       },
       select: { amount: true, paidAt: true },
@@ -400,23 +484,27 @@ export class FinanceService {
 
     const monthlyExpenses: Record<string, number> = {};
     expenses.forEach((e: { amount: any; paidAt: Date | null }) => {
-      const month = format(e.paidAt!, 'yyyy-MM');
-      monthlyExpenses[month] = (monthlyExpenses[month] || 0) + toNumber(e.amount);
+      const month = format(e.paidAt!, "yyyy-MM");
+      monthlyExpenses[month] =
+        (monthlyExpenses[month] || 0) + toNumber(e.amount);
     });
 
     const expenseValues = Object.values(monthlyExpenses);
-    const averageExpense = expenseValues.length > 0 
-      ? expenseValues.reduce((a, b) => a + b, 0) / expenseValues.length 
-      : 0;
+    const averageExpense =
+      expenseValues.length > 0
+        ? expenseValues.reduce((a, b) => a + b, 0) / expenseValues.length
+        : 0;
 
     // 2. Receita esperada (baseado no total de unidades e taxa média)
     // Aqui usamos o total de unidades ocupadas para prever o próximo rateio
-    const unitCount = await prisma.unit.count({ where: { condominiumId, status: 'OCCUPIED' } });
-    
+    const unitCount = await prisma.unit.count({
+      where: { condominiumId, status: "OCCUPIED" },
+    });
+
     // Pegamos o valor total do último rateio como base
     const lastCharge = await prisma.charge.findFirst({
       where: { unit: { condominiumId } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: { amount: true },
     });
 
@@ -428,48 +516,60 @@ export class FinanceService {
       expectedRevenue: roundMoney(expectedRevenue),
       suggestedReserve: roundMoney(expectedRevenue * 0.1), // 10% de margEM
       forecastBalance: roundMoney(expectedRevenue - averageExpense),
-      safetyMargin: averageExpense > 0 ? ((expectedRevenue - averageExpense) / averageExpense) * 100 : 100,
+      safetyMargin:
+        averageExpense > 0
+          ? ((expectedRevenue - averageExpense) / averageExpense) * 100
+          : 100,
     };
   }
 
   // ─── Rateio Parcelado ─────────────────────────────────────────
   async ratioChargesInstallments(
-    data: Omit<RatioChargesDTO, 'dueDate' | 'referenceMonth'> & {
+    data: Omit<RatioChargesDTO, "dueDate" | "referenceMonth"> & {
       firstDueDate: Date;
       installments: number;
       intervalDays: number;
     },
-    createdBy: string
+    createdBy: string,
   ) {
-    const results: { installment: number; dueDate: Date; count: number; totalAmount: number }[] = [];
+    const results: {
+      installment: number;
+      dueDate: Date;
+      count: number;
+      totalAmount: number;
+    }[] = [];
     for (let i = 0; i < data.installments; i++) {
       const dueDate = new Date(data.firstDueDate);
       dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
-      const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+      const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`;
       const description = `${data.description} (${i + 1}/${data.installments})`;
       const result = await this.ratioCharges(
         { ...data, description, dueDate, referenceMonth },
-        createdBy
+        createdBy,
       );
       results.push({ installment: i + 1, dueDate, ...result });
     }
-    return { installments: data.installments, totalCharges: results.reduce((s, r) => s + r.count, 0), results };
+    return {
+      installments: data.installments,
+      totalCharges: results.reduce((s, r) => s + r.count, 0),
+      results,
+    };
   }
 
   // ─── Cobranças Parceladas (unidade única) ─────────────────────
   async createChargeInstallments(
-    data: Omit<CreateChargeDTO, 'dueDate'> & {
+    data: Omit<CreateChargeDTO, "dueDate"> & {
       firstDueDate: Date;
       installments: number;
       intervalDays: number;
     },
-    createdBy: string
+    createdBy: string,
   ) {
     const charges: any[] = [];
     for (let i = 0; i < data.installments; i++) {
       const dueDate = new Date(data.firstDueDate);
       dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
-      const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+      const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`;
       charges.push({
         unitId: data.unitId,
         accountId: data.accountId,
@@ -489,19 +589,26 @@ export class FinanceService {
   }
 
   // ─── Preview de rateio (sem criar) ────────────────────────────
-  async previewRatio(condominiumId: string, totalAmount: number, method: 'equal' | 'fraction') {
+  async previewRatio(
+    condominiumId: string,
+    totalAmount: number,
+    method: "equal" | "fraction",
+  ) {
     const units = await prisma.unit.findMany({
-      where: { condominiumId, status: 'OCCUPIED' },
+      where: { condominiumId, status: "OCCUPIED" },
       select: { id: true, identifier: true, block: true, fraction: true },
     });
-    const totalFraction = units.reduce((s, u) => s + u.fraction, 0);
-    return units.map(u => ({
+    const totalFraction = units.reduce((s, u) => s + Number(u.fraction), 0);
+    return units.map((u) => ({
       unitId: u.id,
       identifier: u.identifier,
       block: u.block,
-      amount: method === 'fraction'
-        ? Math.round((totalAmount * u.fraction / totalFraction) * 100) / 100
-        : Math.round((totalAmount / units.length) * 100) / 100,
+      amount:
+        method === "fraction"
+          ? Math.round(
+              ((totalAmount * Number(u.fraction)) / totalFraction) * 100,
+            ) / 100
+          : Math.round((totalAmount / units.length) * 100) / 100,
     }));
   }
 }
