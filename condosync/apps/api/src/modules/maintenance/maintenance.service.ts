@@ -10,7 +10,7 @@ export interface CreateServiceOrderDTO {
   condominiumId: string;
   unitId?: string;
   title: string;
-  description: string;
+  description?: string;
   category: string;
   location?: string;
   priority?: ServiceOrderPriority;
@@ -116,7 +116,20 @@ export class MaintenanceService {
     );
 
     return prisma.serviceOrder.create({
-      data: { ...data, requestedBy, status: ServiceOrderStatus.OPEN },
+      data: {
+        condominiumId: data.condominiumId,
+        title: data.title,
+        description: data.description ?? "",
+        category: data.category,
+        requestedBy,
+        status: ServiceOrderStatus.OPEN,
+        ...(data.unitId ? { unitId: data.unitId } : {}),
+        ...(data.location ? { location: data.location } : {}),
+        ...(data.priority ? { priority: data.priority } : {}),
+        ...(data.photoUrls ? { photoUrls: data.photoUrls } : {}),
+        ...(data.estimatedCost ? { estimatedCost: data.estimatedCost } : {}),
+        ...(data.scheduledAt ? { scheduledAt: data.scheduledAt } : {}),
+      },
     });
   }
 
