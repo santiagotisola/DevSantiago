@@ -102,7 +102,7 @@ export function MaintenancePage() {
     title: "",
     description: "",
     priority: "MEDIUM",
-    category: "",
+    category: "Geral",
   });
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
@@ -110,7 +110,7 @@ export function MaintenancePage() {
     title: "",
     description: "",
     priority: "MEDIUM",
-    category: "",
+    category: "Geral",
   });
 
   // â”€â”€ Schedule State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -147,7 +147,7 @@ export function MaintenancePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       setShowModal(false);
-      setForm({ title: "", description: "", priority: "MEDIUM", category: "" });
+      setForm({ title: "", description: "", priority: "MEDIUM", category: "Geral" });
     },
   });
 
@@ -386,7 +386,7 @@ export function MaintenancePage() {
                                       title: o.title ?? "",
                                       description: o.description ?? "",
                                       priority: o.priority ?? "MEDIUM",
-                                      category: o.category ?? "",
+                                      category: o.category || "Geral",
                                     });
                                     setEditTarget(o);
                                     setEditModal(true);
@@ -600,15 +600,18 @@ export function MaintenancePage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">Categoria</label>
-                  <input
+                  <label className="text-sm font-medium">Categoria *</label>
+                  <select
                     value={form.category}
                     onChange={(e) =>
                       setForm({ ...form, category: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: Elétrico"
-                  />
+                  >
+                    {["Geral","Elétrico","Hidráulico","Limpeza","Segurança","Elevador","Estrutural","TI","Outro"].map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -621,7 +624,7 @@ export function MaintenancePage() {
               </button>
               <button
                 onClick={() => createMutation.mutate(form)}
-                disabled={!form.title || createMutation.isPending}
+                disabled={!form.title || !form.category || createMutation.isPending}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >
                 Criar
@@ -676,15 +679,18 @@ export function MaintenancePage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium">Categoria</label>
-                  <input
+                  <label className="text-sm font-medium">Categoria *</label>
+                  <select
                     value={editForm.category}
                     onChange={(e) =>
                       setEditForm({ ...editForm, category: e.target.value })
                     }
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ex: Elétrico"
-                  />
+                  >
+                    {["Geral","Elétrico","Hidráulico","Limpeza","Segurança","Elevador","Estrutural","TI","Outro"].map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -702,7 +708,7 @@ export function MaintenancePage() {
                 onClick={() =>
                   updateOrderMutation.mutate({ ...editForm, id: editTarget.id })
                 }
-                disabled={updateOrderMutation.isPending || !editForm.title}
+                disabled={updateOrderMutation.isPending || !editForm.title || !editForm.category}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >
                 {updateOrderMutation.isPending ? "Salvando..." : "Salvar"}
