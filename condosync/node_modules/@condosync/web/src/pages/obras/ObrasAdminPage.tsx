@@ -7,6 +7,7 @@ import {
   Hammer,
   ChevronDown,
   ChevronUp,
+  Plus,
 } from "lucide-react";
 import api from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
@@ -52,6 +53,36 @@ export default function ObrasAdminPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+  // ── Nova Obra ──────────────────────────────────────────────────
+  const [showCreate, setShowCreate] = useState(false);
+  const emptyForm = { unitId: "", description: "", type: "outro" as string, startDate: "", endDate: "", notes: "" };
+  const [createForm, setCreateForm] = useState(emptyForm);
+
+  const { data: units = [] } = useQuery<any[]>({
+    queryKey: ["units-list", condominiumId],
+    queryFn: async () => {
+      const res = await api.get(`/units/condominium/${condominiumId}`);
+      return res.data.data.units ?? res.data.data ?? [];
+    },
+    enabled: !!condominiumId && showCreate,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (d: typeof createForm) =>
+      api.post("/renovations", {
+        ...d,
+        condominiumId,
+        startDate: new Date(d.startDate).toISOString(),
+        endDate: d.endDate ? new Date(d.endDate).toISOString() : undefined,
+        notes: d.notes || undefined,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["renovations-admin"] });
+      setShowCreate(false);
+      setCreateForm(emptyForm);
+    },
+  });
+
   const { data, isLoading } = useQuery<Renovation[]>({
     queryKey: ["renovations-admin", condominiumId],
     queryFn: async () => {
@@ -89,12 +120,22 @@ export default function ObrasAdminPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Obras e Prestadores
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Gerencie as solicitações de obras do condomínio
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Obras e Prestadores
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Gerencie as solicitações de obras do condomínio
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" /> Nova Obra
+          </button>
+        </div>
       </div>
 
       {/* Filter */}
@@ -121,6 +162,74 @@ export default function ObrasAdminPage() {
           </button>
         ))}
       </div>
+
+      {/* Modal: Nova Obra */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Nova Obra</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Unidade *</label>
+                <select value={createForm.unitId} onChange={(e) => setCreateForm({ ...createForm, unitId: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
+                  <option value="">Selecione a unidade</option>
+                  {units.map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.block ? `Bloco ${u.block} — ` : ""}{u.identifier}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tipo *</label>
+                <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm">
+                  {["pintura", "hidráulica", "elétrica", "estrutural", "outro"].map((t) => (
+                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Descrição *</label>
+                <textarea value={createForm.description} onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  rows={3} placeholder="Mínimo 10 caracteres..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Início *</label>
+                  <input type="date" value={createForm.startDate} onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Término (opcional)</label>
+                  <input type="date" value={createForm.endDate} onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Observações</label>
+                <input value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Opcional" />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-2">
+              <button onClick={() => { setShowCreate(false); setCreateForm(emptyForm); }}
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancelar</button>
+              <button
+                onClick={() => createMutation.mutate(createForm)}
+                disabled={createMutation.isPending || !createForm.unitId || !createForm.description || createForm.description.length < 10 || !createForm.startDate}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                {createMutation.isPending ? "Criando..." : "Criar Obra"}
+              </button>
+            </div>
+            {createMutation.isError && (
+              <p className="text-xs text-red-600">Erro ao criar obra. Verifique os dados.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {rejectId && (

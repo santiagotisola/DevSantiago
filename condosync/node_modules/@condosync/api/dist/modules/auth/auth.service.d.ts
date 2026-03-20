@@ -13,18 +13,18 @@ export declare class AuthService {
     private generateTokens;
     register(data: RegisterDTO): Promise<{
         user: {
-            email: string;
             id: string;
-            createdAt: Date;
+            email: string;
             name: string;
             phone: string | null;
             role: import(".prisma/client").$Enums.UserRole;
+            createdAt: Date;
         };
     }>;
     login(data: LoginDTO, ipAddress?: string): Promise<{
         user: {
-            email: string;
             id: string;
+            email: string;
             name: string;
             avatarUrl: string | null;
             role: import(".prisma/client").$Enums.UserRole;
@@ -37,10 +37,10 @@ export declare class AuthService {
                 };
             } & {
                 id: string;
-                userId: string;
                 role: import(".prisma/client").$Enums.UserRole;
                 isActive: boolean;
                 condominiumId: string;
+                userId: string;
                 joinedAt: Date;
                 unitId: string | null;
             })[];
@@ -53,9 +53,7 @@ export declare class AuthService {
         refreshToken: any;
     }>;
     logout(refreshToken: string): Promise<void>;
-    requestPasswordReset(email: string): Promise<{
-        token: string;
-    } | undefined>;
+    requestPasswordReset(email: string): Promise<void>;
     resetPassword(token: string, newPassword: string): Promise<void>;
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>;
 }

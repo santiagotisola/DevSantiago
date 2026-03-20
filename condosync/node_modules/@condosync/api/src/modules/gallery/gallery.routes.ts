@@ -17,7 +17,12 @@ const log = logger.child({ module: "gallery.routes" });
 const router = Router();
 router.use(authenticate);
 
-const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 const storage = multer.diskStorage({
@@ -33,11 +38,21 @@ const storage = multer.diskStorage({
   },
 });
 
-function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback) {
-  ALLOWED_MIMES.has(file.mimetype) ? cb(null, true) : cb(new Error("Apenas imagens são permitidas."));
+function fileFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback,
+) {
+  ALLOWED_MIMES.has(file.mimetype)
+    ? cb(null, true)
+    : cb(new Error("Apenas imagens são permitidas."));
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_SIZE_BYTES } });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: MAX_SIZE_BYTES },
+});
 
 const CATEGORIES = ["areas-comuns", "eventos", "obras", "outro"] as const;
 
@@ -48,21 +63,32 @@ const metaSchema = z.object({
 });
 
 // ── LIST ─────────────────────────────────────────────────────────────────────
-router.get("/:condominiumId", authorizeCondominium, async (req: Request, res: Response) => {
-  const { category } = req.query;
-  const photos = await prisma.photo.findMany({
-    where: {
-      condominiumId: req.params.condominiumId,
-      ...(category ? { category: category as string } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true, title: true, description: true, category: true,
-      fileName: true, fileSize: true, mimeType: true, createdAt: true, uploadedBy: true,
-    },
-  });
-  res.json({ success: true, data: { photos } });
-});
+router.get(
+  "/:condominiumId",
+  authorizeCondominium,
+  async (req: Request, res: Response) => {
+    const { category } = req.query;
+    const photos = await prisma.photo.findMany({
+      where: {
+        condominiumId: req.params.condominiumId,
+        ...(category ? { category: category as string } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        fileName: true,
+        fileSize: true,
+        mimeType: true,
+        createdAt: true,
+        uploadedBy: true,
+      },
+    });
+    res.json({ success: true, data: { photos } });
+  },
+);
 
 // ── UPLOAD ───────────────────────────────────────────────────────────────────
 router.post(
@@ -72,7 +98,9 @@ router.post(
   upload.single("file"),
   async (req: Request, res: Response) => {
     if (!req.file) {
-      res.status(400).json({ success: false, message: "Nenhuma imagem enviada." });
+      res
+        .status(400)
+        .json({ success: false, message: "Nenhuma imagem enviada." });
       return;
     }
     const meta = validateRequest(metaSchema, req.body);
@@ -81,9 +109,9 @@ router.post(
         condominiumId: req.params.condominiumId,
         title: meta.title,
         description: meta.description,
-        category: meta.category,
+        category: meta.category as string,
         fileName: req.file.originalname,
-        storedName: path.basename(req.file.filename),
+        storedName: path.basename(req.file.filename!),
         filePath: req.file.path,
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
@@ -96,18 +124,24 @@ router.post(
 );
 
 // ── SERVE IMAGE ───────────────────────────────────────────────────────────────
-router.get("/:condominiumId/:id/file", authorizeCondominium, async (req: Request, res: Response) => {
-  const photo = await prisma.photo.findFirstOrThrow({
-    where: { id: req.params.id, condominiumId: req.params.condominiumId },
-  });
-  if (!fs.existsSync(photo.filePath)) {
-    res.status(404).json({ success: false, message: "Arquivo não encontrado." });
-    return;
-  }
-  res.set("Content-Type", photo.mimeType);
-  res.set("Cache-Control", "private, max-age=3600");
-  fs.createReadStream(photo.filePath).pipe(res);
-});
+router.get(
+  "/:condominiumId/:id/file",
+  authorizeCondominium,
+  async (req: Request, res: Response) => {
+    const photo = await prisma.photo.findFirstOrThrow({
+      where: { id: req.params.id, condominiumId: req.params.condominiumId },
+    });
+    if (!fs.existsSync(photo.filePath)) {
+      res
+        .status(404)
+        .json({ success: false, message: "Arquivo não encontrado." });
+      return;
+    }
+    res.set("Content-Type", photo.mimeType);
+    res.set("Cache-Control", "private, max-age=3600");
+    fs.createReadStream(photo.filePath).pipe(res);
+  },
+);
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 router.delete(

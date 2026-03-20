@@ -13,7 +13,7 @@ const schema = zod_1.z.object({
     cnpj: zod_1.z.string().optional().or(zod_1.z.literal('')),
     cpf: zod_1.z.string().optional().or(zod_1.z.literal('')),
     serviceType: zod_1.z.string().min(2),
-    phone: zod_1.z.string().optional().or(zod_1.z.literal('')),
+    phone: zod_1.z.string().min(1, 'Telefone é obrigatório'),
     email: zod_1.z.string().email().optional().or(zod_1.z.literal('')),
     notes: zod_1.z.string().optional().or(zod_1.z.literal('')),
 });

@@ -1,6 +1,6 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { cn } from '../../lib/utils';
-import { useAuthStore } from '../../store/authStore';
+import { NavLink, useNavigate } from "react-router-dom";
+import { cn } from "../../lib/utils";
+import { useAuthStore } from "../../store/authStore";
 import {
   LayoutDashboard,
   Users,
@@ -27,9 +27,11 @@ import {
   Vote,
   PackageSearch,
   HardHat,
-} from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+  DoorOpen,
+  CreditCard,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "../../services/api";
 
 interface NavItem {
   label: string;
@@ -40,49 +42,108 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
+  { label: "Dashboard", to: "/", icon: LayoutDashboard },
   {
-    label: 'Portaria',
+    label: "Portaria",
     icon: Shield,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
     children: [
-      { label: 'Visitantes', to: '/portaria/visitantes' },
-      { label: 'Encomendas', to: '/portaria/encomendas' },
-      { label: 'Veículos', to: '/portaria/veiculos' },
-      { label: 'Prestadores', to: '/prestadores' },
+      { label: "Visitantes", to: "/portaria/visitantes" },
+      { label: "Encomendas", to: "/portaria/encomendas" },
+      { label: "Veículos", to: "/portaria/veiculos" },
+      { label: "Prestadores", to: "/prestadores" },
     ],
   },
-  { label: 'Unidades', to: '/unidades', icon: Home, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
-  { label: 'Moradores', to: '/moradores', icon: Users, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
-  { label: 'Pets', to: '/pets', icon: PawPrint, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'DOORMAN', 'SUPER_ADMIN'] },
   {
-    label: 'Financeiro',
+    label: "Unidades",
+    to: "/unidades",
+    icon: Home,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
+  },
+  {
+    label: "Moradores",
+    to: "/moradores",
+    icon: Users,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
+  },
+  {
+    label: "Pets",
+    to: "/pets",
+    icon: PawPrint,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
+  },
+  {
+    label: "Financeiro",
     icon: DollarSign,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
     children: [
-      { label: 'Visão Geral', to: '/financeiro' },
-      { label: 'Cobranças', to: '/financeiro/cobrancas' },
+      { label: "Visão Geral", to: "/financeiro" },
+      { label: "Cobranças", to: "/financeiro/cobrancas" },
+      { label: "Categorias", to: "/financeiro/categorias" },
     ],
   },
-  { label: 'Manutenção', to: '/manutencao', icon: Wrench },
-  { label: 'Áreas Comuns', to: '/areas-comuns', icon: CalendarDays },
+  { label: "Manutenção", to: "/manutencao", icon: Wrench, roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"] },
+  { label: "Áreas Comuns", to: "/areas-comuns", icon: CalendarDays },
   {
-    label: 'Comunicação',
+    label: "Comunicação",
     icon: Megaphone,
     children: [
-      { label: 'Avisos', to: '/comunicacao/avisos' },
-      { label: 'Ocorrências', to: '/comunicacao/ocorrencias' },
-      { label: 'Achados e Perdidos', to: '/comunicacao/achados-e-perdidos' },
-      { label: 'Assembleias', to: '/assembleias' },
+      { label: "Avisos", to: "/comunicacao/avisos" },
+      { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
+      { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos" },
+      { label: "Assembleias", to: "/assembleias" },
     ],
   },
-  { label: 'Documentos', to: '/documentos', icon: FileText },
-  { label: 'Chamados', to: '/chamados', icon: Ticket },
-  { label: 'Galeria', to: '/galeria', icon: Image },
-  { label: 'Estoque', to: '/estoque', icon: Package, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
-  { label: 'Obras', to: '/obras', icon: HardHat, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
-  { label: 'Relatórios', to: '/relatorios', icon: BarChart3, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
-  { label: 'Funcionários', to: '/funcionarios', icon: UserCog, roles: ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'] },
-  { label: 'Condomínios', to: '/admin/condominios', icon: Building2, roles: ['SUPER_ADMIN'] },
-  { label: 'Marketplace', to: '/marketplace', icon: Building, roles: ['SUPER_ADMIN'] },
+  { label: "Documentos", to: "/documentos", icon: FileText },
+  { label: "Chamados", to: "/chamados", icon: Ticket },
+  { label: "Galeria", to: "/galeria", icon: Image },
+  {
+    label: "Estoque",
+    to: "/estoque",
+    icon: Package,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+  },
+  {
+    label: "Obras",
+    to: "/obras",
+    icon: HardHat,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+  },
+  {
+    label: "Relatórios",
+    to: "/relatorios",
+    icon: BarChart3,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+  },
+  {
+    label: "Funcionários",
+    to: "/funcionarios",
+    icon: UserCog,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+  },
+  {
+    label: "Condomínios",
+    to: "/admin/condominios",
+    icon: Building2,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    label: "Marketplace",
+    to: "/marketplace",
+    icon: Building,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    label: "Minha Portaria",
+    icon: DoorOpen,
+    roles: ["RESIDENT"],
+    children: [
+      { label: "Minhas Visitas", to: "/minha-portaria/visitantes" },
+      { label: "Minhas Obras", to: "/minha-portaria/obras" },
+      { label: "Visitantes Recorrentes", to: "/minha-portaria/visitantes-recorrentes" },
+      { label: "Minhas Cobranças", to: "/minhas-cobrancas" },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -91,40 +152,50 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose }: SidebarProps) {
-  const { user, logout, selectedCondominiumId, setSelectedCondominium } = useAuthStore();
+  const { user, logout, selectedCondominiumId, setSelectedCondominium } =
+    useAuthStore();
   const navigate = useNavigate();
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Portaria', 'Financeiro', 'Comunicação']);
-  const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const [expandedItems, setExpandedItems] = useState<string[]>([
+    "Portaria",
+    "Financeiro",
+    "Comunicação",
+  ]);
+  const [condominiums, setCondominiums] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   useEffect(() => {
     if (isSuperAdmin) {
-      api.get('/condominiums').then((res) => {
-        const list = res.data?.data?.condominiums ?? [];
-        setCondominiums(list);
-        if (!selectedCondominiumId && list.length > 0) {
-          setSelectedCondominium(list[0].id);
-        }
-      }).catch(() => {});
+      api
+        .get("/condominiums")
+        .then((res) => {
+          const list = res.data?.data?.condominiums ?? [];
+          setCondominiums(list);
+          if (!selectedCondominiumId && list.length > 0) {
+            setSelectedCondominium(list[0].id);
+          }
+        })
+        .catch(() => {});
     } else if (!selectedCondominiumId && user?.condominiumUsers?.[0]) {
       setSelectedCondominium(user.condominiumUsers[0].condominium.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuperAdmin, user?.condominiumUsers]);
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
   };
 
   const handleLogout = async () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const condominium = user?.condominiumUsers?.find(
-    (c) => c.condominium.id === selectedCondominiumId
+    (c) => c.condominium.id === selectedCondominiumId,
   )?.condominium;
 
   return (
@@ -139,8 +210,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 bg-slate-900 text-white transition-transform duration-300',
-          open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden'
+          "fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 bg-slate-900 text-white transition-transform duration-300",
+          open
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden",
         )}
       >
         {/* Logo */}
@@ -151,7 +224,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </div>
             <span className="font-bold text-lg">CondoSync</span>
           </div>
-          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white">
+          <button
+            onClick={onClose}
+            className="lg:hidden text-slate-400 hover:text-white"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -161,13 +237,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="px-4 py-3 bg-slate-800 mx-3 mt-3 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">Condomínio ativo</p>
             <select
-              value={selectedCondominiumId ?? ''}
+              value={selectedCondominiumId ?? ""}
               onChange={(e) => setSelectedCondominium(e.target.value)}
               className="w-full bg-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
-              {condominiums.length === 0 && <option value="">Nenhum condomínio</option>}
+              {condominiums.length === 0 && (
+                <option value="">Nenhum condomínio</option>
+              )}
               {condominiums.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
@@ -181,7 +261,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {/* Navegação */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems
-            .filter((item) => !item.roles || item.roles.includes(user?.role || ''))
+            .filter(
+              (item) => !item.roles || item.roles.includes(user?.role || ""),
+            )
             .map((item) => {
               if (item.children) {
                 const isExpanded = expandedItems.includes(item.label);
@@ -196,7 +278,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         <span>{item.label}</span>
                       </div>
                       <ChevronDown
-                        className={cn('w-4 h-4 transition-transform', isExpanded && 'rotate-180')}
+                        className={cn(
+                          "w-4 h-4 transition-transform",
+                          isExpanded && "rotate-180",
+                        )}
                       />
                     </button>
 
@@ -208,10 +293,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                             to={child.to}
                             className={({ isActive }) =>
                               cn(
-                                'block px-3 py-2 rounded-lg text-sm transition-colors',
+                                "block px-3 py-2 rounded-lg text-sm transition-colors",
                                 isActive
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                  ? "bg-blue-600 text-white"
+                                  : "text-slate-400 hover:text-white hover:bg-slate-800",
                               )
                             }
                           >
@@ -228,13 +313,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 <NavLink
                   key={item.to}
                   to={item.to!}
-                  end={item.to === '/'}
+                  end={item.to === "/"}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
                     )
                   }
                 >

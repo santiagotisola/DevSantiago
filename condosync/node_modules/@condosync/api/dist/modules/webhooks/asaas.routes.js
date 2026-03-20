@@ -2,10 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("../../config/prisma");
+const env_1 = require("../../config/env");
 const logger_1 = require("../../config/logger");
 const router = (0, express_1.Router)();
 // Endpoint: /api/v1/webhooks/asaas
 router.post('/asaas', async (req, res) => {
+    // Validar token do webhook (segurança contra requisições forjadas)
+    if (env_1.env.ASAAS_WEBHOOK_TOKEN) {
+        const incomingToken = req.headers['asaas-access-token'];
+        if (incomingToken !== env_1.env.ASAAS_WEBHOOK_TOKEN) {
+            logger_1.logger.warn('Webhook Asaas rejeitado — token inválido');
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+    }
     const { event, payment } = req.body;
     logger_1.logger.info(`Webhook Asaas recebido: ${event} para pagamento ${payment.id}`);
     // 1. Verificar se o evento é de pagamento confirmado ou recebido

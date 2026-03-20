@@ -10,12 +10,13 @@ router.use(authenticate, authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN')
 const employeeSchema = z.object({
   condominiumId: z.string().uuid(),
   name: z.string().min(2),
-  cpf: z.string().length(11),
+  cpf: z.string().length(11).optional(),
   role: z.string().min(2),
   phone: z.string().optional(),
   email: z.string().email().optional(),
-  shift: z.enum(['MORNING', 'AFTERNOON', 'NIGHT', 'FULL_DAY']),
-  admissionDate: z.string().datetime(),
+  shift: z.enum(['MORNING', 'AFTERNOON', 'NIGHT', 'FULL_DAY']).optional().default('MORNING'),
+  shiftType: z.enum(['MORNING', 'AFTERNOON', 'NIGHT', 'FULL_DAY']).optional(),
+  admissionDate: z.string().datetime().optional(),
   salaryAmount: z.number().positive().optional(),
   notes: z.string().optional(),
 });
@@ -30,7 +31,16 @@ router.get('/condominium/:condominiumId', async (req: Request, res: Response) =>
 
 router.post('/', async (req: Request, res: Response) => {
   const data = validateRequest(employeeSchema, req.body);
-  const employee = await prisma.employee.create({ data: { ...data, admissionDate: new Date(data.admissionDate) } });
+  const shift = data.shift ?? data.shiftType ?? 'MORNING';
+  const { shiftType: _st, ...rest } = data;
+  const employee = await prisma.employee.create({
+    data: {
+      ...rest,
+      shift,
+      cpf: rest.cpf ?? '',
+      admissionDate: data.admissionDate ? new Date(data.admissionDate) : new Date(),
+    },
+  });
   res.status(201).json({ success: true, data: { employee } });
 });
 

@@ -1,13 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env';
-import { prisma } from '../config/prisma';
-import { UnauthorizedError, ForbiddenError } from './errorHandler';
-import { UserRole } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { env } from "../config/env";
+import { prisma } from "../config/prisma";
+import { UnauthorizedError, ForbiddenError } from "./errorHandler";
+import { UserRole } from "@prisma/client";
 
 export interface JwtPayload {
   userId: string;
   condominiumId?: string;
+  name?: string;
   role: UserRole;
 }
 
@@ -19,11 +20,15 @@ declare global {
   }
 }
 
-export const authenticate = async (req: Request, _res: Response, next: NextFunction) => {
+export const authenticate = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw new UnauthorizedError('Token de acesso não fornecido');
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new UnauthorizedError("Token de acesso não fornecido");
   }
 
   const token = authHeader.slice(7);
@@ -36,7 +41,7 @@ export const authenticate = async (req: Request, _res: Response, next: NextFunct
   });
 
   if (!user || !user.isActive) {
-    throw new UnauthorizedError('Usuário inativo ou não encontrado');
+    throw new UnauthorizedError("Usuário inativo ou não encontrado");
   }
 
   req.user = decoded;
@@ -50,17 +55,24 @@ export const authorize = (...roles: UserRole[]) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      throw new ForbiddenError('Você não tem permissão para esta ação');
+      throw new ForbiddenError("Você não tem permissão para esta ação");
     }
 
     next();
   };
 };
 
-export const authorizeCondominium = async (req: Request, _res: Response, next: NextFunction) => {
+export const authorizeCondominium = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
   if (!req.user) throw new UnauthorizedError();
 
-  const condominiumId = req.params.condominiumId || req.body.condominiumId || req.query.condominiumId as string;
+  const condominiumId =
+    req.params.condominiumId ||
+    req.body.condominiumId ||
+    (req.query.condominiumId as string);
 
   if (!condominiumId) return next();
 
@@ -73,7 +85,7 @@ export const authorizeCondominium = async (req: Request, _res: Response, next: N
   });
 
   if (!membership) {
-    throw new ForbiddenError('Acesso negado a este condomínio');
+    throw new ForbiddenError("Acesso negado a este condomínio");
   }
 
   req.user.condominiumId = condominiumId;

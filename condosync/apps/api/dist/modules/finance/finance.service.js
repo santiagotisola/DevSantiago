@@ -375,13 +375,13 @@ class FinanceService {
             where: { condominiumId, status: 'OCCUPIED' },
             select: { id: true, identifier: true, block: true, fraction: true },
         });
-        const totalFraction = units.reduce((s, u) => s + u.fraction, 0);
+        const totalFraction = units.reduce((s, u) => s + Number(u.fraction), 0);
         return units.map(u => ({
             unitId: u.id,
             identifier: u.identifier,
             block: u.block,
             amount: method === 'fraction'
-                ? Math.round((totalAmount * u.fraction / totalFraction) * 100) / 100
+                ? Math.round((totalAmount * Number(u.fraction) / totalFraction) * 100) / 100
                 : Math.round((totalAmount / units.length) * 100) / 100,
         }));
     }

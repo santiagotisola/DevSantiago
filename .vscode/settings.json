@@ -6,6 +6,8 @@
     "railway": true,
     "git add": true,
     "git commit": true,
-    "git push": true
+    "git push": true,
+    "npx tsc": true,
+    "ForEach-Object": true
   }
 }

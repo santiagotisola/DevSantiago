@@ -35,6 +35,10 @@ export declare class ParcelService {
             carrier: string | null;
             trackingCode: string | null;
             storageLocation: string | null;
+            deliveryPersonName: string | null;
+            deliveryPersonDoc: string | null;
+            vehiclePlate: string | null;
+            hasPackageDamage: boolean;
             receivedAt: Date;
             notifiedAt: Date | null;
             pickedUpAt: Date | null;
@@ -57,6 +61,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;
@@ -74,6 +82,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;
@@ -91,6 +103,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;
@@ -108,6 +124,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;
@@ -131,6 +151,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;
@@ -148,6 +172,10 @@ export declare class ParcelService {
         carrier: string | null;
         trackingCode: string | null;
         storageLocation: string | null;
+        deliveryPersonName: string | null;
+        deliveryPersonDoc: string | null;
+        vehiclePlate: string | null;
+        hasPackageDamage: boolean;
         receivedAt: Date;
         notifiedAt: Date | null;
         pickedUpAt: Date | null;

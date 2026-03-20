@@ -4,6 +4,7 @@ exports.parcelService = exports.ParcelService = void 0;
 const prisma_1 = require("../../config/prisma");
 const client_1 = require("@prisma/client");
 const notification_service_1 = require("../../notifications/notification.service");
+const errorHandler_1 = require("../../middleware/errorHandler");
 class ParcelService {
     async list(condominiumId, filters) {
         const { page = 1, limit = 20, unitId, status } = filters;
@@ -57,6 +58,10 @@ class ParcelService {
         });
     }
     async confirmPickup(id, pickedUpBy, signature) {
+        const parcel = await prisma_1.prisma.parcel.findUniqueOrThrow({ where: { id } });
+        if (parcel.status === client_1.ParcelStatus.PICKED_UP || parcel.status === client_1.ParcelStatus.RETURNED) {
+            throw new errorHandler_1.ConflictError(`Encomenda não pode ser retirada com status ${parcel.status}`);
+        }
         return prisma_1.prisma.parcel.update({
             where: { id },
             data: {

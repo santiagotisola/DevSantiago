@@ -9,6 +9,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const uuid_1 = require("uuid");
 const prisma_1 = require("../../config/prisma");
 const env_1 = require("../../config/env");
+const mail_1 = require("../../config/mail");
+const logger_1 = require("../../config/logger");
 const errorHandler_1 = require("../../middleware/errorHandler");
 class AuthService {
     generateTokens(payload) {
@@ -61,7 +63,7 @@ class AuthService {
         const isValidPassword = await bcryptjs_1.default.compare(data.password, user.passwordHash);
         if (!isValidPassword)
             throw new errorHandler_1.UnauthorizedError('E-mail ou senha inválidos');
-        const payload = { userId: user.id, role: user.role };
+        const payload = { userId: user.id, role: user.role, name: user.name };
         const { accessToken, refreshToken } = this.generateTokens(payload);
         // Salvar refresh token
         const expiresAt = new Date();
@@ -112,8 +114,48 @@ class AuthService {
         await prisma_1.prisma.passwordReset.create({
             data: { token, userId: user.id, expiresAt },
         });
-        // TODO: enviar e-mail com link de reset
-        return { token }; // em produção, apenas enviar por e-mail
+        // Enviar e-mail com link de reset
+        const resetLink = `${env_1.env.FRONTEND_URL}/reset-password?token=${token}`;
+        const htmlContent = `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 32px; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h1 style="color: #1e293b; font-size: 24px; margin: 0;">🔒 CondoSync</h1>
+          <p style="color: #64748b; margin-top: 4px;">Recuperação de Senha</p>
+        </div>
+        <div style="background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <p style="color: #334155; font-size: 16px;">Olá, <strong>${user.name}</strong>!</p>
+          <p style="color: #475569; line-height: 1.6;">
+            Recebemos uma solicitação para redefinir sua senha. 
+            Clique no botão abaixo para criar uma nova senha:
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetLink}" 
+               style="background: #3b82f6; color: #ffffff; padding: 14px 32px; border-radius: 8px; 
+                      text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">
+              Redefinir Minha Senha
+            </a>
+          </div>
+          <p style="color: #94a3b8; font-size: 13px;">
+            Este link expira em <strong>2 horas</strong>. Se você não solicitou a redefinição, ignore este e-mail.
+          </p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;">
+          <p style="color: #94a3b8; font-size: 12px;">
+            Se o botão não funcionar, copie e cole este link no navegador:<br>
+            <a href="${resetLink}" style="color: #3b82f6;">${resetLink}</a>
+          </p>
+        </div>
+        <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 16px;">
+          Este é um e-mail automático do CondoSync. Por favor, não responda.
+        </p>
+      </div>
+    `;
+        try {
+            await (0, mail_1.sendMail)(user.email, 'CondoSync — Redefinição de Senha', htmlContent);
+        }
+        catch (error) {
+            // Log mas não falha — evita revelar se o e-mail existe via tempo de resposta
+            logger_1.logger.error('Falha ao enviar e-mail de reset de senha', { userId: user.id, error });
+        }
     }
     async resetPassword(token, newPassword) {
         const reset = await prisma_1.prisma.passwordReset.findFirst({

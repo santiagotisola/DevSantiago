@@ -12,23 +12,23 @@ export declare const createChargeSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     unitId: string;
     description: string;
+    amount: number;
     dueDate: string;
     accountId: string;
-    amount: number;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }, {
     unitId: string;
     description: string;
+    amount: number;
     dueDate: string;
     accountId: string;
-    amount: number;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    categoryId?: string | undefined;
 }>;
 export declare const updateChargeSchema: z.ZodObject<{
     unitId: z.ZodOptional<z.ZodString>;
@@ -43,23 +43,23 @@ export declare const updateChargeSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     unitId?: string | undefined;
     description?: string | undefined;
-    dueDate?: string | undefined;
-    accountId?: string | undefined;
     amount?: number | undefined;
+    dueDate?: string | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    accountId?: string | undefined;
+    categoryId?: string | undefined;
 }, {
     unitId?: string | undefined;
     description?: string | undefined;
-    dueDate?: string | undefined;
-    accountId?: string | undefined;
     amount?: number | undefined;
+    dueDate?: string | undefined;
     referenceMonth?: string | undefined;
-    categoryId?: string | undefined;
     penaltyAmount?: number | undefined;
     interestRate?: number | undefined;
+    accountId?: string | undefined;
+    categoryId?: string | undefined;
 }>;
 export declare const ratioSchema: z.ZodObject<{
     condominiumId: z.ZodString;
@@ -74,8 +74,8 @@ export declare const ratioSchema: z.ZodObject<{
     condominiumId: string;
     description: string;
     dueDate: string;
-    accountId: string;
     referenceMonth: string;
+    accountId: string;
     totalAmount: number;
     method: "fraction" | "equal";
     categoryId?: string | undefined;
@@ -83,8 +83,8 @@ export declare const ratioSchema: z.ZodObject<{
     condominiumId: string;
     description: string;
     dueDate: string;
-    accountId: string;
     referenceMonth: string;
+    accountId: string;
     totalAmount: number;
     method: "fraction" | "equal";
     categoryId?: string | undefined;
@@ -112,23 +112,23 @@ export declare const createTransactionSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     type: "INCOME" | "EXPENSE";
     description: string;
+    amount: number;
     dueDate: string;
     accountId: string;
-    amount: number;
     notes?: string | undefined;
+    paidAt?: string | undefined;
     referenceMonth?: string | undefined;
     categoryId?: string | undefined;
-    paidAt?: string | undefined;
 }, {
     type: "INCOME" | "EXPENSE";
     description: string;
+    amount: number;
     dueDate: string;
     accountId: string;
-    amount: number;
     notes?: string | undefined;
+    paidAt?: string | undefined;
     referenceMonth?: string | undefined;
     categoryId?: string | undefined;
-    paidAt?: string | undefined;
 }>;
 export declare const ratioInstallmentsSchema: z.ZodObject<{
     condominiumId: z.ZodString;
@@ -173,8 +173,8 @@ export declare const chargeInstallmentsSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     unitId: string;
     description: string;
-    accountId: string;
     amount: number;
+    accountId: string;
     firstDueDate: string;
     installments: number;
     intervalDays: number;
@@ -182,8 +182,8 @@ export declare const chargeInstallmentsSchema: z.ZodObject<{
 }, {
     unitId: string;
     description: string;
-    accountId: string;
     amount: number;
+    accountId: string;
     firstDueDate: string;
     installments: number;
     intervalDays: number;

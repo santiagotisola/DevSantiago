@@ -34,9 +34,15 @@ router.post("/", async (req: Request, res: Response) => {
 
   // Residents can only add vehicles to their own unit
   const user = req.user!;
-  if (user.role === 'RESIDENT' && user.unitId !== data.unitId) {
-    res.status(403).json({ success: false, message: 'Proibido: você só pode cadastrar veículos na sua unidade.' });
-    return;
+  if (user.role === 'RESIDENT') {
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, unitId: data.unitId },
+      select: { id: true },
+    });
+    if (!membership) {
+      res.status(403).json({ success: false, message: 'Proibido: você só pode cadastrar veículos na sua unidade.' });
+      return;
+    }
   }
 
   const vehicle = await prisma.vehicle.create({ data });
@@ -50,7 +56,15 @@ router.put("/:id", async (req: Request, res: Response) => {
   const user = req.user!;
   if (user.role === 'RESIDENT') {
     const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
-    if (!existing || existing.unitId !== user.unitId) {
+    if (!existing) {
+      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para editar este veículo.' });
+      return;
+    }
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, unitId: existing.unitId },
+      select: { id: true },
+    });
+    if (!membership) {
       res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para editar este veículo.' });
       return;
     }
@@ -68,7 +82,15 @@ router.delete("/:id", async (req: Request, res: Response) => {
   const user = req.user!;
   if (user.role === 'RESIDENT') {
     const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
-    if (!existing || existing.unitId !== user.unitId) {
+    if (!existing) {
+      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para remover este veículo.' });
+      return;
+    }
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, unitId: existing.unitId },
+      select: { id: true },
+    });
+    if (!membership) {
       res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para remover este veículo.' });
       return;
     }

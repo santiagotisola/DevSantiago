@@ -46,10 +46,8 @@ router.post("/charges/ratio", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC
     res.json({ success: true, data: result });
 });
 router.patch("/charges/:id/pay", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
-    const body = req.body && typeof req.body.paidAmount === "number"
-        ? req.body
-        : { paidAmount: 0 };
-    const charge = await finance_service_1.financeService.markAsPaid(req.params.id, body.paidAmount || 0, body.paidAt ? new Date(body.paidAt) : undefined);
+    const { paidAmount, paidAt } = (0, validateRequest_1.validateRequest)(finance_validation_1.paySchema, req.body);
+    const charge = await finance_service_1.financeService.markAsPaid(req.params.id, paidAmount, paidAt ? new Date(paidAt) : undefined);
     res.json({ success: true, data: { charge } });
 });
 router.post("/charges/ratio/installments", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {

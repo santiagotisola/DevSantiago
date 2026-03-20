@@ -744,6 +744,59 @@ async function main() {
   });
   console.log("  ✅ Enquete criada");
 
+  // ── MARKETPLACE ───────────────────────────────────────────────────────────
+  const partners = [
+    {
+      name: "Farmácia Saúde Viva",
+      description: "Farmácia com atendimento especializado e delivery",
+      category: "saude",
+      website: "https://saudeviva.com.br",
+      phone: "(11) 98765-0001",
+    },
+    {
+      name: "Restaurante Sabor & Arte",
+      description: "Culinária caseira com opções vegetarianas",
+      category: "alimentacao",
+      phone: "(11) 98765-0002",
+    },
+    {
+      name: "Academia FitLife",
+      description: "Academia completa com personal trainer",
+      category: "saude",
+      website: "https://fitlife.com.br",
+      phone: "(11) 98765-0003",
+    },
+  ];
+
+  for (const p of partners) {
+    const partner = await prisma.marketplacePartner.upsert({
+      where: {
+        id: `demo-partner-${p.category}-${p.name.substring(0, 5).toLowerCase().replace(/\s/g, "")}`,
+      },
+      update: {},
+      create: {
+        id: `demo-partner-${p.category}-${p.name.substring(0, 5).toLowerCase().replace(/\s/g, "")}`,
+        ...p,
+        isActive: true,
+      },
+    });
+
+    await prisma.marketplaceOffer.createMany({
+      data: [
+        {
+          partnerId: partner.id,
+          title: `10% de desconto para moradores`,
+          description: `Desconto especial para moradores do condomínio ${condo.name}`,
+          discount: "10%",
+          couponCode: "CONDO10",
+          status: "ACTIVE",
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+  console.log("  ✅ Parceiros e ofertas do Marketplace criados");
+
   // ── RESUMO ────────────────────────────────────────────────────────────────
   console.log("\n🎉 Seed demo concluído com sucesso!\n");
   console.log("📋 Dados inseridos:");
@@ -755,6 +808,7 @@ async function main() {
   console.log("  💰  15 cobranças de condomínio (3 meses × 5 unidades)");
   console.log("  📊  9 transações financeiras");
   console.log("  🏊  6 reservas de área comum");
+  console.log("  🛒  3 parceiros marketplace com ofertas");
   console.log("  📢  5 comunicados");
   console.log("  🗳️   1 enquete ativa");
 }

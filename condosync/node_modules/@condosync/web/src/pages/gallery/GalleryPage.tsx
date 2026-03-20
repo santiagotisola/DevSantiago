@@ -163,9 +163,7 @@ export default function GalleryPage() {
       fd.append('title', uploadForm.title);
       fd.append('category', uploadForm.category);
       if (uploadForm.description) fd.append('description', uploadForm.description);
-      await api.post(`/gallery/${condominiumId}`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/gallery/${condominiumId}`, fd);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['gallery'] });

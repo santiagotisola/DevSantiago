@@ -14,9 +14,11 @@ export declare const env: {
     BCRYPT_ROUNDS: string;
     REDIS_URL: string;
     OPENAI_MODEL: string;
+    FRONTEND_URL: string;
     SMTP_HOST?: string | undefined;
     SMTP_USER?: string | undefined;
     SMTP_PASS?: string | undefined;
     OPENAI_API_KEY?: string | undefined;
+    ASAAS_WEBHOOK_TOKEN?: string | undefined;
 };
 //# sourceMappingURL=env.d.ts.map
