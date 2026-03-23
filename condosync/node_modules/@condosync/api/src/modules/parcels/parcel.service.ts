@@ -1,7 +1,9 @@
 import { prisma } from '../../config/prisma';
-import { ParcelStatus } from '@prisma/client';
+import { ParcelStatus, UserRole } from '@prisma/client';
 import { NotificationService } from '../../notifications/notification.service';
-import { ConflictError } from '../../middleware/errorHandler';
+import { ConflictError, ForbiddenError, ValidationError } from '../../middleware/errorHandler';
+
+type ParcelActor = { userId: string; role: UserRole };
 
 export interface RegisterParcelDTO {
   unitId: string;
@@ -44,7 +46,31 @@ export class ParcelService {
     return { parcels, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async register(data: RegisterParcelDTO, registeredBy: string) {
+  private async ensureParcelAccess(id: string, actor: ParcelActor) {
+    const parcel = await prisma.parcel.findUniqueOrThrow({
+      where: { id },
+      include: { unit: { select: { condominiumId: true } } },
+    });
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: actor.userId, condominiumId: parcel.unit.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta encomenda');
+    }
+    return parcel;
+  }
+
+  async register(data: RegisterParcelDTO, registeredBy: string, actor: ParcelActor) {
+    const unit = await prisma.unit.findFirst({ where: { id: data.unitId } });
+    if (!unit) {
+      throw new ValidationError('Unidade inválida', { unitId: ['Unidade não encontrada'] });
+    }
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: actor.userId, condominiumId: unit.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta unidade');
+    }
     const parcel = await prisma.parcel.create({
       data: { ...data, registeredBy, status: ParcelStatus.RECEIVED },
     });
@@ -80,15 +106,16 @@ export class ParcelService {
     return parcel;
   }
 
-  async update(id: string, data: Partial<Omit<RegisterParcelDTO, 'unitId'>>) {
+  async update(id: string, actor: ParcelActor, data: Partial<Omit<RegisterParcelDTO, 'unitId'>>) {
+    await this.ensureParcelAccess(id, actor);
     return prisma.parcel.update({
       where: { id },
       data,
     });
   }
 
-  async confirmPickup(id: string, pickedUpBy: string, signature?: string) {
-    const parcel = await prisma.parcel.findUniqueOrThrow({ where: { id } });
+  async confirmPickup(id: string, pickedUpBy: string, actor: ParcelActor, signature?: string) {
+    const parcel = await this.ensureParcelAccess(id, actor);
     if (parcel.status === ParcelStatus.PICKED_UP || parcel.status === ParcelStatus.RETURNED) {
       throw new ConflictError(`Encomenda não pode ser retirada com status ${parcel.status}`);
     }
@@ -103,7 +130,8 @@ export class ParcelService {
     });
   }
 
-  async cancel(id: string, reason?: string) {
+  async cancel(id: string, actor: ParcelActor, reason?: string) {
+    await this.ensureParcelAccess(id, actor);
     return prisma.parcel.update({
       where: { id },
       data: {
@@ -113,14 +141,22 @@ export class ParcelService {
     });
   }
 
-  async findById(id: string) {
+  async findById(id: string, actor: ParcelActor) {
+    await this.ensureParcelAccess(id, actor);
     return prisma.parcel.findUniqueOrThrow({
       where: { id },
       include: { unit: { select: { identifier: true, block: true, condominiumId: true } } },
     });
   }
 
-  async pendingByUnit(unitId: string) {
+  async pendingByUnit(unitId: string, actor: ParcelActor) {
+    const unit = await prisma.unit.findUniqueOrThrow({ where: { id: unitId } });
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: actor.userId, condominiumId: unit.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta unidade');
+    }
     return prisma.parcel.findMany({
       where: { unitId, status: { in: [ParcelStatus.RECEIVED, ParcelStatus.NOTIFIED] } },
       orderBy: { receivedAt: 'desc' },

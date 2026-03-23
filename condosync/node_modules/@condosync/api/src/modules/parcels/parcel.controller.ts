@@ -52,35 +52,35 @@ export class ParcelController {
 
   async register(req: Request, res: Response) {
     const data = validateRequest(registerSchema, req.body);
-    const parcel = await parcelService.register(data, req.user!.userId);
+    const parcel = await parcelService.register(data, req.user!.userId, req.user!);
     res.status(201).json({ success: true, data: { parcel } });
   }
 
   async confirmPickup(req: Request, res: Response) {
     const { pickedUpBy, signature } = validateRequest(pickupSchema, req.body);
-    const parcel = await parcelService.confirmPickup(req.params.id, pickedUpBy, signature);
+    const parcel = await parcelService.confirmPickup(req.params.id, pickedUpBy, req.user!, signature);
     res.json({ success: true, data: { parcel } });
   }
 
   async update(req: Request, res: Response) {
     const data = validateRequest(updateSchema, req.body);
-    const parcel = await parcelService.update(req.params.id, data);
+    const parcel = await parcelService.update(req.params.id, req.user!, data);
     res.json({ success: true, data: { parcel } });
   }
 
   async cancel(req: Request, res: Response) {
     const { reason } = validateRequest(cancelSchema, req.body);
-    const parcel = await parcelService.cancel(req.params.id, reason);
+    const parcel = await parcelService.cancel(req.params.id, req.user!, reason);
     res.json({ success: true, data: { parcel } });
   }
 
   async findById(req: Request, res: Response) {
-    const parcel = await parcelService.findById(req.params.id);
+    const parcel = await parcelService.findById(req.params.id, req.user!);
     res.json({ success: true, data: { parcel } });
   }
 
   async pendingByUnit(req: Request, res: Response) {
-    const parcels = await parcelService.pendingByUnit(req.params.unitId);
+    const parcels = await parcelService.pendingByUnit(req.params.unitId, req.user!);
     res.json({ success: true, data: { parcels } });
   }
 }

@@ -68,7 +68,7 @@ router.patch(
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(updateChargeSchema, req.body);
-    const charge = await financeService.updateCharge(req.params.id, {
+    const charge = await financeService.updateCharge(req.params.id, req.user!, {
       ...data,
       ...(data.dueDate && { dueDate: new Date(data.dueDate) as any }),
     });
@@ -96,6 +96,7 @@ router.patch(
     const { paidAmount, paidAt } = validateRequest(paySchema, req.body);
     const charge = await financeService.markAsPaid(
       req.params.id,
+      req.user!,
       paidAmount,
       paidAt ? new Date(paidAt) : undefined,
     );
@@ -151,13 +152,13 @@ router.delete(
   "/charges/:id",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const charge = await financeService.cancelCharge(req.params.id);
+    const charge = await financeService.cancelCharge(req.params.id, req.user!);
     res.json({ success: true, data: { charge } });
   },
 );
 
 router.get("/charges/unit/:unitId", async (req: Request, res: Response) => {
-  const data = await financeService.getChargesByUnit(req.params.unitId);
+  const data = await financeService.getChargesByUnit(req.params.unitId, req.user!);
   res.json({ success: true, data });
 });
 

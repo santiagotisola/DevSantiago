@@ -136,11 +136,14 @@ export class VisitorService {
   async registerEntry(
     visitorId: string,
     registeredBy: string,
+    actor: VisitorActor,
     photoUrl?: string,
   ) {
     const visitor = await prisma.visitor.findUniqueOrThrow({
       where: { id: visitorId },
     });
+
+    await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
 
     if (visitor.status === VisitorStatus.INSIDE) {
       throw new ForbiddenError("Visitante já está dentro do condomínio");
@@ -177,10 +180,12 @@ export class VisitorService {
     return updated;
   }
 
-  async registerExit(visitorId: string, registeredBy: string) {
+  async registerExit(visitorId: string, registeredBy: string, actor: VisitorActor) {
     const visitor = await prisma.visitor.findUniqueOrThrow({
       where: { id: visitorId },
     });
+
+    await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
 
     return prisma.visitor.update({
       where: { id: visitorId },
@@ -214,8 +219,8 @@ export class VisitorService {
     });
   }
 
-  async findById(id: string) {
-    return prisma.visitor.findUniqueOrThrow({
+  async findById(id: string, actor: VisitorActor) {
+    const visitor = await prisma.visitor.findUniqueOrThrow({
       where: { id },
       include: {
         unit: {
@@ -223,10 +228,13 @@ export class VisitorService {
         },
       },
     });
+    await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
+    return visitor;
   }
 
   async update(
     id: string,
+    actor: VisitorActor,
     data: Partial<
       Pick<
         CreateVisitorDTO,
@@ -242,6 +250,7 @@ export class VisitorService {
     >,
   ) {
     const visitor = await prisma.visitor.findUniqueOrThrow({ where: { id } });
+    await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
     if (
       visitor.status === VisitorStatus.INSIDE ||
       visitor.status === VisitorStatus.LEFT

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
-import { ValidationError } from '../../middleware/errorHandler';
+import { ForbiddenError, ValidationError } from '../../middleware/errorHandler';
 import { validateRequest } from '../../utils/validateRequest';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
@@ -12,6 +13,13 @@ router.use(authenticate);
 
 // Dependentes de uma unidade
 router.get('/unit/:unitId/dependents', async (req: Request, res: Response) => {
+  const unit = await prisma.unit.findUniqueOrThrow({ where: { id: req.params.unitId } });
+  if (req.user!.role !== 'SUPER_ADMIN') {
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: req.user!.userId, condominiumId: unit.condominiumId, isActive: true },
+    });
+    if (!membership) throw new ForbiddenError('Acesso negado a esta unidade');
+  }
   const dependents = await prisma.dependent.findMany({
     where: { unitId: req.params.unitId, isActive: true },
   });
@@ -76,7 +84,7 @@ router.post('/', authorize('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async 
   // Cria ou reutiliza usuário pelo e-mail
   let user = await prisma.user.findUnique({ where: { email: data.email } });
   if (!user) {
-    const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+    const tempPassword = randomBytes(8).toString('base64url') + 'A1!';
     const passwordHash = await bcrypt.hash(tempPassword, 10);
     user = await prisma.user.create({
       data: {

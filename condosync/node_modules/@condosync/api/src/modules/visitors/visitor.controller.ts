@@ -66,6 +66,7 @@ export class VisitorController {
     const visitor = await visitorService.registerEntry(
       req.params.id,
       req.user!.userId,
+      req.user!,
       photoUrl,
     );
     res.json({ success: true, data: { visitor } });
@@ -75,6 +76,7 @@ export class VisitorController {
     const visitor = await visitorService.registerExit(
       req.params.id,
       req.user!.userId,
+      req.user!,
     );
     res.json({ success: true, data: { visitor } });
   }
@@ -91,7 +93,7 @@ export class VisitorController {
 
   async update(req: Request, res: Response) {
     const data = validateRequest(updateSchema, req.body);
-    const visitor = await visitorService.update(req.params.id, {
+    const visitor = await visitorService.update(req.params.id, req.user!, {
       ...data,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
     });
@@ -99,7 +101,7 @@ export class VisitorController {
   }
 
   async findById(req: Request, res: Response) {
-    const visitor = await visitorService.findById(req.params.id);
+    const visitor = await visitorService.findById(req.params.id, req.user!);
     res.json({ success: true, data: { visitor } });
   }
 

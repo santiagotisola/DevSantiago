@@ -115,6 +115,15 @@ export class MaintenanceService {
       data.condominiumId,
     );
 
+    if (data.unitId) {
+      const unit = await prisma.unit.findFirst({
+        where: { id: data.unitId, condominiumId: data.condominiumId },
+      });
+      if (!unit) {
+        throw new ForbiddenError('Unidade não pertence a este condomínio');
+      }
+    }
+
     return prisma.serviceOrder.create({
       data: {
         condominiumId: data.condominiumId,
