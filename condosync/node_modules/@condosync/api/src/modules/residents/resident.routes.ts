@@ -43,6 +43,8 @@ const dependentSchema = z.object({
 
 router.post("/dependents", async (req: Request, res: Response) => {
   const data = validateRequest(dependentSchema, req.body);
+  // Valida existência da unidade antes de persistir (B2)
+  await prisma.unit.findUniqueOrThrow({ where: { id: data.unitId } });
   const dependent = await prisma.dependent.create({
     data: {
       ...data,
@@ -110,6 +112,7 @@ router.post(
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(createResidentSchema, req.body);
+    residentService.assertResidentRoleRequiresUnit('RESIDENT', data.unitId);
     await residentService.assertResidentUnitBelongsToCondominium(
       data.condominiumId,
       data.unitId,
@@ -179,7 +182,7 @@ const updateResidentSchema = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().optional(),
   cpf: z.string().optional(),
-  unitId: z.string().uuid(),
+  unitId: z.string().uuid().optional(),
 });
 
 // Atualiza dados do morador (user + unidade)
@@ -200,10 +203,12 @@ router.patch(
       });
     }
 
-    await residentService.assertResidentUnitBelongsToCondominium(
-      condominiumUser.condominiumId,
-      data.unitId,
-    );
+    if (data.unitId) {
+      await residentService.assertResidentUnitBelongsToCondominium(
+        condominiumUser.condominiumId,
+        data.unitId,
+      );
+    }
 
     // Atualiza dados do usuário
     if (data.name || data.phone !== undefined || data.cpf !== undefined) {
@@ -220,7 +225,7 @@ router.patch(
     // Atualiza unidade
     const updated = await prisma.condominiumUser.update({
       where: { id: req.params.id },
-      data: { unitId: data.unitId },
+      data: { ...(data.unitId ? { unitId: data.unitId } : {}) },
       include: {
         user: {
           select: { id: true, name: true, email: true, phone: true, cpf: true },

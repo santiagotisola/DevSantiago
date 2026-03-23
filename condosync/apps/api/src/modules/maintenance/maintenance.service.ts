@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma";
-import { ForbiddenError } from "../../middleware/errorHandler";
+import { AppError, ForbiddenError } from "../../middleware/errorHandler";
 import {
   ServiceOrderPriority,
   ServiceOrderStatus,
@@ -193,6 +193,20 @@ export class MaintenanceService {
   ) {
     await this.ensureOrderAccess(id, actor);
 
+    const order = await prisma.serviceOrder.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    if (
+      order.status === ServiceOrderStatus.COMPLETED ||
+      order.status === ServiceOrderStatus.CANCELED
+    ) {
+      throw new AppError(
+        `Não é possível atribuir uma ordem com status ${order.status}`,
+        422,
+      );
+    }
+
     return prisma.serviceOrder.update({
       where: { id },
       data: {
@@ -235,6 +249,8 @@ export class MaintenanceService {
       case "anual":
         d.setFullYear(d.getFullYear() + 1);
         break;
+      default:
+        throw new AppError(`Frequência de manutenção inválida: ${frequency}`, 422);
     }
     return d;
   }

@@ -173,7 +173,10 @@ export class ParcelService {
   }
 
   async cancel(id: string, actor: ParcelActor, reason?: string) {
-    await this.ensureParcelAccess(id, actor);
+    const parcel = await this.ensureParcelAccess(id, actor);
+    if (parcel.status === ParcelStatus.PICKED_UP || parcel.status === ParcelStatus.RETURNED) {
+      throw new ConflictError(`Encomenda não pode ser cancelada com status ${parcel.status}`);
+    }
     return prisma.parcel.update({
       where: { id },
       data: {

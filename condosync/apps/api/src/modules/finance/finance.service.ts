@@ -85,10 +85,16 @@ export class FinanceService {
     });
   }
 
-  async getAccountBalance(accountId: string) {
+  async getAccountBalance(accountId: string, actor: FinanceActor) {
     const account = await prisma.financialAccount.findUniqueOrThrow({
       where: { id: accountId },
     });
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: actor.userId, condominiumId: account.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta conta');
+    }
 
     const [income, expense] = await prisma.$transaction([
       prisma.financialTransaction.aggregate({
@@ -393,6 +399,7 @@ export class FinanceService {
   // ─── Transações ──────────────────────────────────────────────
   async listTransactions(
     accountId: string,
+    actor: FinanceActor,
     filters: {
       type?: FinancialTransactionType;
       referenceMonth?: string;
@@ -400,6 +407,16 @@ export class FinanceService {
       limit?: number;
     },
   ) {
+    const account = await prisma.financialAccount.findUniqueOrThrow({
+      where: { id: accountId },
+      select: { condominiumId: true },
+    });
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: actor.userId, condominiumId: account.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta conta');
+    }
     const { page = 1, limit = 20, ...where } = filters;
 
     const [transactions, total] = await prisma.$transaction([
@@ -431,14 +448,15 @@ export class FinanceService {
       (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`,
     );
 
+    // Busca accountIds uma única vez fora do loop (B7: fix N+1)
+    const accounts = await prisma.financialAccount.findMany({
+      where: { condominiumId },
+      select: { id: true },
+    });
+    const accountIds = accounts.map((a: { id: string }) => a.id);
+
     const result = await Promise.all(
       months.map(async (month) => {
-        const accounts = await prisma.financialAccount.findMany({
-          where: { condominiumId },
-          select: { id: true },
-        });
-        const accountIds = accounts.map((a: { id: string }) => a.id);
-
         const [income, expense, charged, paid, overdue] =
           await prisma.$transaction([
             prisma.financialTransaction.aggregate({

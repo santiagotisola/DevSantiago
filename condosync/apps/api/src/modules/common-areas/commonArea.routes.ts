@@ -147,11 +147,22 @@ router.patch(
       isAvailable: z.boolean().optional(),
     });
     const data = validateRequest(schema, req.body);
-    const area = await prisma.commonArea.update({
+    // M10: verifica pertencimento da área ao condomínio do ator
+    const area = await prisma.commonArea.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { condominiumId: true },
+    });
+    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: req.user!.userId, condominiumId: area.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta área');
+    }
+    const updated = await prisma.commonArea.update({
       where: { id: req.params.id },
       data,
     });
-    res.json({ success: true, data: { area } });
+    res.json({ success: true, data: { area: updated } });
   },
 );
 
@@ -159,6 +170,16 @@ router.delete(
   "/:id",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
+    const area = await prisma.commonArea.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { condominiumId: true },
+    });
+    if (req.user!.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: req.user!.userId, condominiumId: area.condominiumId, isActive: true },
+      });
+      if (!membership) throw new ForbiddenError('Acesso negado a esta área');
+    }
     await prisma.commonArea.update({
       where: { id: req.params.id },
       data: { isActive: false },
@@ -215,6 +236,36 @@ router.post("/reservations", async (req: Request, res: Response) => {
     );
   }
 
+  // M11: valida horário de funcionamento da área
+  const startDt = new Date(data.startDate);
+  const endDt = new Date(data.endDate);
+
+  if (area.maxDaysAdvance) {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + area.maxDaysAdvance);
+    if (startDt > maxDate) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `Reserva não pode ser feita com mais de ${area.maxDaysAdvance} dias de antecedência` },
+      });
+    }
+  }
+
+  if (area.openTime && area.closeTime) {
+    const [openH, openM] = (area.openTime as string).split(':').map(Number);
+    const [closeH, closeM] = (area.closeTime as string).split(':').map(Number);
+    const startMinutes = startDt.getHours() * 60 + startDt.getMinutes();
+    const endMinutes = endDt.getHours() * 60 + endDt.getMinutes();
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: `Reserva fora do horário de funcionamento (${area.openTime} – ${area.closeTime})` },
+      });
+    }
+  }
+
   const conflict = await prisma.reservation.findFirst({
     where: {
       commonAreaId: data.commonAreaId,
@@ -252,6 +303,17 @@ router.patch(
   "/reservations/:id/approve",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
+    // B6: impede aprovar reserva já cancelada
+    const target = await prisma.reservation.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { status: true },
+    });
+    if (target.status === 'CANCELED') {
+      return res.status(422).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Não é possível aprovar uma reserva cancelada' },
+      });
+    }
     await ensureReservationAccess(req, req.params.id, { managementOnly: true });
     const reservation = await prisma.reservation.update({
       where: { id: req.params.id },

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { Request, Response } from "express";
+import { z } from "zod";
 import { financeService } from "./finance.service";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
@@ -34,7 +35,7 @@ router.get("/accounts/:condominiumId", async (req: Request, res: Response) => {
 router.get(
   "/accounts/:accountId/balance",
   async (req: Request, res: Response) => {
-    const data = await financeService.getAccountBalance(req.params.accountId);
+    const data = await financeService.getAccountBalance(req.params.accountId, req.user!);
     res.json({ success: true, data });
   },
 );
@@ -177,7 +178,7 @@ router.get(
 
 // Transações
 router.get("/transactions/:accountId", async (req: Request, res: Response) => {
-  const data = await financeService.listTransactions(req.params.accountId, {
+  const data = await financeService.listTransactions(req.params.accountId, req.user!, {
     page: Number(req.query.page) || 1,
     limit: Number(req.query.limit) || 20,
   });
@@ -226,7 +227,12 @@ router.patch(
   "/accounts/:accountId/gateway",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const { gatewayType, gatewayKey, gatewayConfig } = req.body;
+    const gatewaySchema = z.object({
+      gatewayType: z.enum(["ASAAS", "PJBANK"]),
+      gatewayKey: z.string().min(1),
+      gatewayConfig: z.record(z.unknown()).optional(),
+    });
+    const { gatewayType, gatewayKey, gatewayConfig } = validateRequest(gatewaySchema, req.body);
     const account = await financeService.configureGateway(
       req.params.accountId,
       { gatewayType, gatewayKey, gatewayConfig },
