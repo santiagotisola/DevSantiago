@@ -12,10 +12,10 @@ router.get('/condominium/:condominiumId', assembly_controller_1.assemblyControll
 router.get('/:id', assembly_controller_1.assemblyController.getById);
 // Pegar resultados da votação
 router.get('/:id/results', assembly_controller_1.assemblyController.getResults);
-// Criar assembleia (Apenas Syndic/Admin - Aqui poderia ter um middleware checkRole extra)
-router.post('/condominium/:condominiumId', assembly_controller_1.assemblyController.create);
-// Atualizar status da assembleia (Iniciar, Finalizar)
-router.patch('/:id/status', assembly_controller_1.assemblyController.updateStatus);
+// Criar assembleia — somente gestores [A1]
+router.post('/condominium/:condominiumId', (0, auth_1.authorize)('SYNDIC', 'CONDOMINIUM_ADMIN', 'SUPER_ADMIN'), assembly_controller_1.assemblyController.create);
+// Atualizar status da assembleia — somente gestores [A2]
+router.patch('/:id/status', (0, auth_1.authorize)('SYNDIC', 'CONDOMINIUM_ADMIN', 'SUPER_ADMIN'), assembly_controller_1.assemblyController.updateStatus);
 // Registrar presença do usuário logado na assembleia
 router.post('/:id/attendance', assembly_controller_1.assemblyController.registerAttendance);
 // Votar em um item da pauta

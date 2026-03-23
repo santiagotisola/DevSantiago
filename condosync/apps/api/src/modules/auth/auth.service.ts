@@ -164,9 +164,15 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string) {
+    const start = Date.now();
     const user = await prisma.user.findUnique({ where: { email } });
     // Não revelar se o e-mail existe
-    if (!user) return;
+    if (!user) {
+      // Constant-time response to prevent timing-based email enumeration
+      const elapsed = Date.now() - start;
+      await new Promise((r) => setTimeout(r, Math.max(0, 200 - elapsed)));
+      return;
+    }
 
     const token = uuidv4();
     const expiresAt = new Date();
@@ -266,7 +272,11 @@ export class AuthService {
       newPassword,
       Number(env.BCRYPT_ROUNDS),
     );
-    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      // Invalidar todas as sessões activas [B2]
+      prisma.refreshToken.deleteMany({ where: { userId } }),
+    ]);
   }
 }
 

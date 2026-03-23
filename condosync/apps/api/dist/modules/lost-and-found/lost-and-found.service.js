@@ -2,8 +2,33 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lostAndFoundService = exports.LostAndFoundService = void 0;
 const prisma_1 = require("../../config/prisma");
+const client_1 = require("@prisma/client");
+const errorHandler_1 = require("../../middleware/errorHandler");
 class LostAndFoundService {
-    async list(condominiumId, page = 1, limit = 20) {
+    async ensureAccess(id, actor) {
+        const item = await prisma_1.prisma.lostAndFound.findUniqueOrThrow({
+            where: { id },
+            select: { id: true, condominiumId: true },
+        });
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: { userId: actor.userId, condominiumId: item.condominiumId, isActive: true },
+                select: { id: true },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError('Acesso negado a este item');
+        }
+        return item;
+    }
+    async list(condominiumId, actor, page = 1, limit = 20) {
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: { userId: actor.userId, condominiumId, isActive: true },
+                select: { id: true },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError('Acesso negado a este condomínio');
+        }
         const skip = (page - 1) * limit;
         const [items, total] = await Promise.all([
             prisma_1.prisma.lostAndFound.findMany({
@@ -26,7 +51,9 @@ class LostAndFoundService {
             }
         };
     }
-    async getById(id) {
+    // F1 — IDOR fix: verifica membership
+    async getById(id, actor) {
+        await this.ensureAccess(id, actor);
         return prisma_1.prisma.lostAndFound.findUniqueOrThrow({
             where: { id },
             include: { createdBy: { select: { name: true } } }
@@ -43,7 +70,9 @@ class LostAndFoundService {
             }
         });
     }
-    async update(id, data) {
+    // F2 — IDOR fix: verifica membership
+    async update(id, data, actor) {
+        await this.ensureAccess(id, actor);
         return prisma_1.prisma.lostAndFound.update({
             where: { id },
             data: {
@@ -52,7 +81,9 @@ class LostAndFoundService {
             }
         });
     }
-    async delete(id) {
+    // F3 — IDOR fix: verifica membership
+    async delete(id, actor) {
+        await this.ensureAccess(id, actor);
         return prisma_1.prisma.lostAndFound.delete({
             where: { id }
         });

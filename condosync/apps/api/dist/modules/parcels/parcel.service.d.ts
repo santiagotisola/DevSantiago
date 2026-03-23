@@ -1,4 +1,8 @@
-import { ParcelStatus } from '@prisma/client';
+import { ParcelStatus, UserRole } from "@prisma/client";
+type ParcelActor = {
+    userId: string;
+    role: UserRole;
+};
 export interface RegisterParcelDTO {
     unitId: string;
     senderName?: string;
@@ -50,7 +54,8 @@ export declare class ParcelService {
         limit: number;
         totalPages: number;
     }>;
-    register(data: RegisterParcelDTO, registeredBy: string): Promise<{
+    private ensureParcelAccess;
+    register(data: RegisterParcelDTO, registeredBy: string, actor: ParcelActor): Promise<{
         status: import(".prisma/client").$Enums.ParcelStatus;
         id: string;
         unitId: string;
@@ -71,7 +76,7 @@ export declare class ParcelService {
         pickedUpBy: string | null;
         pickupSignature: string | null;
     }>;
-    update(id: string, data: Partial<Omit<RegisterParcelDTO, 'unitId'>>): Promise<{
+    update(id: string, actor: ParcelActor, data: Partial<Omit<RegisterParcelDTO, "unitId">>): Promise<{
         status: import(".prisma/client").$Enums.ParcelStatus;
         id: string;
         unitId: string;
@@ -92,7 +97,7 @@ export declare class ParcelService {
         pickedUpBy: string | null;
         pickupSignature: string | null;
     }>;
-    confirmPickup(id: string, pickedUpBy: string, signature?: string): Promise<{
+    confirmPickup(id: string, pickedUpBy: string, actor: ParcelActor, signature?: string): Promise<{
         status: import(".prisma/client").$Enums.ParcelStatus;
         id: string;
         unitId: string;
@@ -113,7 +118,7 @@ export declare class ParcelService {
         pickedUpBy: string | null;
         pickupSignature: string | null;
     }>;
-    cancel(id: string, reason?: string): Promise<{
+    cancel(id: string, actor: ParcelActor, reason?: string): Promise<{
         status: import(".prisma/client").$Enums.ParcelStatus;
         id: string;
         unitId: string;
@@ -134,7 +139,7 @@ export declare class ParcelService {
         pickedUpBy: string | null;
         pickupSignature: string | null;
     }>;
-    findById(id: string): Promise<{
+    findById(id: string, actor: ParcelActor): Promise<{
         unit: {
             identifier: string;
             condominiumId: string;
@@ -161,7 +166,7 @@ export declare class ParcelService {
         pickedUpBy: string | null;
         pickupSignature: string | null;
     }>;
-    pendingByUnit(unitId: string): Promise<{
+    pendingByUnit(unitId: string, actor: ParcelActor): Promise<{
         status: import(".prisma/client").$Enums.ParcelStatus;
         id: string;
         unitId: string;
@@ -184,4 +189,5 @@ export declare class ParcelService {
     }[]>;
 }
 export declare const parcelService: ParcelService;
+export {};
 //# sourceMappingURL=parcel.service.d.ts.map

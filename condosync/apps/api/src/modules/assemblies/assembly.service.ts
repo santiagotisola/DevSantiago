@@ -1,7 +1,9 @@
-import { prisma } from '../../config/prisma';
-import { AssemblyStatus } from '@prisma/client';
-import { AppError } from '../../middleware/errorHandler';
-import { NotificationService } from '../../notifications/notification.service';
+import { prisma } from "../../config/prisma";
+import { AssemblyStatus, UserRole } from "@prisma/client";
+import { AppError, ForbiddenError } from "../../middleware/errorHandler";
+import { NotificationService } from "../../notifications/notification.service";
+
+type AssemblyActor = { userId: string; role: UserRole };
 
 export interface CreateAssemblyDTO {
   condominiumId: string;
@@ -17,22 +19,57 @@ export interface CreateAssemblyDTO {
   }[];
 }
 
+// Valid status transitions: SCHEDULED → IN_PROGRESS → FINISHED
+const VALID_TRANSITIONS: Record<AssemblyStatus, AssemblyStatus[]> = {
+  [AssemblyStatus.SCHEDULED]: [AssemblyStatus.IN_PROGRESS],
+  [AssemblyStatus.IN_PROGRESS]: [AssemblyStatus.FINISHED],
+  [AssemblyStatus.FINISHED]: [],
+  [AssemblyStatus.CANCELED]: [],
+};
+
 export class AssemblyService {
+  private async ensureAssemblyAccess(assemblyId: string, actor: AssemblyActor) {
+    const assembly = await prisma.assembly.findUniqueOrThrow({
+      where: { id: assemblyId },
+      select: { id: true, condominiumId: true },
+    });
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: {
+          userId: actor.userId,
+          condominiumId: assembly.condominiumId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!membership)
+        throw new ForbiddenError("Acesso negado a esta assembleia");
+    }
+    return assembly;
+  }
+
   async list(condominiumId: string, page = 1, limit = 20) {
     const [assemblies, total] = await prisma.$transaction([
       prisma.assembly.findMany({
         where: { condominiumId },
-        orderBy: { scheduledAt: 'desc' },
+        orderBy: { scheduledAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.assembly.count({ where: { condominiumId } }),
     ]);
 
-    return { assemblies, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      assemblies,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  async getById(id: string) {
+  async getById(id: string, actor: AssemblyActor) {
+    await this.ensureAssemblyAccess(id, actor);
     return prisma.assembly.findUniqueOrThrow({
       where: { id },
       include: {
@@ -46,7 +83,21 @@ export class AssemblyService {
     });
   }
 
-  async create(data: CreateAssemblyDTO) {
+  async create(data: CreateAssemblyDTO, actor: AssemblyActor) {
+    // Verify actor is a member of the condominium
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: {
+          userId: actor.userId,
+          condominiumId: data.condominiumId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      if (!membership)
+        throw new ForbiddenError("Acesso negado a este condomínio");
+    }
+
     const { votingItems, ...assemblyData } = data;
 
     const assembly = await prisma.assembly.create({
@@ -73,19 +124,34 @@ export class AssemblyService {
       unitUsers.map((u) =>
         NotificationService.enqueue({
           userId: u.userId,
-          type: 'ASSEMBLY',
-          title: 'Nova Assembleia Agendada',
-          message: `Uma nova assembleia "${data.title}" foi agendada para ${data.scheduledAt.toLocaleString('pt-BR')}.`,
+          type: "ASSEMBLY",
+          title: "Nova Assembleia Agendada",
+          message: `Uma nova assembleia "${data.title}" foi agendada para ${data.scheduledAt.toLocaleString("pt-BR")}.`,
           data: { assemblyId: assembly.id },
-          channels: ['inapp', 'email'],
-        })
-      )
+          channels: ["inapp", "email"],
+        }),
+      ),
     );
 
     return assembly;
   }
 
-  async updateStatus(id: string, status: AssemblyStatus) {
+  async updateStatus(id: string, status: AssemblyStatus, actor: AssemblyActor) {
+    await this.ensureAssemblyAccess(id, actor);
+
+    const current = await prisma.assembly.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+
+    const allowed = VALID_TRANSITIONS[current.status];
+    if (!allowed.includes(status)) {
+      throw new AppError(
+        `Transição inválida: ${current.status} → ${status}. Transições permitidas: ${allowed.join(", ") || "nenhuma"}`,
+        400,
+      );
+    }
+
     const assembly = await prisma.assembly.update({
       where: { id },
       data: {
@@ -106,20 +172,25 @@ export class AssemblyService {
         unitUsers.map((u) =>
           NotificationService.enqueue({
             userId: u.userId,
-            type: 'ASSEMBLY',
-            title: 'Assembleia Iniciada',
+            type: "ASSEMBLY",
+            title: "Assembleia Iniciada",
             message: `A assembleia "${assembly.title}" começou agora. Participe pelo link no sistema.`,
             data: { assemblyId: assembly.id },
-            channels: ['inapp'],
-          })
-        )
+            channels: ["inapp"],
+          }),
+        ),
       );
     }
 
     return assembly;
   }
 
-  async vote(votingItemId: string, userId: string, optionId: string) {
+  async vote(
+    votingItemId: string,
+    userId: string,
+    optionId: string,
+    actor: AssemblyActor,
+  ) {
     // Verificar se a assembleia está em progresso
     const votingItem = await prisma.assemblyVotingItem.findUniqueOrThrow({
       where: { id: votingItemId },
@@ -127,8 +198,13 @@ export class AssemblyService {
     });
 
     if (votingItem.assembly.status !== AssemblyStatus.IN_PROGRESS) {
-      throw new AppError('Votação só é permitida enquanto a assembleia está em progresso');
+      throw new AppError(
+        "Votação só é permitida enquanto a assembleia está em progresso",
+      );
     }
+
+    // Verificar membership do votante [A4]
+    await this.ensureAssemblyAccess(votingItem.assemblyId, actor);
 
     return prisma.assemblyVote.upsert({
       where: {
@@ -139,7 +215,12 @@ export class AssemblyService {
     });
   }
 
-  async registerAttendance(assemblyId: string, userId: string) {
+  async registerAttendance(
+    assemblyId: string,
+    userId: string,
+    actor: AssemblyActor,
+  ) {
+    await this.ensureAssemblyAccess(assemblyId, actor);
     return prisma.assemblyAttendee.upsert({
       where: {
         assemblyId_userId: { assemblyId, userId },
@@ -149,7 +230,8 @@ export class AssemblyService {
     });
   }
 
-  async getVotingResults(assemblyId: string) {
+  async getVotingResults(assemblyId: string, actor: AssemblyActor) {
+    await this.ensureAssemblyAccess(assemblyId, actor);
     const items = await prisma.assemblyVotingItem.findMany({
       where: { assemblyId },
       include: {

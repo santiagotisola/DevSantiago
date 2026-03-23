@@ -1,23 +1,38 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../../config/prisma';
-import { authenticate, authorize, authorizeCondominium } from '../../middleware/auth';
-import { validateRequest } from '../../utils/validateRequest';
-import { z } from 'zod';
-import { io } from '../../server';
-import { logger } from '../../config/logger';
+import { Router, Request, Response } from "express";
+import { prisma } from "../../config/prisma";
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from "../../middleware/auth";
+import { validateRequest } from "../../utils/validateRequest";
+import { z } from "zod";
+import { io } from "../../server";
+import { logger } from "../../config/logger";
+import {
+  NotFoundError,
+  ConflictError,
+  ForbiddenError,
+} from "../../middleware/errorHandler";
 
 const router = Router();
 router.use(authenticate);
 
 // Trigger panic alert
 router.post(
-  '/',
-  authorize('DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN', 'RESIDENT'),
+  "/",
+  authorize(
+    "DOORMAN",
+    "CONDOMINIUM_ADMIN",
+    "SYNDIC",
+    "SUPER_ADMIN",
+    "RESIDENT",
+  ),
   authorizeCondominium,
   async (req: Request, res: Response) => {
     const schema = z.object({
       condominiumId: z.string().uuid(),
-      notes: z.string().optional(),
+      notes: z.string().max(500).optional(),
     });
     const { condominiumId, notes } = validateRequest(schema, req.body);
     const user = req.user!;
@@ -31,45 +46,54 @@ router.post(
     });
 
     // Broadcast via WebSocket only to condominium staff
-    io.to(`condominium:${condominiumId}:staff`).emit('panic:alert', {
+    io.to(`condominium:${condominiumId}:staff`).emit("panic:alert", {
       alertId: alert.id,
       triggeredBy: user.userId,
-      triggeredByName: user.name ?? 'Usuário',
+      triggeredByName: user.name ?? "Usuário",
       condominiumId,
       triggeredAt: alert.createdAt,
     });
 
-    logger.warn(`PÂNICO acionado por ${user.userId} no condomínio ${condominiumId}`);
+    logger.warn(
+      `PÂNICO acionado por ${user.userId} no condomínio ${condominiumId}`,
+    );
     res.status(201).json({ success: true, data: alert });
   },
 );
 
 // Resolve panic alert
 router.post(
-  '/:id/resolve',
-  authorize('DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
+  "/:id/resolve",
+  authorize("DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const schema = z.object({ notes: z.string().optional() });
+    const schema = z.object({ notes: z.string().max(500).optional() });
     const { notes } = validateRequest(schema, req.body);
     const user = req.user!;
 
     const existing = await prisma.panicAlert.findUnique({
       where: { id: req.params.id },
-      select: { id: true, condominiumId: true },
+      select: { id: true, condominiumId: true, resolvedAt: true },
     });
     if (!existing) {
-      res.status(404).json({ success: false, message: 'Alerta não encontrado' });
-      return;
+      throw new NotFoundError("Alerta não encontrado");
     }
 
-    if (user.role !== 'SUPER_ADMIN') {
+    // H1 — impede sobrescrever resolução já realizada
+    if (existing.resolvedAt) {
+      throw new ConflictError("Este alerta já foi resolvido");
+    }
+
+    if (user.role !== "SUPER_ADMIN") {
       const membership = await prisma.condominiumUser.findFirst({
-        where: { userId: user.userId, condominiumId: existing.condominiumId, isActive: true },
+        where: {
+          userId: user.userId,
+          condominiumId: existing.condominiumId,
+          isActive: true,
+        },
         select: { id: true },
       });
       if (!membership) {
-        res.status(403).json({ success: false, message: 'Acesso negado a este condomínio' });
-        return;
+        throw new ForbiddenError("Acesso negado a este condomínio");
       }
     }
 
@@ -88,13 +112,13 @@ router.post(
 
 // List alerts for a condominium
 router.get(
-  '/:condominiumId',
-  authorize('DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
+  "/:condominiumId",
+  authorize("DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   authorizeCondominium,
   async (req: Request, res: Response) => {
     const alerts = await prisma.panicAlert.findMany({
       where: { condominiumId: req.params.condominiumId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 50,
     });
     res.json({ success: true, data: alerts });

@@ -13,46 +13,47 @@ class AssemblyController {
     }
     async getById(req, res) {
         const { id } = req.params;
-        const assembly = await assembly_service_1.assemblyService.getById(id);
+        const assembly = await assembly_service_1.assemblyService.getById(id, req.user);
         return res.json(assembly);
     }
     async create(req, res) {
         const { condominiumId } = req.params;
-        const userId = req.user.id;
+        const actor = req.user;
         const validData = (0, validateRequest_1.validateRequest)(assembly_validation_1.createAssemblySchema, { body: req.body });
         const { body } = validData;
         const assembly = await assembly_service_1.assemblyService.create({
             ...body,
             condominiumId,
-            createdBy: userId,
+            createdBy: actor.userId,
             scheduledAt: new Date(body.scheduledAt)
-        });
+        }, actor);
         return res.status(201).json(assembly);
     }
     async updateStatus(req, res) {
         const { id } = req.params;
+        const actor = req.user;
         const validData = (0, validateRequest_1.validateRequest)(assembly_validation_1.updateAssemblyStatusSchema, { body: req.body });
         const { status } = validData.body;
-        const assembly = await assembly_service_1.assemblyService.updateStatus(id, status);
+        const assembly = await assembly_service_1.assemblyService.updateStatus(id, status, actor);
         return res.json(assembly);
     }
     async vote(req, res) {
         const { itemId } = req.params;
+        const actor = req.user;
         const validData = (0, validateRequest_1.validateRequest)(assembly_validation_1.voteAssemblySchema, { body: req.body });
         const { optionId } = validData.body;
-        const userId = req.user.id;
-        const vote = await assembly_service_1.assemblyService.vote(itemId, userId, optionId);
+        const vote = await assembly_service_1.assemblyService.vote(itemId, actor.userId, optionId, actor);
         return res.json(vote);
     }
     async registerAttendance(req, res) {
         const { id } = req.params;
-        const userId = req.user.id;
-        const entry = await assembly_service_1.assemblyService.registerAttendance(id, userId);
+        const actor = req.user;
+        const entry = await assembly_service_1.assemblyService.registerAttendance(id, actor.userId, actor);
         return res.json(entry);
     }
     async getResults(req, res) {
         const { id } = req.params;
-        const results = await assembly_service_1.assemblyService.getVotingResults(id);
+        const results = await assembly_service_1.assemblyService.getVotingResults(id, req.user);
         return res.json(results);
     }
 }

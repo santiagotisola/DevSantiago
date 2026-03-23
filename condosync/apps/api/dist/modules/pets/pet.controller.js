@@ -8,33 +8,37 @@ class PetController {
     async list(req, res) {
         const { condominiumId } = req.params;
         const { page, limit } = req.query;
-        const result = await pet_service_1.petService.listByCondominium(condominiumId, Number(page) || 1, Number(limit) || 20);
+        const result = await pet_service_1.petService.listByCondominium(condominiumId, req.user, Number(page) || 1, Number(limit) || 20);
         return res.json(result);
     }
     async listByUnit(req, res) {
         const { unitId } = req.params;
-        const pets = await pet_service_1.petService.listByUnit(unitId);
+        const pets = await pet_service_1.petService.listByUnit(unitId, req.user);
         return res.json(pets);
     }
+    // I2 — passa actor
     async getById(req, res) {
         const { id } = req.params;
-        const pet = await pet_service_1.petService.getById(id);
+        const pet = await pet_service_1.petService.getById(id, req.user);
         return res.json(pet);
     }
+    // I1 — passa actor para validação de unitId
     async create(req, res) {
         const validData = (0, validateRequest_1.validateRequest)(pet_validation_1.createPetSchema, { body: req.body });
-        const pet = await pet_service_1.petService.create(validData.body);
+        const pet = await pet_service_1.petService.create(validData.body, req.user);
         return res.status(201).json(pet);
     }
+    // I2 — passa actor
     async update(req, res) {
         const { id } = req.params;
         const validData = (0, validateRequest_1.validateRequest)(pet_validation_1.updatePetSchema, { body: req.body });
-        const pet = await pet_service_1.petService.update(id, validData.body);
+        const pet = await pet_service_1.petService.update(id, validData.body, req.user);
         return res.json(pet);
     }
+    // I2 — passa actor
     async delete(req, res) {
         const { id } = req.params;
-        await pet_service_1.petService.delete(id);
+        await pet_service_1.petService.delete(id, req.user);
         return res.status(204).send();
     }
 }

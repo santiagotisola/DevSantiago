@@ -11,8 +11,8 @@ const createSchema = zod_1.z.object({
     condominiumId: zod_1.z.string().uuid(),
     unitId: zod_1.z.string().uuid().optional(),
     title: zod_1.z.string().min(3),
-    description: zod_1.z.string().min(10),
-    category: zod_1.z.string().min(2),
+    description: zod_1.z.string().optional().default(""),
+    category: zod_1.z.string().min(2).optional().default("Geral"),
     location: zod_1.z.string().optional(),
     priority: zod_1.z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
     photoUrls: zod_1.z.array(zod_1.z.string().url()).optional(),
@@ -58,7 +58,15 @@ router.get("/condominium/:condominiumId", (0, auth_1.authorize)("CONDOMINIUM_ADM
 router.post("/", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     const data = (0, validateRequest_1.validateRequest)(createSchema, req.body);
     const order = await maintenance_service_1.maintenanceService.create({
-        ...data,
+        condominiumId: data.condominiumId,
+        title: data.title,
+        description: data.description ?? "",
+        category: data.category ?? "Geral",
+        unitId: data.unitId,
+        location: data.location,
+        priority: data.priority,
+        photoUrls: data.photoUrls,
+        estimatedCost: data.estimatedCost,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
     }, req.user.userId, req.user);
     res.status(201).json({ success: true, data: { order } });

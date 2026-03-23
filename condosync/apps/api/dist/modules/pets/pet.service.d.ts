@@ -1,5 +1,39 @@
+import { UserRole } from '@prisma/client';
+type PetActor = {
+    userId: string;
+    role: UserRole;
+};
+interface CreatePetDTO {
+    name: string;
+    type: string;
+    breed?: string;
+    size?: string;
+    gender?: string;
+    birthDate?: string | null;
+    color?: string;
+    weight?: number;
+    lastVaccination?: string | null;
+    notes?: string;
+    unitId: string;
+}
+interface UpdatePetDTO {
+    name?: string;
+    type?: string;
+    breed?: string;
+    size?: string;
+    gender?: string;
+    birthDate?: string | null;
+    color?: string;
+    weight?: number;
+    lastVaccination?: string | null;
+    notes?: string;
+    unitId?: string;
+    isActive?: boolean;
+}
 export declare class PetService {
-    listByCondominium(condominiumId: string, page?: number, limit?: number): Promise<{
+    private ensurePetAccess;
+    private ensureUnitAccess;
+    listByCondominium(condominiumId: string, actor: PetActor, page?: number, limit?: number): Promise<{
         pets: ({
             unit: {
                 identifier: string;
@@ -30,7 +64,7 @@ export declare class PetService {
             totalPages: number;
         };
     }>;
-    listByUnit(unitId: string): Promise<{
+    listByUnit(unitId: string, actor: PetActor): Promise<{
         type: string;
         id: string;
         name: string;
@@ -48,7 +82,7 @@ export declare class PetService {
         weight: number | null;
         lastVaccination: Date | null;
     }[]>;
-    getById(id: string): Promise<{
+    getById(id: string, actor: PetActor): Promise<{
         unit: {
             type: string | null;
             status: import(".prisma/client").$Enums.UnitStatus;
@@ -83,7 +117,7 @@ export declare class PetService {
         weight: number | null;
         lastVaccination: Date | null;
     }>;
-    create(data: any): Promise<{
+    create(data: CreatePetDTO, actor: PetActor): Promise<{
         type: string;
         id: string;
         name: string;
@@ -101,7 +135,7 @@ export declare class PetService {
         weight: number | null;
         lastVaccination: Date | null;
     }>;
-    update(id: string, data: any): Promise<{
+    update(id: string, data: UpdatePetDTO, actor: PetActor): Promise<{
         type: string;
         id: string;
         name: string;
@@ -119,7 +153,7 @@ export declare class PetService {
         weight: number | null;
         lastVaccination: Date | null;
     }>;
-    delete(id: string): Promise<{
+    delete(id: string, actor: PetActor): Promise<{
         type: string;
         id: string;
         name: string;
@@ -139,4 +173,5 @@ export declare class PetService {
     }>;
 }
 export declare const petService: PetService;
+export {};
 //# sourceMappingURL=pet.service.d.ts.map

@@ -66,9 +66,15 @@ exports.io = new socket_io_1.Server(httpServer, {
 });
 exports.io.use(async (socket, next) => {
     try {
-        const authToken = typeof socket.handshake.auth?.token === "string" ? socket.handshake.auth.token : "";
-        const headerValue = typeof socket.handshake.headers.authorization === "string" ? socket.handshake.headers.authorization : "";
-        const tokenFromHeader = headerValue.startsWith("Bearer ") ? headerValue.slice(7) : "";
+        const authToken = typeof socket.handshake.auth?.token === "string"
+            ? socket.handshake.auth.token
+            : "";
+        const headerValue = typeof socket.handshake.headers.authorization === "string"
+            ? socket.handshake.headers.authorization
+            : "";
+        const tokenFromHeader = headerValue.startsWith("Bearer ")
+            ? headerValue.slice(7)
+            : "";
         const token = authToken || tokenFromHeader;
         if (!token) {
             return next(new Error("Unauthorized"));

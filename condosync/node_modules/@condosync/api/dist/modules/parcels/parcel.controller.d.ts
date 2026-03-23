@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 export declare class ParcelController {
     list(req: Request, res: Response): Promise<void>;
     register(req: Request, res: Response): Promise<void>;

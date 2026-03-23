@@ -1,5 +1,29 @@
+import { LostAndFoundStatus, UserRole } from '@prisma/client';
+type LostActor = {
+    userId: string;
+    role: UserRole;
+};
+interface CreateLostAndFoundDTO {
+    title: string;
+    description?: string;
+    category: string;
+    place?: string;
+    status?: LostAndFoundStatus;
+    foundDate?: string | null;
+    lostDate?: string | null;
+}
+interface UpdateLostAndFoundDTO {
+    title?: string;
+    description?: string;
+    category?: string;
+    place?: string;
+    status?: LostAndFoundStatus;
+    returnedTo?: string | null;
+    returnedAt?: string | null;
+}
 export declare class LostAndFoundService {
-    list(condominiumId: string, page?: number, limit?: number): Promise<{
+    private ensureAccess;
+    list(condominiumId: string, actor: LostActor, page?: number, limit?: number): Promise<{
         items: {
             status: import(".prisma/client").$Enums.LostAndFoundStatus;
             id: string;
@@ -24,7 +48,7 @@ export declare class LostAndFoundService {
             totalPages: number;
         };
     }>;
-    getById(id: string): Promise<{
+    getById(id: string, actor: LostActor): Promise<{
         createdBy: {
             name: string;
         };
@@ -45,7 +69,7 @@ export declare class LostAndFoundService {
         returnedTo: string | null;
         createdById: string;
     }>;
-    create(data: any, createdById: string, condominiumId: string): Promise<{
+    create(data: CreateLostAndFoundDTO, createdById: string, condominiumId: string): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
         createdAt: Date;
@@ -62,7 +86,7 @@ export declare class LostAndFoundService {
         returnedTo: string | null;
         createdById: string;
     }>;
-    update(id: string, data: any): Promise<{
+    update(id: string, data: UpdateLostAndFoundDTO, actor: LostActor): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
         createdAt: Date;
@@ -79,7 +103,7 @@ export declare class LostAndFoundService {
         returnedTo: string | null;
         createdById: string;
     }>;
-    delete(id: string): Promise<{
+    delete(id: string, actor: LostActor): Promise<{
         status: import(".prisma/client").$Enums.LostAndFoundStatus;
         id: string;
         createdAt: Date;
@@ -98,4 +122,5 @@ export declare class LostAndFoundService {
     }>;
 }
 export declare const lostAndFoundService: LostAndFoundService;
+export {};
 //# sourceMappingURL=lost-and-found.service.d.ts.map

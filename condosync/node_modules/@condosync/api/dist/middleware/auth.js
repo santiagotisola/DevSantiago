@@ -11,8 +11,8 @@ const errorHandler_1 = require("./errorHandler");
 const client_1 = require("@prisma/client");
 const authenticate = async (req, _res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-        throw new errorHandler_1.UnauthorizedError('Token de acesso não fornecido');
+    if (!authHeader?.startsWith("Bearer ")) {
+        throw new errorHandler_1.UnauthorizedError("Token de acesso não fornecido");
     }
     const token = authHeader.slice(7);
     const decoded = jsonwebtoken_1.default.verify(token, env_1.env.JWT_SECRET);
@@ -22,7 +22,7 @@ const authenticate = async (req, _res, next) => {
         select: { id: true, isActive: true, role: true },
     });
     if (!user || !user.isActive) {
-        throw new errorHandler_1.UnauthorizedError('Usuário inativo ou não encontrado');
+        throw new errorHandler_1.UnauthorizedError("Usuário inativo ou não encontrado");
     }
     req.user = decoded;
     next();
@@ -34,7 +34,7 @@ const authorize = (...roles) => {
             throw new errorHandler_1.UnauthorizedError();
         }
         if (!roles.includes(req.user.role)) {
-            throw new errorHandler_1.ForbiddenError('Você não tem permissão para esta ação');
+            throw new errorHandler_1.ForbiddenError("Você não tem permissão para esta ação");
         }
         next();
     };
@@ -43,7 +43,9 @@ exports.authorize = authorize;
 const authorizeCondominium = async (req, _res, next) => {
     if (!req.user)
         throw new errorHandler_1.UnauthorizedError();
-    const condominiumId = req.params.condominiumId || req.body.condominiumId || req.query.condominiumId;
+    const condominiumId = req.params.condominiumId ||
+        req.body.condominiumId ||
+        req.query.condominiumId;
     if (!condominiumId)
         return next();
     // Super admin tem acesso total
@@ -54,7 +56,7 @@ const authorizeCondominium = async (req, _res, next) => {
         where: { userId: req.user.userId, condominiumId, isActive: true },
     });
     if (!membership) {
-        throw new errorHandler_1.ForbiddenError('Acesso negado a este condomínio');
+        throw new errorHandler_1.ForbiddenError("Acesso negado a este condomínio");
     }
     req.user.condominiumId = condominiumId;
     req.user.role = membership.role;

@@ -48,30 +48,30 @@ class ParcelController {
     }
     async register(req, res) {
         const data = (0, validateRequest_1.validateRequest)(registerSchema, req.body);
-        const parcel = await parcel_service_1.parcelService.register(data, req.user.userId);
+        const parcel = await parcel_service_1.parcelService.register(data, req.user.userId, req.user);
         res.status(201).json({ success: true, data: { parcel } });
     }
     async confirmPickup(req, res) {
         const { pickedUpBy, signature } = (0, validateRequest_1.validateRequest)(pickupSchema, req.body);
-        const parcel = await parcel_service_1.parcelService.confirmPickup(req.params.id, pickedUpBy, signature);
+        const parcel = await parcel_service_1.parcelService.confirmPickup(req.params.id, pickedUpBy, req.user, signature);
         res.json({ success: true, data: { parcel } });
     }
     async update(req, res) {
         const data = (0, validateRequest_1.validateRequest)(updateSchema, req.body);
-        const parcel = await parcel_service_1.parcelService.update(req.params.id, data);
+        const parcel = await parcel_service_1.parcelService.update(req.params.id, req.user, data);
         res.json({ success: true, data: { parcel } });
     }
     async cancel(req, res) {
         const { reason } = (0, validateRequest_1.validateRequest)(cancelSchema, req.body);
-        const parcel = await parcel_service_1.parcelService.cancel(req.params.id, reason);
+        const parcel = await parcel_service_1.parcelService.cancel(req.params.id, req.user, reason);
         res.json({ success: true, data: { parcel } });
     }
     async findById(req, res) {
-        const parcel = await parcel_service_1.parcelService.findById(req.params.id);
+        const parcel = await parcel_service_1.parcelService.findById(req.params.id, req.user);
         res.json({ success: true, data: { parcel } });
     }
     async pendingByUnit(req, res) {
-        const parcels = await parcel_service_1.parcelService.pendingByUnit(req.params.unitId);
+        const parcels = await parcel_service_1.parcelService.pendingByUnit(req.params.unitId, req.user);
         res.json({ success: true, data: { parcels } });
     }
 }

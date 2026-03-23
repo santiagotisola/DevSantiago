@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const crypto_1 = require("crypto");
 const prisma_1 = require("../../config/prisma");
 const auth_1 = require("../../middleware/auth");
 const errorHandler_1 = require("../../middleware/errorHandler");
@@ -14,7 +15,21 @@ const resident_service_1 = require("./resident.service");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 // Dependentes de uma unidade
-router.get('/unit/:unitId/dependents', async (req, res) => {
+router.get("/unit/:unitId/dependents", async (req, res) => {
+    const unit = await prisma_1.prisma.unit.findUniqueOrThrow({
+        where: { id: req.params.unitId },
+    });
+    if (req.user.role !== "SUPER_ADMIN") {
+        const membership = await prisma_1.prisma.condominiumUser.findFirst({
+            where: {
+                userId: req.user.userId,
+                condominiumId: unit.condominiumId,
+                isActive: true,
+            },
+        });
+        if (!membership)
+            throw new errorHandler_1.ForbiddenError("Acesso negado a esta unidade");
+    }
     const dependents = await prisma_1.prisma.dependent.findMany({
         where: { unitId: req.params.unitId, isActive: true },
     });
@@ -28,33 +43,54 @@ const dependentSchema = zod_1.z.object({
     cpf: zod_1.z.string().optional(),
     photoUrl: zod_1.z.string().url().optional(),
 });
-router.post('/dependents', async (req, res) => {
+router.post("/dependents", async (req, res) => {
     const data = (0, validateRequest_1.validateRequest)(dependentSchema, req.body);
+    // Valida existência da unidade antes de persistir (B2)
+    await prisma_1.prisma.unit.findUniqueOrThrow({ where: { id: data.unitId } });
     const dependent = await prisma_1.prisma.dependent.create({
-        data: { ...data, birthDate: data.birthDate ? new Date(data.birthDate) : undefined },
+        data: {
+            ...data,
+            birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+        },
     });
     res.status(201).json({ success: true, data: { dependent } });
 });
-router.delete('/dependents/:id', async (req, res) => {
-    await prisma_1.prisma.dependent.update({ where: { id: req.params.id }, data: { isActive: false } });
+router.delete("/dependents/:id", async (req, res) => {
+    await prisma_1.prisma.dependent.update({
+        where: { id: req.params.id },
+        data: { isActive: false },
+    });
     res.json({ success: true });
 });
 // Residentes de um condomínio
-router.get('/condominium/:condominiumId', async (req, res) => {
+router.get("/condominium/:condominiumId", async (req, res) => {
     const residents = await prisma_1.prisma.condominiumUser.findMany({
-        where: { condominiumId: req.params.condominiumId, role: 'RESIDENT', isActive: true },
+        where: {
+            condominiumId: req.params.condominiumId,
+            role: "RESIDENT",
+            isActive: true,
+        },
         include: {
-            user: { select: { id: true, name: true, email: true, phone: true, avatarUrl: true, cpf: true } },
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    avatarUrl: true,
+                    cpf: true,
+                },
+            },
             unit: {
                 select: {
                     id: true,
                     identifier: true,
                     block: true,
-                    dependents: { where: { isActive: true }, orderBy: { name: 'asc' } },
+                    dependents: { where: { isActive: true }, orderBy: { name: "asc" } },
                 },
             },
         },
-        orderBy: { joinedAt: 'asc' },
+        orderBy: { joinedAt: "asc" },
     });
     res.json({ success: true, data: { residents } });
 });
@@ -66,13 +102,14 @@ const createResidentSchema = zod_1.z.object({
     unitId: zod_1.z.string().uuid(),
     condominiumId: zod_1.z.string().uuid(),
 });
-router.post('/', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+router.post("/", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     const data = (0, validateRequest_1.validateRequest)(createResidentSchema, req.body);
+    resident_service_1.residentService.assertResidentRoleRequiresUnit("RESIDENT", data.unitId);
     await resident_service_1.residentService.assertResidentUnitBelongsToCondominium(data.condominiumId, data.unitId);
     // Cria ou reutiliza usuário pelo e-mail
     let user = await prisma_1.prisma.user.findUnique({ where: { email: data.email } });
     if (!user) {
-        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        const tempPassword = (0, crypto_1.randomBytes)(8).toString("base64url") + "A1!";
         const passwordHash = await bcryptjs_1.default.hash(tempPassword, 10);
         user = await prisma_1.prisma.user.create({
             data: {
@@ -81,7 +118,7 @@ router.post('/', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
                 ...(data.phone ? { phone: data.phone } : {}),
                 ...(data.cpf ? { cpf: data.cpf } : {}),
                 passwordHash,
-                role: 'RESIDENT',
+                role: "RESIDENT",
             },
         });
     }
@@ -101,7 +138,10 @@ router.post('/', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
         where: { userId: user.id, condominiumId: data.condominiumId },
     });
     if (existing) {
-        res.status(409).json({ success: false, message: 'Morador já vinculado a este condomínio' });
+        res.status(409).json({
+            success: false,
+            message: "Morador já vinculado a este condomínio",
+        });
         return;
     }
     const resident = await prisma_1.prisma.condominiumUser.create({
@@ -109,10 +149,12 @@ router.post('/', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADM
             userId: user.id,
             condominiumId: data.condominiumId,
             unitId: data.unitId,
-            role: 'RESIDENT',
+            role: "RESIDENT",
         },
         include: {
-            user: { select: { id: true, name: true, email: true, phone: true, cpf: true } },
+            user: {
+                select: { id: true, name: true, email: true, phone: true, cpf: true },
+            },
             unit: { select: { id: true, identifier: true, block: true } },
         },
     });
@@ -122,21 +164,23 @@ const updateResidentSchema = zod_1.z.object({
     name: zod_1.z.string().min(2).optional(),
     phone: zod_1.z.string().optional(),
     cpf: zod_1.z.string().optional(),
-    unitId: zod_1.z.string().uuid(),
+    unitId: zod_1.z.string().uuid().optional(),
 });
 // Atualiza dados do morador (user + unidade)
-router.patch('/:id', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+router.patch("/:id", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     const data = (0, validateRequest_1.validateRequest)(updateResidentSchema, req.body);
     const condominiumUser = await prisma_1.prisma.condominiumUser.findUniqueOrThrow({
         where: { id: req.params.id },
         include: { user: true },
     });
-    if (condominiumUser.role !== 'RESIDENT') {
-        throw new errorHandler_1.ValidationError('Dados invalidos', {
-            id: ['O registro informado nao pertence a um morador.'],
+    if (condominiumUser.role !== "RESIDENT") {
+        throw new errorHandler_1.ValidationError("Dados invalidos", {
+            id: ["O registro informado nao pertence a um morador."],
         });
     }
-    await resident_service_1.residentService.assertResidentUnitBelongsToCondominium(condominiumUser.condominiumId, data.unitId);
+    if (data.unitId) {
+        await resident_service_1.residentService.assertResidentUnitBelongsToCondominium(condominiumUser.condominiumId, data.unitId);
+    }
     // Atualiza dados do usuário
     if (data.name || data.phone !== undefined || data.cpf !== undefined) {
         await prisma_1.prisma.user.update({
@@ -151,16 +195,18 @@ router.patch('/:id', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER
     // Atualiza unidade
     const updated = await prisma_1.prisma.condominiumUser.update({
         where: { id: req.params.id },
-        data: { unitId: data.unitId },
+        data: { ...(data.unitId ? { unitId: data.unitId } : {}) },
         include: {
-            user: { select: { id: true, name: true, email: true, phone: true, cpf: true } },
+            user: {
+                select: { id: true, name: true, email: true, phone: true, cpf: true },
+            },
             unit: { select: { id: true, identifier: true, block: true } },
         },
     });
     res.json({ success: true, data: { resident: updated } });
 });
 // Remove morador do condomínio (desativa vínculo)
-router.delete('/:id', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+router.delete("/:id", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     await prisma_1.prisma.condominiumUser.update({
         where: { id: req.params.id },
         data: { isActive: false },

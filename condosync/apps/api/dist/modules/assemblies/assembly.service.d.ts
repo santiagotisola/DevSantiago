@@ -1,4 +1,8 @@
-import { AssemblyStatus } from '@prisma/client';
+import { AssemblyStatus, UserRole } from '@prisma/client';
+type AssemblyActor = {
+    userId: string;
+    role: UserRole;
+};
 export interface CreateAssemblyDTO {
     condominiumId: string;
     title: string;
@@ -16,6 +20,7 @@ export interface CreateAssemblyDTO {
     }[];
 }
 export declare class AssemblyService {
+    private ensureAssemblyAccess;
     list(condominiumId: string, page?: number, limit?: number): Promise<{
         assemblies: {
             status: import(".prisma/client").$Enums.AssemblyStatus;
@@ -37,7 +42,7 @@ export declare class AssemblyService {
         limit: number;
         totalPages: number;
     }>;
-    getById(id: string): Promise<{
+    getById(id: string, actor: AssemblyActor): Promise<{
         _count: {
             attendees: number;
         };
@@ -67,7 +72,7 @@ export declare class AssemblyService {
         finishedAt: Date | null;
         minutesUrl: string | null;
     }>;
-    create(data: CreateAssemblyDTO): Promise<{
+    create(data: CreateAssemblyDTO, actor: AssemblyActor): Promise<{
         votingItems: {
             options: import("@prisma/client/runtime/library").JsonValue;
             id: string;
@@ -90,7 +95,7 @@ export declare class AssemblyService {
         finishedAt: Date | null;
         minutesUrl: string | null;
     }>;
-    updateStatus(id: string, status: AssemblyStatus): Promise<{
+    updateStatus(id: string, status: AssemblyStatus, actor: AssemblyActor): Promise<{
         status: import(".prisma/client").$Enums.AssemblyStatus;
         id: string;
         createdAt: Date;
@@ -105,21 +110,21 @@ export declare class AssemblyService {
         finishedAt: Date | null;
         minutesUrl: string | null;
     }>;
-    vote(votingItemId: string, userId: string, optionId: string): Promise<{
+    vote(votingItemId: string, userId: string, optionId: string, actor: AssemblyActor): Promise<{
         id: string;
         userId: string;
         votedAt: Date;
         optionId: string;
         votingItemId: string;
     }>;
-    registerAttendance(assemblyId: string, userId: string): Promise<{
+    registerAttendance(assemblyId: string, userId: string, actor: AssemblyActor): Promise<{
         id: string;
         userId: string;
         joinedAt: Date;
         assemblyId: string;
         leftAt: Date | null;
     }>;
-    getVotingResults(assemblyId: string): Promise<{
+    getVotingResults(assemblyId: string, actor: AssemblyActor): Promise<{
         id: string;
         title: string;
         results: {
@@ -131,4 +136,5 @@ export declare class AssemblyService {
     }[]>;
 }
 export declare const assemblyService: AssemblyService;
+export {};
 //# sourceMappingURL=assembly.service.d.ts.map

@@ -55,8 +55,29 @@ class MaintenanceService {
     }
     async create(data, requestedBy, actor) {
         await this.ensureCondominiumAccess(actor.userId, actor.role, data.condominiumId);
+        if (data.unitId) {
+            const unit = await prisma_1.prisma.unit.findFirst({
+                where: { id: data.unitId, condominiumId: data.condominiumId },
+            });
+            if (!unit) {
+                throw new errorHandler_1.ForbiddenError("Unidade não pertence a este condomínio");
+            }
+        }
         return prisma_1.prisma.serviceOrder.create({
-            data: { ...data, requestedBy, status: client_1.ServiceOrderStatus.OPEN },
+            data: {
+                condominiumId: data.condominiumId,
+                title: data.title,
+                description: data.description ?? "",
+                category: data.category,
+                requestedBy,
+                status: client_1.ServiceOrderStatus.OPEN,
+                ...(data.unitId ? { unitId: data.unitId } : {}),
+                ...(data.location ? { location: data.location } : {}),
+                ...(data.priority ? { priority: data.priority } : {}),
+                ...(data.photoUrls ? { photoUrls: data.photoUrls } : {}),
+                ...(data.estimatedCost ? { estimatedCost: data.estimatedCost } : {}),
+                ...(data.scheduledAt ? { scheduledAt: data.scheduledAt } : {}),
+            },
         });
     }
     async updateStatus(id, status, actor, extra) {
@@ -79,6 +100,14 @@ class MaintenanceService {
     }
     async assign(id, actor, serviceProviderId, assignedTo) {
         await this.ensureOrderAccess(id, actor);
+        const order = await prisma_1.prisma.serviceOrder.findUniqueOrThrow({
+            where: { id },
+            select: { status: true },
+        });
+        if (order.status === client_1.ServiceOrderStatus.COMPLETED ||
+            order.status === client_1.ServiceOrderStatus.CANCELED) {
+            throw new errorHandler_1.AppError(`Não é possível atribuir uma ordem com status ${order.status}`, 422);
+        }
         return prisma_1.prisma.serviceOrder.update({
             where: { id },
             data: {
@@ -119,6 +148,8 @@ class MaintenanceService {
             case "anual":
                 d.setFullYear(d.getFullYear() + 1);
                 break;
+            default:
+                throw new errorHandler_1.AppError(`Frequência de manutenção inválida: ${frequency}`, 422);
         }
         return d;
     }

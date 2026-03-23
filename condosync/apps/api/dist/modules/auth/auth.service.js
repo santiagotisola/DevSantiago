@@ -23,23 +23,32 @@ class AuthService {
         return { accessToken, refreshToken };
     }
     async register(data) {
-        const existing = await prisma_1.prisma.user.findUnique({ where: { email: data.email } });
+        const existing = await prisma_1.prisma.user.findUnique({
+            where: { email: data.email },
+        });
         if (existing)
-            throw new errorHandler_1.ConflictError('Este e-mail já está cadastrado');
+            throw new errorHandler_1.ConflictError("Este e-mail já está cadastrado");
         if (data.cpf) {
-            const cpfExists = await prisma_1.prisma.user.findUnique({ where: { cpf: data.cpf } });
+            const cpfExists = await prisma_1.prisma.user.findUnique({
+                where: { cpf: data.cpf },
+            });
             if (cpfExists)
-                throw new errorHandler_1.ConflictError('Este CPF já está cadastrado');
+                throw new errorHandler_1.ConflictError("Este CPF já está cadastrado");
         }
         const passwordHash = await bcryptjs_1.default.hash(data.password, Number(env_1.env.BCRYPT_ROUNDS));
         const user = await prisma_1.prisma.user.create({
             data: {
                 ...data,
                 passwordHash,
-                role: 'RESIDENT',
+                role: "RESIDENT",
             },
             select: {
-                id: true, name: true, email: true, phone: true, role: true, createdAt: true,
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                createdAt: true,
             },
         });
         return { user };
@@ -48,22 +57,33 @@ class AuthService {
         const user = await prisma_1.prisma.user.findUnique({
             where: { email: data.email },
             select: {
-                id: true, name: true, email: true, role: true,
-                passwordHash: true, isActive: true, avatarUrl: true,
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                passwordHash: true,
+                isActive: true,
+                avatarUrl: true,
                 condominiumUsers: {
                     where: { isActive: true },
-                    include: { condominium: { select: { id: true, name: true, logoUrl: true } } },
+                    include: {
+                        condominium: { select: { id: true, name: true, logoUrl: true } },
+                    },
                 },
             },
         });
         if (!user)
-            throw new errorHandler_1.UnauthorizedError('E-mail ou senha inválidos');
+            throw new errorHandler_1.UnauthorizedError("E-mail ou senha inválidos");
         if (!user.isActive)
-            throw new errorHandler_1.UnauthorizedError('Conta desativada. Contate o suporte.');
+            throw new errorHandler_1.UnauthorizedError("Conta desativada. Contate o suporte.");
         const isValidPassword = await bcryptjs_1.default.compare(data.password, user.passwordHash);
         if (!isValidPassword)
-            throw new errorHandler_1.UnauthorizedError('E-mail ou senha inválidos');
-        const payload = { userId: user.id, role: user.role, name: user.name };
+            throw new errorHandler_1.UnauthorizedError("E-mail ou senha inválidos");
+        const payload = {
+            userId: user.id,
+            role: user.role,
+            name: user.name,
+        };
         const { accessToken, refreshToken } = this.generateTokens(payload);
         // Salvar refresh token
         const expiresAt = new Date();
@@ -86,7 +106,7 @@ class AuthService {
     async refreshTokens(token) {
         const stored = await prisma_1.prisma.refreshToken.findUnique({ where: { token } });
         if (!stored || stored.expiresAt < new Date()) {
-            throw new errorHandler_1.UnauthorizedError('Refresh token inválido ou expirado');
+            throw new errorHandler_1.UnauthorizedError("Refresh token inválido ou expirado");
         }
         const decoded = jsonwebtoken_1.default.verify(token, env_1.env.JWT_REFRESH_SECRET);
         const payload = { userId: decoded.userId, role: decoded.role };
@@ -104,10 +124,15 @@ class AuthService {
         await prisma_1.prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
     }
     async requestPasswordReset(email) {
+        const start = Date.now();
         const user = await prisma_1.prisma.user.findUnique({ where: { email } });
         // Não revelar se o e-mail existe
-        if (!user)
+        if (!user) {
+            // Constant-time response to prevent timing-based email enumeration
+            const elapsed = Date.now() - start;
+            await new Promise((r) => setTimeout(r, Math.max(0, 200 - elapsed)));
             return;
+        }
         const token = (0, uuid_1.v4)();
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 2);
@@ -150,11 +175,14 @@ class AuthService {
       </div>
     `;
         try {
-            await (0, mail_1.sendMail)(user.email, 'CondoSync — Redefinição de Senha', htmlContent);
+            await (0, mail_1.sendMail)(user.email, "CondoSync — Redefinição de Senha", htmlContent);
         }
         catch (error) {
             // Log mas não falha — evita revelar se o e-mail existe via tempo de resposta
-            logger_1.logger.error('Falha ao enviar e-mail de reset de senha', { userId: user.id, error });
+            logger_1.logger.error("Falha ao enviar e-mail de reset de senha", {
+                userId: user.id,
+                error,
+            });
         }
     }
     async resetPassword(token, newPassword) {
@@ -162,11 +190,17 @@ class AuthService {
             where: { token, used: false, expiresAt: { gt: new Date() } },
         });
         if (!reset)
-            throw new errorHandler_1.AppError('Token inválido ou expirado', 400);
+            throw new errorHandler_1.AppError("Token inválido ou expirado", 400);
         const passwordHash = await bcryptjs_1.default.hash(newPassword, Number(env_1.env.BCRYPT_ROUNDS));
         await prisma_1.prisma.$transaction([
-            prisma_1.prisma.user.update({ where: { id: reset.userId }, data: { passwordHash } }),
-            prisma_1.prisma.passwordReset.update({ where: { id: reset.id }, data: { used: true } }),
+            prisma_1.prisma.user.update({
+                where: { id: reset.userId },
+                data: { passwordHash },
+            }),
+            prisma_1.prisma.passwordReset.update({
+                where: { id: reset.id },
+                data: { used: true },
+            }),
             prisma_1.prisma.refreshToken.deleteMany({ where: { userId: reset.userId } }),
         ]);
     }
@@ -174,9 +208,13 @@ class AuthService {
         const user = await prisma_1.prisma.user.findUniqueOrThrow({ where: { id: userId } });
         const isValid = await bcryptjs_1.default.compare(currentPassword, user.passwordHash);
         if (!isValid)
-            throw new errorHandler_1.AppError('Senha atual incorreta', 400);
+            throw new errorHandler_1.AppError("Senha atual incorreta", 400);
         const passwordHash = await bcryptjs_1.default.hash(newPassword, Number(env_1.env.BCRYPT_ROUNDS));
-        await prisma_1.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+        await prisma_1.prisma.$transaction([
+            prisma_1.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+            // Invalidar todas as sessões activas [B2]
+            prisma_1.prisma.refreshToken.deleteMany({ where: { userId } }),
+        ]);
     }
 }
 exports.AuthService = AuthService;

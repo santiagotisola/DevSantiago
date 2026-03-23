@@ -9,7 +9,13 @@ const createSchema = zod_1.z.object({
     name: zod_1.z.string().min(2),
     document: zod_1.z.string().optional(),
     documentType: zod_1.z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
-    phone: zod_1.z.string().refine((v) => { const d = v.replace(/\D/g, ''); return d.length >= 10 && d.length <= 11; }, 'Telefone inválido. Use (XX) XXXXX-XXXX').optional(),
+    phone: zod_1.z
+        .string()
+        .refine((v) => {
+        const d = v.replace(/\D/g, "");
+        return d.length >= 10 && d.length <= 11;
+    }, "Telefone inválido. Use (XX) XXXXX-XXXX")
+        .optional(),
     company: zod_1.z.string().optional(),
     reason: zod_1.z.string().optional(),
     scheduledAt: zod_1.z.string().datetime().optional(),
@@ -19,7 +25,13 @@ const updateSchema = zod_1.z.object({
     name: zod_1.z.string().min(2).optional(),
     document: zod_1.z.string().optional(),
     documentType: zod_1.z.enum(["CPF", "RG", "CNH", "PASSPORT"]).optional(),
-    phone: zod_1.z.string().refine((v) => { const d = v.replace(/\D/g, ''); return d.length >= 10 && d.length <= 11; }, 'Telefone inválido. Use (XX) XXXXX-XXXX').optional(),
+    phone: zod_1.z
+        .string()
+        .refine((v) => {
+        const d = v.replace(/\D/g, "");
+        return d.length >= 10 && d.length <= 11;
+    }, "Telefone inválido. Use (XX) XXXXX-XXXX")
+        .optional(),
     company: zod_1.z.string().optional(),
     reason: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
@@ -49,11 +61,11 @@ class VisitorController {
     }
     async registerEntry(req, res) {
         const { photoUrl } = (0, validateRequest_1.validateRequest)(entrySchema, req.body);
-        const visitor = await visitor_service_1.visitorService.registerEntry(req.params.id, req.user.userId, photoUrl);
+        const visitor = await visitor_service_1.visitorService.registerEntry(req.params.id, req.user.userId, req.user, photoUrl);
         res.json({ success: true, data: { visitor } });
     }
     async registerExit(req, res) {
-        const visitor = await visitor_service_1.visitorService.registerExit(req.params.id, req.user.userId);
+        const visitor = await visitor_service_1.visitorService.registerExit(req.params.id, req.user.userId, req.user);
         res.json({ success: true, data: { visitor } });
     }
     async authorize(req, res) {
@@ -63,14 +75,14 @@ class VisitorController {
     }
     async update(req, res) {
         const data = (0, validateRequest_1.validateRequest)(updateSchema, req.body);
-        const visitor = await visitor_service_1.visitorService.update(req.params.id, {
+        const visitor = await visitor_service_1.visitorService.update(req.params.id, req.user, {
             ...data,
             scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
         });
         res.json({ success: true, data: { visitor } });
     }
     async findById(req, res) {
-        const visitor = await visitor_service_1.visitorService.findById(req.params.id);
+        const visitor = await visitor_service_1.visitorService.findById(req.params.id, req.user);
         res.json({ success: true, data: { visitor } });
     }
     async historyByUnit(req, res) {

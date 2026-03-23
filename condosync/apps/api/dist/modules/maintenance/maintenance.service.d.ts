@@ -3,7 +3,7 @@ export interface CreateServiceOrderDTO {
     condominiumId: string;
     unitId?: string;
     title: string;
-    description: string;
+    description?: string;
     category: string;
     location?: string;
     priority?: ServiceOrderPriority;

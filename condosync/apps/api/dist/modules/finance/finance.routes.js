@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const zod_1 = require("zod");
 const finance_service_1 = require("./finance.service");
 const auth_1 = require("../../middleware/auth");
 const validateRequest_1 = require("../../utils/validateRequest");
@@ -14,7 +15,7 @@ router.get("/accounts/:condominiumId", async (req, res) => {
     res.json({ success: true, data: { accounts } });
 });
 router.get("/accounts/:accountId/balance", async (req, res) => {
-    const data = await finance_service_1.financeService.getAccountBalance(req.params.accountId);
+    const data = await finance_service_1.financeService.getAccountBalance(req.params.accountId, req.user);
     res.json({ success: true, data });
 });
 // Cobranças
@@ -34,7 +35,7 @@ router.post("/charges", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SU
 });
 router.patch("/charges/:id", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     const data = (0, validateRequest_1.validateRequest)(finance_validation_1.updateChargeSchema, req.body);
-    const charge = await finance_service_1.financeService.updateCharge(req.params.id, {
+    const charge = await finance_service_1.financeService.updateCharge(req.params.id, req.user, {
         ...data,
         ...(data.dueDate && { dueDate: new Date(data.dueDate) }),
     });
@@ -47,7 +48,7 @@ router.post("/charges/ratio", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC
 });
 router.patch("/charges/:id/pay", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
     const { paidAmount, paidAt } = (0, validateRequest_1.validateRequest)(finance_validation_1.paySchema, req.body);
-    const charge = await finance_service_1.financeService.markAsPaid(req.params.id, paidAmount, paidAt ? new Date(paidAt) : undefined);
+    const charge = await finance_service_1.financeService.markAsPaid(req.params.id, req.user, paidAmount, paidAt ? new Date(paidAt) : undefined);
     res.json({ success: true, data: { charge } });
 });
 router.post("/charges/ratio/installments", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
@@ -66,11 +67,11 @@ router.get("/charges/ratio/preview", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", 
     res.json({ success: true, data: { preview } });
 });
 router.delete("/charges/:id", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
-    const charge = await finance_service_1.financeService.cancelCharge(req.params.id);
+    const charge = await finance_service_1.financeService.cancelCharge(req.params.id, req.user);
     res.json({ success: true, data: { charge } });
 });
 router.get("/charges/unit/:unitId", async (req, res) => {
-    const data = await finance_service_1.financeService.getChargesByUnit(req.params.unitId);
+    const data = await finance_service_1.financeService.getChargesByUnit(req.params.unitId, req.user);
     res.json({ success: true, data });
 });
 router.get("/defaulters/:condominiumId", async (req, res) => {
@@ -79,7 +80,7 @@ router.get("/defaulters/:condominiumId", async (req, res) => {
 });
 // Transações
 router.get("/transactions/:accountId", async (req, res) => {
-    const data = await finance_service_1.financeService.listTransactions(req.params.accountId, {
+    const data = await finance_service_1.financeService.listTransactions(req.params.accountId, req.user, {
         page: Number(req.query.page) || 1,
         limit: Number(req.query.limit) || 20,
     });
@@ -110,7 +111,12 @@ router.post("/charges/:id/sync", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYN
 });
 // Configurar gateway na conta financeira
 router.patch("/accounts/:accountId/gateway", (0, auth_1.authorize)("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"), async (req, res) => {
-    const { gatewayType, gatewayKey, gatewayConfig } = req.body;
+    const gatewaySchema = zod_1.z.object({
+        gatewayType: zod_1.z.enum(["ASAAS", "PJBANK"]),
+        gatewayKey: zod_1.z.string().min(1),
+        gatewayConfig: zod_1.z.record(zod_1.z.unknown()).optional(),
+    });
+    const { gatewayType, gatewayKey, gatewayConfig } = (0, validateRequest_1.validateRequest)(gatewaySchema, req.body);
     const account = await finance_service_1.financeService.configureGateway(req.params.accountId, { gatewayType, gatewayKey, gatewayConfig });
     res.json({ success: true, data: { account } });
 });

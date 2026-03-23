@@ -1,4 +1,4 @@
-import { ChargeStatus, FinancialTransactionType } from '@prisma/client';
+import { ChargeStatus, FinancialTransactionType, UserRole } from "@prisma/client";
 export interface CreateChargeDTO {
     unitId: string;
     accountId: string;
@@ -30,9 +30,14 @@ export interface RatioChargesDTO {
     totalAmount: number;
     dueDate: Date;
     referenceMonth: string;
-    method: 'equal' | 'fraction';
+    method: "equal" | "fraction";
 }
+type FinanceActor = {
+    userId: string;
+    role: UserRole;
+};
 export declare class FinanceService {
+    private ensureChargeAccess;
     listAccounts(condominiumId: string): Promise<({
         _count: {
             charges: number;
@@ -53,7 +58,7 @@ export declare class FinanceService {
         gatewayKey: string | null;
         gatewayConfig: import("@prisma/client/runtime/library").JsonValue | null;
     })[]>;
-    getAccountBalance(accountId: string): Promise<{
+    getAccountBalance(accountId: string, actor: FinanceActor): Promise<{
         account: {
             id: string;
             name: string;
@@ -148,7 +153,7 @@ export declare class FinanceService {
         accountId: string;
         categoryId: string | null;
     }>;
-    updateCharge(chargeId: string, data: Partial<CreateChargeDTO>): Promise<{
+    updateCharge(chargeId: string, actor: FinanceActor, data: Partial<CreateChargeDTO>): Promise<{
         status: import(".prisma/client").$Enums.ChargeStatus;
         id: string;
         createdAt: Date;
@@ -270,7 +275,7 @@ export declare class FinanceService {
         name: string;
         gatewayType: import(".prisma/client").$Enums.GatewayType;
     }>;
-    markAsPaid(chargeId: string, paidAmount: number, paidAt?: Date): Promise<{
+    markAsPaid(chargeId: string, actor: FinanceActor, paidAmount: number, paidAt?: Date): Promise<{
         status: import(".prisma/client").$Enums.ChargeStatus;
         id: string;
         createdAt: Date;
@@ -295,7 +300,7 @@ export declare class FinanceService {
         accountId: string;
         categoryId: string | null;
     }>;
-    cancelCharge(chargeId: string): Promise<{
+    cancelCharge(chargeId: string, actor: FinanceActor): Promise<{
         status: import(".prisma/client").$Enums.ChargeStatus;
         id: string;
         createdAt: Date;
@@ -320,7 +325,7 @@ export declare class FinanceService {
         accountId: string;
         categoryId: string | null;
     }>;
-    listTransactions(accountId: string, filters: {
+    listTransactions(accountId: string, actor: FinanceActor, filters: {
         type?: FinancialTransactionType;
         referenceMonth?: string;
         page?: number;
@@ -407,7 +412,7 @@ export declare class FinanceService {
         accountId: string;
         categoryId: string | null;
     })[]>;
-    getChargesByUnit(unitId: string): Promise<{
+    getChargesByUnit(unitId: string, actor: FinanceActor): Promise<{
         pending: {
             status: import(".prisma/client").$Enums.ChargeStatus;
             id: string;
@@ -442,7 +447,7 @@ export declare class FinanceService {
         forecastBalance: number;
         safetyMargin: number;
     }>;
-    ratioChargesInstallments(data: Omit<RatioChargesDTO, 'dueDate' | 'referenceMonth'> & {
+    ratioChargesInstallments(data: Omit<RatioChargesDTO, "dueDate" | "referenceMonth"> & {
         firstDueDate: Date;
         installments: number;
         intervalDays: number;
@@ -456,7 +461,7 @@ export declare class FinanceService {
             totalAmount: number;
         }[];
     }>;
-    createChargeInstallments(data: Omit<CreateChargeDTO, 'dueDate'> & {
+    createChargeInstallments(data: Omit<CreateChargeDTO, "dueDate"> & {
         firstDueDate: Date;
         installments: number;
         intervalDays: number;
@@ -464,7 +469,7 @@ export declare class FinanceService {
         installments: number;
         count: number;
     }>;
-    previewRatio(condominiumId: string, totalAmount: number, method: 'equal' | 'fraction'): Promise<{
+    previewRatio(condominiumId: string, totalAmount: number, method: "equal" | "fraction"): Promise<{
         unitId: string;
         identifier: string;
         block: string | null;
@@ -472,4 +477,5 @@ export declare class FinanceService {
     }[]>;
 }
 export declare const financeService: FinanceService;
+export {};
 //# sourceMappingURL=finance.service.d.ts.map

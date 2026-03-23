@@ -164,27 +164,31 @@ router.get(
   },
 );
 
-router.post("/",
+router.post(
+  "/",
   authorize("RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-  const data = validateRequest(renovationSchema, req.body);
-  const unit = await ensureUnitAccess(req, data.unitId);
+    const data = validateRequest(renovationSchema, req.body);
+    const unit = await ensureUnitAccess(req, data.unitId);
 
-  if (unit.condominiumId !== data.condominiumId) {
-    throw new ForbiddenError("A unidade informada nao pertence ao condominio");
-  }
+    if (unit.condominiumId !== data.condominiumId) {
+      throw new ForbiddenError(
+        "A unidade informada nao pertence ao condominio",
+      );
+    }
 
-  const renovation = await prisma.renovation.create({
-    data: {
-      ...data,
-      startDate: new Date(data.startDate),
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
-      createdBy: req.user!.userId,
-    },
-    include: { authorizedProviders: true },
-  });
-  res.status(201).json({ success: true, data: { renovation } });
-});
+    const renovation = await prisma.renovation.create({
+      data: {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        createdBy: req.user!.userId,
+      },
+      include: { authorizedProviders: true },
+    });
+    res.status(201).json({ success: true, data: { renovation } });
+  },
+);
 
 router.patch(
   "/:id/approve",
@@ -222,6 +226,23 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
     })
     .parse(req.body);
 
+  // J1 — estado máquina: fetch current, validate transition
+  const current = await prisma.renovation.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { status: true },
+  });
+
+  const validTransitions: Record<string, string[]> = {
+    APPROVED: ["IN_PROGRESS"],
+    IN_PROGRESS: ["COMPLETED"],
+  };
+  const allowed = validTransitions[current.status] ?? [];
+  if (!allowed.includes(status)) {
+    throw new ForbiddenError(
+      `Transição inválida: ${current.status} → ${status}. Transições permitidas: ${allowed.join(", ") || "nenhuma"}`,
+    );
+  }
+
   const renovation = await prisma.renovation.update({
     where: { id: req.params.id },
     data: { status: status as RenovationStatus },
@@ -232,6 +253,18 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
 
 router.delete("/:id", async (req: Request, res: Response) => {
   await ensureRenovationAccess(req, req.params.id, { residentOwnOnly: true });
+
+  // J2 — só permite deletar obras em PENDING ou REJECTED
+  const renovation = await prisma.renovation.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { status: true },
+  });
+  if (!["PENDING", "REJECTED"].includes(renovation.status)) {
+    throw new ForbiddenError(
+      `Não é possível excluir uma obra com status ${renovation.status}. Apenas obras PENDENTES ou REJEITADAS podem ser excluídas.`,
+    );
+  }
+
   await prisma.renovation.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });

@@ -4,32 +4,45 @@ const express_1 = require("express");
 const prisma_1 = require("../../config/prisma");
 const auth_1 = require("../../middleware/auth");
 const decimal_1 = require("../../utils/decimal");
+const zod_1 = require("zod");
 const report_service_1 = require("./report.service");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
 router.use((0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN'));
+// K1 — authorizeCondominium em nível de router aplicado por rota (condominiumId no params)
+router.use(auth_1.authorizeCondominium);
+const dateRangeSchema = zod_1.z.object({
+    startDate: zod_1.z.string().datetime({ message: 'startDate deve ser uma data ISO válida' }).optional(),
+    endDate: zod_1.z.string().datetime({ message: 'endDate deve ser uma data ISO válida' }).optional(),
+});
 // Relatório de visitantes por período
 router.get('/visitors/:condominiumId', async (req, res) => {
-    const { startDate, endDate } = req.query;
-    const visitors = await prisma_1.prisma.visitor.findMany({
-        where: {
-            unit: { condominiumId: req.params.condominiumId },
-            createdAt: {
-                gte: startDate ? new Date(startDate) : new Date(new Date().setDate(1)),
-                lte: endDate ? new Date(endDate) : new Date(),
-            },
+    // K2 — validar datas com Zod
+    const { startDate, endDate } = dateRangeSchema.parse(req.query);
+    const where = {
+        unit: { condominiumId: req.params.condominiumId },
+        createdAt: {
+            gte: startDate ? new Date(startDate) : new Date(new Date().setDate(1)),
+            lte: endDate ? new Date(endDate) : new Date(),
         },
-        include: { unit: { select: { identifier: true, block: true } } },
-        orderBy: { createdAt: 'desc' },
-    });
-    const stats = {
-        total: visitors.length,
-        authorized: visitors.filter((v) => v.status === 'AUTHORIZED' || v.status === 'INSIDE' || v.status === 'LEFT').length,
-        denied: visitors.filter((v) => v.status === 'DENIED').length,
-        avgDurationMs: visitors
-            .filter((v) => v.entryAt && v.exitAt)
-            .reduce((sum, v) => sum + (v.exitAt.getTime() - v.entryAt.getTime()), 0) / (visitors.filter((v) => v.entryAt && v.exitAt).length || 1),
     };
+    const [visitors, total, authorized, denied] = await prisma_1.prisma.$transaction([
+        prisma_1.prisma.visitor.findMany({
+            where,
+            include: { unit: { select: { identifier: true, block: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+        }),
+        prisma_1.prisma.visitor.count({ where }),
+        prisma_1.prisma.visitor.count({ where: { ...where, status: { in: ['AUTHORIZED', 'INSIDE', 'LEFT'] } } }),
+        prisma_1.prisma.visitor.count({ where: { ...where, status: 'DENIED' } }),
+    ]);
+    const withDuration = visitors.filter((v) => v.entryAt && v.exitAt);
+    const avgDurationMs = withDuration.length > 0
+        ? withDuration.reduce((sum, v) => sum + (v.exitAt.getTime() - v.entryAt.getTime()), 0) /
+            withDuration.length
+        : 0;
+    const stats = { total, authorized, denied, avgDurationMs };
     res.json({ success: true, data: { visitors, stats } });
 });
 // Relatório financeiro

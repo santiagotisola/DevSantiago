@@ -10,6 +10,25 @@ const logger_1 = require("../../config/logger");
 const date_fns_1 = require("date-fns");
 const notification_service_1 = require("../../notifications/notification.service");
 class FinanceService {
+    // ─── Guard de acesso ────────────────────────────────────────
+    async ensureChargeAccess(chargeId, actor) {
+        const charge = await prisma_1.prisma.charge.findUniqueOrThrow({
+            where: { id: chargeId },
+            include: { unit: { select: { condominiumId: true } } },
+        });
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: {
+                    userId: actor.userId,
+                    condominiumId: charge.unit.condominiumId,
+                    isActive: true,
+                },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError("Acesso negado a esta cobrança");
+        }
+        return charge;
+    }
     // ─── Contas ──────────────────────────────────────────────────
     async listAccounts(condominiumId) {
         return prisma_1.prisma.financialAccount.findMany({
@@ -19,20 +38,46 @@ class FinanceService {
             },
         });
     }
-    async getAccountBalance(accountId) {
-        const account = await prisma_1.prisma.financialAccount.findUniqueOrThrow({ where: { id: accountId } });
+    async getAccountBalance(accountId, actor) {
+        const account = await prisma_1.prisma.financialAccount.findUniqueOrThrow({
+            where: { id: accountId },
+        });
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: {
+                    userId: actor.userId,
+                    condominiumId: account.condominiumId,
+                    isActive: true,
+                },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError("Acesso negado a esta conta");
+        }
         const [income, expense] = await prisma_1.prisma.$transaction([
             prisma_1.prisma.financialTransaction.aggregate({
-                where: { accountId, type: client_1.FinancialTransactionType.INCOME, paidAt: { not: null } },
+                where: {
+                    accountId,
+                    type: client_1.FinancialTransactionType.INCOME,
+                    paidAt: { not: null },
+                },
                 _sum: { amount: true },
             }),
             prisma_1.prisma.financialTransaction.aggregate({
-                where: { accountId, type: client_1.FinancialTransactionType.EXPENSE, paidAt: { not: null } },
+                where: {
+                    accountId,
+                    type: client_1.FinancialTransactionType.EXPENSE,
+                    paidAt: { not: null },
+                },
                 _sum: { amount: true },
             }),
         ]);
         const balance = (0, decimal_1.toNumber)(income._sum.amount) - (0, decimal_1.toNumber)(expense._sum.amount);
-        return { account, balance, totalIncome: (0, decimal_1.toNumber)(income._sum.amount), totalExpense: (0, decimal_1.toNumber)(expense._sum.amount) };
+        return {
+            account,
+            balance,
+            totalIncome: (0, decimal_1.toNumber)(income._sum.amount),
+            totalExpense: (0, decimal_1.toNumber)(expense._sum.amount),
+        };
     }
     // ─── Cobranças ───────────────────────────────────────────────
     async listCharges(condominiumId, filters) {
@@ -49,15 +94,33 @@ class FinanceService {
                     unit: { select: { identifier: true, block: true } },
                     category: { select: { name: true } },
                 },
-                orderBy: [{ dueDate: 'asc' }, { status: 'asc' }],
+                orderBy: [{ dueDate: "asc" }, { status: "asc" }],
                 skip: (page - 1) * limit,
                 take: limit,
             }),
             prisma_1.prisma.charge.count({ where: { unit: { condominiumId } } }),
         ]);
-        return { charges, total, page, limit, totalPages: Math.ceil(total / limit) };
+        return {
+            charges,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
     async createCharge(data, createdBy) {
+        const account = await prisma_1.prisma.financialAccount.findUniqueOrThrow({
+            where: { id: data.accountId },
+            select: { condominiumId: true },
+        });
+        const unit = await prisma_1.prisma.unit.findFirst({
+            where: { id: data.unitId, condominiumId: account.condominiumId },
+        });
+        if (!unit) {
+            throw new errorHandler_1.ValidationError("Unidade inválida", {
+                unitId: ["Unidade não pertence ao condomínio desta conta"],
+            });
+        }
         const charge = await prisma_1.prisma.charge.create({
             data: { ...data, createdBy, status: client_1.ChargeStatus.PENDING },
             include: { unit: { select: { identifier: true, block: true } } },
@@ -68,15 +131,20 @@ class FinanceService {
         });
         await Promise.all(unitUsers.map((u) => notification_service_1.NotificationService.enqueue({
             userId: u.userId,
-            type: 'FINANCIAL',
-            title: 'Nova cobrança gerada',
-            message: `Uma nova cobrança no valor de R$ ${Number(data.amount).toFixed(2)} foi gerada com vencimento em ${(0, date_fns_1.format)(new Date(data.dueDate), 'dd/MM/yyyy')}.`,
-            data: { chargeId: charge.id, amount: data.amount, dueDate: data.dueDate },
-            channels: ['inapp', 'email'],
+            type: "FINANCIAL",
+            title: "Nova cobrança gerada",
+            message: `Uma nova cobrança no valor de R$ ${Number(data.amount).toFixed(2)} foi gerada com vencimento em ${(0, date_fns_1.format)(new Date(data.dueDate), "dd/MM/yyyy")}.`,
+            data: {
+                chargeId: charge.id,
+                amount: data.amount,
+                dueDate: data.dueDate,
+            },
+            channels: ["inapp", "email"],
         })));
         return charge;
     }
-    async updateCharge(chargeId, data) {
+    async updateCharge(chargeId, actor, data) {
+        await this.ensureChargeAccess(chargeId, actor);
         return prisma_1.prisma.charge.update({
             where: { id: chargeId },
             data: data,
@@ -84,13 +152,13 @@ class FinanceService {
     }
     async ratioCharges(data, createdBy) {
         const units = await prisma_1.prisma.unit.findMany({
-            where: { condominiumId: data.condominiumId, status: 'OCCUPIED' },
+            where: { condominiumId: data.condominiumId, status: "OCCUPIED" },
         });
         if (units.length === 0)
-            throw new errorHandler_1.AppError('Nenhuma unidade ocupada encontrada');
+            throw new errorHandler_1.AppError("Nenhuma unidade ocupada encontrada");
         const totalFraction = units.reduce((sum, u) => sum + u.fraction.toNumber(), 0);
         const chargesData = units.map((unit) => {
-            const amount = data.method === 'fraction'
+            const amount = data.method === "fraction"
                 ? (data.totalAmount * unit.fraction.toNumber()) / totalFraction
                 : data.totalAmount / units.length;
             return {
@@ -108,7 +176,7 @@ class FinanceService {
         // Usamos transaction individual para poder capturar IDs e sincronizar
         const createdCharges = await prisma_1.prisma.$transaction(chargesData.map((c) => prisma_1.prisma.charge.create({ data: c, select: { id: true } })));
         // Sincronização assíncrona
-        Promise.all(createdCharges.map((c) => this.syncChargeWithGateway(c.id))).catch(e => logger_1.logger.error('Erro na sincronização em lote de cobranças:', e));
+        Promise.all(createdCharges.map((c) => this.syncChargeWithGateway(c.id))).catch((e) => logger_1.logger.error("Erro na sincronização em lote de cobranças:", e));
         return { count: createdCharges.length, totalAmount: data.totalAmount };
     }
     // ─── Integração com Gateway ──────────────────────────────────
@@ -117,7 +185,7 @@ class FinanceService {
             where: { id: chargeId },
             include: {
                 account: true,
-            }
+            },
         });
         if (!charge || !charge.account.gatewayKey || charge.gatewayId)
             return;
@@ -127,7 +195,7 @@ class FinanceService {
         try {
             const response = await gateway.createPayment(charge, {
                 apiKey: charge.account.gatewayKey,
-                config: charge.account.gatewayConfig
+                config: charge.account.gatewayConfig,
             });
             return prisma_1.prisma.charge.update({
                 where: { id: charge.id },
@@ -139,7 +207,7 @@ class FinanceService {
                     pixCopyPaste: response.pixCopyPaste,
                     boletoUrl: response.boletoUrl,
                     boletoCode: response.boletoCode,
-                }
+                },
             });
         }
         catch (error) {
@@ -150,7 +218,9 @@ class FinanceService {
         return prisma_1.prisma.charge.findUnique({
             where: { id: chargeId },
             include: {
-                unit: { select: { identifier: true, block: true, condominiumId: true } },
+                unit: {
+                    select: { identifier: true, block: true, condominiumId: true },
+                },
                 category: { select: { name: true } },
             },
         });
@@ -161,15 +231,18 @@ class FinanceService {
             include: { account: true },
         });
         if (!charge)
-            throw new errorHandler_1.AppError('Cobrança não encontrada', 404);
-        if (charge.status !== 'PENDING')
-            throw new errorHandler_1.AppError('Apenas cobranças pendentes podem ser sincronizadas');
+            throw new errorHandler_1.AppError("Cobrança não encontrada", 404);
+        if (charge.status !== "PENDING")
+            throw new errorHandler_1.AppError("Apenas cobranças pendentes podem ser sincronizadas");
         if (!charge.account.gatewayKey)
-            throw new errorHandler_1.AppError('Conta financeira não possui gateway configurado');
+            throw new errorHandler_1.AppError("Conta financeira não possui gateway configurado");
         const gateway = gateway_1.GatewayFactory.getService(charge.account.gatewayType);
         if (!gateway)
-            throw new errorHandler_1.AppError('Gateway não suportado');
-        const response = await gateway.createPayment(charge, { apiKey: charge.account.gatewayKey, config: charge.account.gatewayConfig });
+            throw new errorHandler_1.AppError("Gateway não suportado");
+        const response = await gateway.createPayment(charge, {
+            apiKey: charge.account.gatewayKey,
+            config: charge.account.gatewayConfig,
+        });
         return prisma_1.prisma.charge.update({
             where: { id: chargeId },
             data: {
@@ -194,20 +267,41 @@ class FinanceService {
             select: { id: true, name: true, gatewayType: true },
         });
     }
-    async markAsPaid(chargeId, paidAmount, paidAt) {
+    async markAsPaid(chargeId, actor, paidAmount, paidAt) {
+        await this.ensureChargeAccess(chargeId, actor);
         return prisma_1.prisma.charge.update({
             where: { id: chargeId },
-            data: { status: client_1.ChargeStatus.PAID, paidAmount, paidAt: paidAt || new Date() },
+            data: {
+                status: client_1.ChargeStatus.PAID,
+                paidAmount,
+                paidAt: paidAt || new Date(),
+            },
         });
     }
-    async cancelCharge(chargeId) {
+    async cancelCharge(chargeId, actor) {
+        await this.ensureChargeAccess(chargeId, actor);
         return prisma_1.prisma.charge.update({
             where: { id: chargeId },
             data: { status: client_1.ChargeStatus.CANCELED },
         });
     }
     // ─── Transações ──────────────────────────────────────────────
-    async listTransactions(accountId, filters) {
+    async listTransactions(accountId, actor, filters) {
+        const account = await prisma_1.prisma.financialAccount.findUniqueOrThrow({
+            where: { id: accountId },
+            select: { condominiumId: true },
+        });
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: {
+                    userId: actor.userId,
+                    condominiumId: account.condominiumId,
+                    isActive: true,
+                },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError("Acesso negado a esta conta");
+        }
         const { page = 1, limit = 20, ...where } = filters;
         const [transactions, total] = await prisma_1.prisma.$transaction([
             prisma_1.prisma.financialTransaction.findMany({
@@ -217,7 +311,7 @@ class FinanceService {
                     ...(where.referenceMonth && { referenceMonth: where.referenceMonth }),
                 },
                 include: { category: { select: { name: true } } },
-                orderBy: { dueDate: 'desc' },
+                orderBy: { dueDate: "desc" },
                 skip: (page - 1) * limit,
                 take: limit,
             }),
@@ -230,20 +324,31 @@ class FinanceService {
     }
     // ─── Relatórios ──────────────────────────────────────────────
     async getMonthlyBalance(condominiumId, year) {
-        const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+        const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
+        // Busca accountIds uma única vez fora do loop (B7: fix N+1)
+        const accounts = await prisma_1.prisma.financialAccount.findMany({
+            where: { condominiumId },
+            select: { id: true },
+        });
+        const accountIds = accounts.map((a) => a.id);
         const result = await Promise.all(months.map(async (month) => {
-            const accounts = await prisma_1.prisma.financialAccount.findMany({
-                where: { condominiumId },
-                select: { id: true },
-            });
-            const accountIds = accounts.map((a) => a.id);
             const [income, expense, charged, paid, overdue] = await prisma_1.prisma.$transaction([
                 prisma_1.prisma.financialTransaction.aggregate({
-                    where: { accountId: { in: accountIds }, type: 'INCOME', referenceMonth: month, paidAt: { not: null } },
+                    where: {
+                        accountId: { in: accountIds },
+                        type: "INCOME",
+                        referenceMonth: month,
+                        paidAt: { not: null },
+                    },
                     _sum: { amount: true },
                 }),
                 prisma_1.prisma.financialTransaction.aggregate({
-                    where: { accountId: { in: accountIds }, type: 'EXPENSE', referenceMonth: month, paidAt: { not: null } },
+                    where: {
+                        accountId: { in: accountIds },
+                        type: "EXPENSE",
+                        referenceMonth: month,
+                        paidAt: { not: null },
+                    },
                     _sum: { amount: true },
                 }),
                 prisma_1.prisma.charge.aggregate({
@@ -251,11 +356,19 @@ class FinanceService {
                     _sum: { amount: true },
                 }),
                 prisma_1.prisma.charge.aggregate({
-                    where: { unit: { condominiumId }, referenceMonth: month, status: 'PAID' },
+                    where: {
+                        unit: { condominiumId },
+                        referenceMonth: month,
+                        status: "PAID",
+                    },
                     _sum: { paidAmount: true },
                 }),
                 prisma_1.prisma.charge.count({
-                    where: { unit: { condominiumId }, referenceMonth: month, status: 'OVERDUE' },
+                    where: {
+                        unit: { condominiumId },
+                        referenceMonth: month,
+                        status: "OVERDUE",
+                    },
                 }),
             ]);
             return {
@@ -279,14 +392,26 @@ class FinanceService {
                 dueDate: { lt: now },
             },
             include: { unit: { select: { identifier: true, block: true } } },
-            orderBy: { dueDate: 'asc' },
+            orderBy: { dueDate: "asc" },
         });
     }
-    async getChargesByUnit(unitId) {
+    async getChargesByUnit(unitId, actor) {
+        const unit = await prisma_1.prisma.unit.findUniqueOrThrow({ where: { id: unitId } });
+        if (actor.role !== client_1.UserRole.SUPER_ADMIN) {
+            const membership = await prisma_1.prisma.condominiumUser.findFirst({
+                where: {
+                    userId: actor.userId,
+                    condominiumId: unit.condominiumId,
+                    isActive: true,
+                },
+            });
+            if (!membership)
+                throw new errorHandler_1.ForbiddenError("Acesso negado a esta unidade");
+        }
         const [pending, total] = await prisma_1.prisma.$transaction([
             prisma_1.prisma.charge.findMany({
-                where: { unitId, status: { in: ['PENDING', 'OVERDUE'] } },
-                orderBy: { dueDate: 'asc' },
+                where: { unitId, status: { in: ["PENDING", "OVERDUE"] } },
+                orderBy: { dueDate: "asc" },
             }),
             prisma_1.prisma.charge.aggregate({ where: { unitId }, _sum: { amount: true } }),
         ]);
@@ -299,15 +424,16 @@ class FinanceService {
         const expenses = await prisma_1.prisma.financialTransaction.findMany({
             where: {
                 account: { condominiumId },
-                type: 'EXPENSE',
+                type: "EXPENSE",
                 paidAt: { gte: sixMonthsAgo },
             },
             select: { amount: true, paidAt: true },
         });
         const monthlyExpenses = {};
         expenses.forEach((e) => {
-            const month = (0, date_fns_1.format)(e.paidAt, 'yyyy-MM');
-            monthlyExpenses[month] = (monthlyExpenses[month] || 0) + (0, decimal_1.toNumber)(e.amount);
+            const month = (0, date_fns_1.format)(e.paidAt, "yyyy-MM");
+            monthlyExpenses[month] =
+                (monthlyExpenses[month] || 0) + (0, decimal_1.toNumber)(e.amount);
         });
         const expenseValues = Object.values(monthlyExpenses);
         const averageExpense = expenseValues.length > 0
@@ -315,11 +441,13 @@ class FinanceService {
             : 0;
         // 2. Receita esperada (baseado no total de unidades e taxa média)
         // Aqui usamos o total de unidades ocupadas para prever o próximo rateio
-        const unitCount = await prisma_1.prisma.unit.count({ where: { condominiumId, status: 'OCCUPIED' } });
+        const unitCount = await prisma_1.prisma.unit.count({
+            where: { condominiumId, status: "OCCUPIED" },
+        });
         // Pegamos o valor total do último rateio como base
         const lastCharge = await prisma_1.prisma.charge.findFirst({
             where: { unit: { condominiumId } },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             select: { amount: true },
         });
         const baseAmountPerUnit = lastCharge ? (0, decimal_1.toNumber)(lastCharge.amount) : 0;
@@ -329,7 +457,9 @@ class FinanceService {
             expectedRevenue: (0, decimal_1.roundMoney)(expectedRevenue),
             suggestedReserve: (0, decimal_1.roundMoney)(expectedRevenue * 0.1), // 10% de margEM
             forecastBalance: (0, decimal_1.roundMoney)(expectedRevenue - averageExpense),
-            safetyMargin: averageExpense > 0 ? ((expectedRevenue - averageExpense) / averageExpense) * 100 : 100,
+            safetyMargin: averageExpense > 0
+                ? ((expectedRevenue - averageExpense) / averageExpense) * 100
+                : 100,
         };
     }
     // ─── Rateio Parcelado ─────────────────────────────────────────
@@ -338,12 +468,16 @@ class FinanceService {
         for (let i = 0; i < data.installments; i++) {
             const dueDate = new Date(data.firstDueDate);
             dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
-            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`;
             const description = `${data.description} (${i + 1}/${data.installments})`;
             const result = await this.ratioCharges({ ...data, description, dueDate, referenceMonth }, createdBy);
             results.push({ installment: i + 1, dueDate, ...result });
         }
-        return { installments: data.installments, totalCharges: results.reduce((s, r) => s + r.count, 0), results };
+        return {
+            installments: data.installments,
+            totalCharges: results.reduce((s, r) => s + r.count, 0),
+            results,
+        };
     }
     // ─── Cobranças Parceladas (unidade única) ─────────────────────
     async createChargeInstallments(data, createdBy) {
@@ -351,7 +485,7 @@ class FinanceService {
         for (let i = 0; i < data.installments; i++) {
             const dueDate = new Date(data.firstDueDate);
             dueDate.setDate(dueDate.getDate() + i * data.intervalDays);
-            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}`;
+            const referenceMonth = `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`;
             charges.push({
                 unitId: data.unitId,
                 accountId: data.accountId,
@@ -372,16 +506,16 @@ class FinanceService {
     // ─── Preview de rateio (sem criar) ────────────────────────────
     async previewRatio(condominiumId, totalAmount, method) {
         const units = await prisma_1.prisma.unit.findMany({
-            where: { condominiumId, status: 'OCCUPIED' },
+            where: { condominiumId, status: "OCCUPIED" },
             select: { id: true, identifier: true, block: true, fraction: true },
         });
         const totalFraction = units.reduce((s, u) => s + Number(u.fraction), 0);
-        return units.map(u => ({
+        return units.map((u) => ({
             unitId: u.id,
             identifier: u.identifier,
             block: u.block,
-            amount: method === 'fraction'
-                ? Math.round((totalAmount * Number(u.fraction) / totalFraction) * 100) / 100
+            amount: method === "fraction"
+                ? Math.round(((totalAmount * Number(u.fraction)) / totalFraction) * 100) / 100
                 : Math.round((totalAmount / units.length) * 100) / 100,
         }));
     }

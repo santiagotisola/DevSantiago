@@ -8,30 +8,33 @@ class LostAndFoundController {
     async list(req, res) {
         const { condominiumId } = req.params;
         const { page, limit } = req.query;
-        const result = await lost_and_found_service_1.lostAndFoundService.list(condominiumId, Number(page) || 1, Number(limit) || 20);
+        const result = await lost_and_found_service_1.lostAndFoundService.list(condominiumId, req.user, Number(page) || 1, Number(limit) || 20);
         return res.json(result);
     }
+    // F1 — passa actor para verificação IDOR
     async getById(req, res) {
         const { id } = req.params;
-        const item = await lost_and_found_service_1.lostAndFoundService.getById(id);
+        const item = await lost_and_found_service_1.lostAndFoundService.getById(id, req.user);
         return res.json(item);
     }
     async create(req, res) {
         const { condominiumId } = req.params;
-        const userId = req.user.id;
+        const actor = req.user;
         const validData = (0, validateRequest_1.validateRequest)(lost_and_found_validation_1.createLostAndFoundSchema, { body: req.body });
-        const item = await lost_and_found_service_1.lostAndFoundService.create(validData.body, userId, condominiumId);
+        const item = await lost_and_found_service_1.lostAndFoundService.create(validData.body, actor.userId, condominiumId);
         return res.status(201).json(item);
     }
+    // F2 — passa actor para verificação IDOR
     async update(req, res) {
         const { id } = req.params;
         const validData = (0, validateRequest_1.validateRequest)(lost_and_found_validation_1.updateLostAndFoundSchema, { body: req.body });
-        const item = await lost_and_found_service_1.lostAndFoundService.update(id, validData.body);
+        const item = await lost_and_found_service_1.lostAndFoundService.update(id, validData.body, req.user);
         return res.json(item);
     }
+    // F3 — passa actor para verificação IDOR
     async delete(req, res) {
         const { id } = req.params;
-        await lost_and_found_service_1.lostAndFoundService.delete(id);
+        await lost_and_found_service_1.lostAndFoundService.delete(id, req.user);
         return res.status(204).send();
     }
 }

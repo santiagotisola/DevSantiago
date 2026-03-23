@@ -3,13 +3,18 @@ import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
+import { ForbiddenError } from "../../middleware/errorHandler";
 
 const router = Router();
 router.use(authenticate);
 
 const vehicleSchema = z.object({
   unitId: z.string().uuid(),
-  plate: z.string().min(7).max(8).toUpperCase(),
+  plate: z
+    .string()
+    .min(7)
+    .max(8)
+    .transform((s) => s.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()),
   brand: z.string().min(2),
   model: z.string().min(2),
   color: z.string().min(2),
@@ -22,7 +27,25 @@ const vehicleSchema = z.object({
   type: z.enum(["CAR", "MOTORCYCLE", "TRUCK", "BICYCLE", "OTHER"]).optional(),
 });
 
+// N1 — verifica que o ator pertence ao condomínio da unidade
 router.get("/unit/:unitId", async (req: Request, res: Response) => {
+  const unit = await prisma.unit.findUniqueOrThrow({
+    where: { id: req.params.unitId },
+    select: { condominiumId: true },
+  });
+  if (req.user!.role !== "SUPER_ADMIN") {
+    const membership = await prisma.condominiumUser.findFirst({
+      where: {
+        userId: req.user!.userId,
+        condominiumId: unit.condominiumId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new ForbiddenError("Acesso negado a esta unidade");
+    }
+  }
   const vehicles = await prisma.vehicle.findMany({
     where: { unitId: req.params.unitId, isActive: true },
   });
@@ -34,14 +57,15 @@ router.post("/", async (req: Request, res: Response) => {
 
   // Residents can only add vehicles to their own unit
   const user = req.user!;
-  if (user.role === 'RESIDENT') {
+  if (user.role === "RESIDENT") {
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: user.userId, unitId: data.unitId },
       select: { id: true },
     });
     if (!membership) {
-      res.status(403).json({ success: false, message: 'Proibido: você só pode cadastrar veículos na sua unidade.' });
-      return;
+      throw new ForbiddenError(
+        "Proibido: você só pode cadastrar veículos na sua unidade.",
+      );
     }
   }
 
@@ -54,19 +78,24 @@ router.put("/:id", async (req: Request, res: Response) => {
 
   // Ensure vehicle belongs to the user's unit if RESIDENT
   const user = req.user!;
-  if (user.role === 'RESIDENT') {
-    const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
+  if (user.role === "RESIDENT") {
+    const existing = await prisma.vehicle.findUnique({
+      where: { id: req.params.id },
+      select: { unitId: true },
+    });
     if (!existing) {
-      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para editar este veículo.' });
-      return;
+      throw new ForbiddenError(
+        "Proibido: você não tem permissão para editar este veículo.",
+      );
     }
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: user.userId, unitId: existing.unitId },
       select: { id: true },
     });
     if (!membership) {
-      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para editar este veículo.' });
-      return;
+      throw new ForbiddenError(
+        "Proibido: você não tem permissão para editar este veículo.",
+      );
     }
   }
 
@@ -80,19 +109,24 @@ router.put("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   // Ensure vehicle belongs to the user's unit if RESIDENT
   const user = req.user!;
-  if (user.role === 'RESIDENT') {
-    const existing = await prisma.vehicle.findUnique({ where: { id: req.params.id }, select: { unitId: true } });
+  if (user.role === "RESIDENT") {
+    const existing = await prisma.vehicle.findUnique({
+      where: { id: req.params.id },
+      select: { unitId: true },
+    });
     if (!existing) {
-      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para remover este veículo.' });
-      return;
+      throw new ForbiddenError(
+        "Proibido: você não tem permissão para remover este veículo.",
+      );
     }
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: user.userId, unitId: existing.unitId },
       select: { id: true },
     });
     if (!membership) {
-      res.status(403).json({ success: false, message: 'Proibido: você não tem permissão para remover este veículo.' });
-      return;
+      throw new ForbiddenError(
+        "Proibido: você não tem permissão para remover este veículo.",
+      );
     }
   }
 
@@ -118,11 +152,10 @@ router.get(
 
     const logs = await prisma.vehicleAccessLog.findMany({
       where: {
+        // N2 — terceira cláusula removida: vazava logs de outros condomínios
         OR: [
           { vehicle: { unit: { condominiumId: req.params.condominiumId } } },
           { vehicleId: null, unitId: { in: unitIds } },
-          // logs sem vehicleId nem unitId registrados pelo porteiro deste condomínio
-          { vehicleId: null, unitId: null, registeredBy: { not: null } },
         ],
       },
       include: {
@@ -173,10 +206,41 @@ router.post(
   },
 );
 
+// N3 — IDOR fix: verifica tenant do log antes de registrar saída
 router.patch(
   "/access-logs/:id/exit",
   authorize("DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
+    const existing = await prisma.vehicleAccessLog.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        vehicle: { select: { unit: { select: { condominiumId: true } } } },
+        unitId: true,
+      },
+    });
+
+    const condominiumId =
+      existing.vehicle?.unit?.condominiumId ??
+      (existing.unitId
+        ? (
+            await prisma.unit.findUnique({
+              where: { id: existing.unitId },
+              select: { condominiumId: true },
+            })
+          )?.condominiumId
+        : null);
+
+    if (condominiumId && req.user!.role !== "SUPER_ADMIN") {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: req.user!.userId, condominiumId, isActive: true },
+        select: { id: true },
+      });
+      if (!membership) {
+        throw new ForbiddenError("Acesso negado a este log");
+      }
+    }
+
     const log = await prisma.vehicleAccessLog.update({
       where: { id: req.params.id },
       data: { exitAt: new Date() },

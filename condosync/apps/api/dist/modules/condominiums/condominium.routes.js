@@ -6,12 +6,24 @@ const auth_1 = require("../../middleware/auth");
 const validateRequest_1 = require("../../utils/validateRequest");
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const errorHandler_1 = require("../../middleware/errorHandler");
 const resident_service_1 = require("../residents/resident.service");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
+/** Verifica que o ator pertence ao condomÃ­nio indicado */
+async function ensureCondominiumMembership(userId, role, condominiumId) {
+    if (role === client_1.UserRole.SUPER_ADMIN)
+        return;
+    const membership = await prisma_1.prisma.condominiumUser.findFirst({
+        where: { userId, condominiumId, isActive: true },
+        select: { id: true },
+    });
+    if (!membership)
+        throw new errorHandler_1.ForbiddenError('Acesso negado a este condomÃ­nio');
+}
 const createSchema = zod_1.z.object({
     name: zod_1.z.string().min(3),
-    cnpj: zod_1.z.string().optional(),
+    cnpj: zod_1.z.string().regex(/^\d{14}$/, 'CNPJ deve conter 14 dígitos numéricos').optional(),
     address: zod_1.z.string().optional(),
     city: zod_1.z.string().optional(),
     state: zod_1.z.string().optional(),
@@ -45,7 +57,9 @@ router.post('/', (0, auth_1.authorize)('SUPER_ADMIN'), async (req, res) => {
     });
     res.status(201).json({ success: true, data: { condominium } });
 });
+// D1 â€” GET /:id verifica membership para nÃ£o-super-admins
 router.get('/:id', async (req, res) => {
+    await ensureCondominiumMembership(req.user.userId, req.user.role, req.params.id);
     const condominium = await prisma_1.prisma.condominium.findUniqueOrThrow({
         where: { id: req.params.id },
         include: {
@@ -54,13 +68,16 @@ router.get('/:id', async (req, res) => {
     });
     res.json({ success: true, data: { condominium } });
 });
+// D2 â€” PUT /:id verifica membership antes de editar
 router.put('/:id', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+    await ensureCondominiumMembership(req.user.userId, req.user.role, req.params.id);
     const data = (0, validateRequest_1.validateRequest)(createSchema.partial(), req.body);
     const condominium = await prisma_1.prisma.condominium.update({ where: { id: req.params.id }, data });
     res.json({ success: true, data: { condominium } });
 });
-// Adicionar membro ao condomínio
+// Adicionar membro ao condomÃ­nio
 router.post('/:id/members', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+    await ensureCondominiumMembership(req.user.userId, req.user.role, req.params.id);
     const schema = zod_1.z.object({
         userId: zod_1.z.string().uuid(),
         role: zod_1.z.nativeEnum(client_1.UserRole),
@@ -78,8 +95,9 @@ router.post('/:id/members', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC',
     });
     res.status(201).json({ success: true, data: { member } });
 });
-// Listar membros
-router.get('/:id/members', async (req, res) => {
+// D3 â€” GET /:id/members requer autorizaÃ§Ã£o e membership
+router.get('/:id/members', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'COUNCIL_MEMBER', 'SUPER_ADMIN'), async (req, res) => {
+    await ensureCondominiumMembership(req.user.userId, req.user.role, req.params.id);
     const members = await prisma_1.prisma.condominiumUser.findMany({
         where: { condominiumId: req.params.id, isActive: true },
         include: {
@@ -90,8 +108,9 @@ router.get('/:id/members', async (req, res) => {
     });
     res.json({ success: true, data: { members } });
 });
-// Remover membro do condomínio
+// D4 â€” DELETE /:id/members verifica membership do ator
 router.delete('/:id/members/:userId', (0, auth_1.authorize)('CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'), async (req, res) => {
+    await ensureCondominiumMembership(req.user.userId, req.user.role, req.params.id);
     await prisma_1.prisma.condominiumUser.deleteMany({
         where: { condominiumId: req.params.id, userId: req.params.userId },
     });

@@ -89,10 +89,11 @@ class VisitorService {
         }
         return visitor;
     }
-    async registerEntry(visitorId, registeredBy, photoUrl) {
+    async registerEntry(visitorId, registeredBy, actor, photoUrl) {
         const visitor = await prisma_1.prisma.visitor.findUniqueOrThrow({
             where: { id: visitorId },
         });
+        await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
         if (visitor.status === client_1.VisitorStatus.INSIDE) {
             throw new errorHandler_1.ForbiddenError("Visitante já está dentro do condomínio");
         }
@@ -119,10 +120,11 @@ class VisitorService {
         })));
         return updated;
     }
-    async registerExit(visitorId, registeredBy) {
+    async registerExit(visitorId, registeredBy, actor) {
         const visitor = await prisma_1.prisma.visitor.findUniqueOrThrow({
             where: { id: visitorId },
         });
+        await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
         return prisma_1.prisma.visitor.update({
             where: { id: visitorId },
             data: { status: client_1.VisitorStatus.LEFT, exitAt: new Date(), registeredBy },
@@ -146,8 +148,8 @@ class VisitorService {
             },
         });
     }
-    async findById(id) {
-        return prisma_1.prisma.visitor.findUniqueOrThrow({
+    async findById(id, actor) {
+        const visitor = await prisma_1.prisma.visitor.findUniqueOrThrow({
             where: { id },
             include: {
                 unit: {
@@ -155,9 +157,12 @@ class VisitorService {
                 },
             },
         });
+        await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
+        return visitor;
     }
-    async update(id, data) {
+    async update(id, actor, data) {
         const visitor = await prisma_1.prisma.visitor.findUniqueOrThrow({ where: { id } });
+        await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
         if (visitor.status === client_1.VisitorStatus.INSIDE ||
             visitor.status === client_1.VisitorStatus.LEFT) {
             throw new errorHandler_1.ForbiddenError("Não é possível editar um visitante que já entrou ou saiu");

@@ -4,7 +4,9 @@ import { authenticate, authorize } from "../../middleware/auth";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
-import { format, subDays } from "date-fns";
+import { ForbiddenError } from "../../middleware/errorHandler";
+import { z } from "zod";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const router = Router();
@@ -14,6 +16,20 @@ router.use(authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"));
 // GET /ai/status — verifica se o assistente está habilitado
 router.get("/status", (_req: Request, res: Response) => {
   res.json({ success: true, data: { enabled: !!env.OPENAI_API_KEY } });
+});
+
+// P2 — schema com limites no array de mensagens
+const aiChatSchema = z.object({
+  condominiumId: z.string().uuid(),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().min(1).max(4000),
+      }),
+    )
+    .min(1)
+    .max(20),
 });
 
 // POST /ai/chat — envia mensagem ao assistente
@@ -26,18 +42,17 @@ router.post("/chat", async (req: Request, res: Response) => {
     });
   }
 
-  const { condominiumId, messages } = req.body as {
-    condominiumId: string;
-    messages: { role: "user" | "assistant"; content: string }[];
-  };
+  const { condominiumId, messages } = aiChatSchema.parse(req.body);
 
-  if (!condominiumId || !Array.isArray(messages) || messages.length === 0) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "condominiumId e messages são obrigatórios",
-      });
+  // P1 — verifica membership do ator no condomínio informado
+  if (req.user!.role !== "SUPER_ADMIN") {
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: req.user!.userId, condominiumId, isActive: true },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new ForbiddenError("Acesso negado a este condomínio");
+    }
   }
 
   // ─── Coleta contexto do condomínio ────────────────────────
@@ -159,20 +174,16 @@ Use esses dados quando o usuário perguntar sobre a situação do condomínio. P
         .json({ success: false, message: "Chave da API OpenAI inválida." });
     }
     if (status === 429) {
-      return res
-        .status(429)
-        .json({
-          success: false,
-          message:
-            "Limite de requisições da OpenAI atingido. Tente novamente em instantes.",
-        });
-    }
-    return res
-      .status(502)
-      .json({
+      return res.status(429).json({
         success: false,
-        message: "Erro ao consultar a IA. Tente novamente.",
+        message:
+          "Limite de requisições da OpenAI atingido. Tente novamente em instantes.",
       });
+    }
+    return res.status(502).json({
+      success: false,
+      message: "Erro ao consultar a IA. Tente novamente.",
+    });
   }
 });
 

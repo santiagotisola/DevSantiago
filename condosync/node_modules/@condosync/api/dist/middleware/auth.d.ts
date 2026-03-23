@@ -1,9 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { UserRole } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import { UserRole } from "@prisma/client";
 export interface JwtPayload {
     userId: string;
     condominiumId?: string;
-    unitId?: string;
     name?: string;
     role: UserRole;
 }

@@ -4,10 +4,12 @@ const express_1 = require("express");
 const prisma_1 = require("../../config/prisma");
 const auth_1 = require("../../middleware/auth");
 const validateRequest_1 = require("../../utils/validateRequest");
+const errorHandler_1 = require("../../middleware/errorHandler");
+const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
-// Listar usuários do sistema (super admin)
+// Listar usuÃ¡rios do sistema (super admin)
 router.get('/', (0, auth_1.authorize)('SUPER_ADMIN'), async (req, res) => {
     const users = await prisma_1.prisma.user.findMany({
         select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, lastLoginAt: true },
@@ -17,8 +19,24 @@ router.get('/', (0, auth_1.authorize)('SUPER_ADMIN'), async (req, res) => {
     });
     res.json({ success: true, data: { users } });
 });
-// Perfil de um usuário
+// M1 â€” GET /:id: SUPER_ADMIN vÃª tudo; outros sÃ³ podem ver perfil do mesmo condomÃ­nio
 router.get('/:id', async (req, res) => {
+    const actor = req.user;
+    if (actor.role !== client_1.UserRole.SUPER_ADMIN && actor.userId !== req.params.id) {
+        // Verifica que ator e alvo compartilham um condomÃ­nio ativo
+        const sharedCondominium = await prisma_1.prisma.condominiumUser.findFirst({
+            where: {
+                userId: actor.userId,
+                isActive: true,
+                condominium: {
+                    condominiumUsers: { some: { userId: req.params.id, isActive: true } },
+                },
+            },
+            select: { id: true },
+        });
+        if (!sharedCondominium)
+            throw new errorHandler_1.ForbiddenError('Acesso negado');
+    }
     const user = await prisma_1.prisma.user.findUniqueOrThrow({
         where: { id: req.params.id },
         select: {
@@ -49,10 +67,34 @@ router.put('/:id', async (req, res) => {
     });
     res.json({ success: true, data: { user } });
 });
-// Ativar/desativar usuário
+// M2 â€” toggle-active: CONDOMINIUM_ADMIN sÃ³ pode desativar membros do seu condomÃ­nio;
+//       nÃ£o pode desativar SUPER_ADMIN nem outros admins
 router.patch('/:id/toggle-active', (0, auth_1.authorize)('SUPER_ADMIN', 'CONDOMINIUM_ADMIN'), async (req, res) => {
-    const user = await prisma_1.prisma.user.findUniqueOrThrow({ where: { id: req.params.id }, select: { isActive: true } });
-    const updated = await prisma_1.prisma.user.update({ where: { id: req.params.id }, data: { isActive: !user.isActive } });
+    const actor = req.user;
+    const target = await prisma_1.prisma.user.findUniqueOrThrow({
+        where: { id: req.params.id },
+        select: { isActive: true, role: true },
+    });
+    if (actor.role === client_1.UserRole.CONDOMINIUM_ADMIN) {
+        // Impede desativar SUPER_ADMIN ou outro CONDOMINIUM_ADMIN
+        if (target.role === client_1.UserRole.SUPER_ADMIN || target.role === client_1.UserRole.CONDOMINIUM_ADMIN) {
+            throw new errorHandler_1.ForbiddenError('VocÃª nÃ£o tem permissÃ£o para ativar/desativar este usuÃ¡rio');
+        }
+        // Verifica que o alvo pertence ao mesmo condomÃ­nio
+        const sharedCondominium = await prisma_1.prisma.condominiumUser.findFirst({
+            where: {
+                userId: actor.userId,
+                isActive: true,
+                condominium: {
+                    condominiumUsers: { some: { userId: req.params.id, isActive: true } },
+                },
+            },
+            select: { id: true },
+        });
+        if (!sharedCondominium)
+            throw new errorHandler_1.ForbiddenError('UsuÃ¡rio nÃ£o pertence ao seu condomÃ­nio');
+    }
+    const updated = await prisma_1.prisma.user.update({ where: { id: req.params.id }, data: { isActive: !target.isActive } });
     res.json({ success: true, data: { isActive: updated.isActive } });
 });
 exports.default = router;
