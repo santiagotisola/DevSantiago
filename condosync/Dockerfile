@@ -1,6 +1,6 @@
 # Dockerfile do serviço Web (contexto = condosync/)
 # Stage 1: build React com Vite
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY apps/web/ ./
 RUN npm run build
 
 # Stage 2: servir com nginx
-FROM nginx:1.25-alpine
+FROM nginx:1.27-alpine
 
 RUN rm /etc/nginx/conf.d/default.conf
 

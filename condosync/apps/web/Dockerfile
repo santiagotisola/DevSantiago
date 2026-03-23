@@ -1,5 +1,5 @@
 # ─── Stage 1: Builder ─────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY apps/web/ ./
 RUN npx vite build
 
 # ─── Stage 2: Production (nginx) ──────────────────────────────────────────────
-FROM nginx:1.25-alpine AS production
+FROM nginx:1.27-alpine AS production
 
 # Remover config padrão do nginx
 RUN rm /etc/nginx/conf.d/default.conf

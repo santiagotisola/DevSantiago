@@ -1,14 +1,14 @@
 # ─── Stage 1: Builder ─────────────────────────────────────────────────────────
 # Contexto de build: condosync/apps/api/
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Instalar dependências usando o package.json próprio da API
-COPY package.json ./
-RUN npm install
+# Instalar todas as dependências (incluindo dev) com lockfile para build reprodutível
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copiar todo o código-fonte da API
 COPY . ./
@@ -17,13 +17,14 @@ COPY . ./
 RUN ./node_modules/.bin/prisma generate
 
 # Compilar TypeScript → dist/
-RUN node_modules/.bin/tsc --noCheck 2>&1 || true
-RUN test -f dist/server.js || node_modules/.bin/tsc --noEmitOnError false 2>&1 || true
-RUN ls dist/ 2>&1 || echo "dist/ vazio ou inexistente"
+RUN node_modules/.bin/tsc --skipLibCheck --noEmitOnError false
 RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
 
+# Remover devDependencies antes de copiar para produção
+RUN npm ci --omit=dev
+
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
