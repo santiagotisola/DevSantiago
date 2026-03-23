@@ -5,7 +5,11 @@ import {
   GatewayType,
   UserRole,
 } from "@prisma/client";
-import { AppError, ForbiddenError, ValidationError } from "../../middleware/errorHandler";
+import {
+  AppError,
+  ForbiddenError,
+  ValidationError,
+} from "../../middleware/errorHandler";
 import { toNumber, roundMoney } from "../../utils/decimal";
 import { GatewayFactory } from "../../services/gateway";
 import { logger } from "../../config/logger";
@@ -59,9 +63,14 @@ export class FinanceService {
     });
     if (actor.role !== UserRole.SUPER_ADMIN) {
       const membership = await prisma.condominiumUser.findFirst({
-        where: { userId: actor.userId, condominiumId: charge.unit.condominiumId, isActive: true },
+        where: {
+          userId: actor.userId,
+          condominiumId: charge.unit.condominiumId,
+          isActive: true,
+        },
       });
-      if (!membership) throw new ForbiddenError('Acesso negado a esta cobrança');
+      if (!membership)
+        throw new ForbiddenError("Acesso negado a esta cobrança");
     }
     return charge;
   }
@@ -160,8 +169,8 @@ export class FinanceService {
       where: { id: data.unitId, condominiumId: account.condominiumId },
     });
     if (!unit) {
-      throw new ValidationError('Unidade inválida', {
-        unitId: ['Unidade não pertence ao condomínio desta conta'],
+      throw new ValidationError("Unidade inválida", {
+        unitId: ["Unidade não pertence ao condomínio desta conta"],
       });
     }
     const charge = await prisma.charge.create({
@@ -194,7 +203,11 @@ export class FinanceService {
     return charge;
   }
 
-  async updateCharge(chargeId: string, actor: FinanceActor, data: Partial<CreateChargeDTO>) {
+  async updateCharge(
+    chargeId: string,
+    actor: FinanceActor,
+    data: Partial<CreateChargeDTO>,
+  ) {
     await this.ensureChargeAccess(chargeId, actor);
     return prisma.charge.update({
       where: { id: chargeId },
@@ -352,7 +365,12 @@ export class FinanceService {
     });
   }
 
-  async markAsPaid(chargeId: string, actor: FinanceActor, paidAmount: number, paidAt?: Date) {
+  async markAsPaid(
+    chargeId: string,
+    actor: FinanceActor,
+    paidAmount: number,
+    paidAt?: Date,
+  ) {
     await this.ensureChargeAccess(chargeId, actor);
     return prisma.charge.update({
       where: { id: chargeId },
@@ -494,9 +512,13 @@ export class FinanceService {
     const unit = await prisma.unit.findUniqueOrThrow({ where: { id: unitId } });
     if (actor.role !== UserRole.SUPER_ADMIN) {
       const membership = await prisma.condominiumUser.findFirst({
-        where: { userId: actor.userId, condominiumId: unit.condominiumId, isActive: true },
+        where: {
+          userId: actor.userId,
+          condominiumId: unit.condominiumId,
+          isActive: true,
+        },
       });
-      if (!membership) throw new ForbiddenError('Acesso negado a esta unidade');
+      if (!membership) throw new ForbiddenError("Acesso negado a esta unidade");
     }
     const [pending, total] = await prisma.$transaction([
       prisma.charge.findMany({

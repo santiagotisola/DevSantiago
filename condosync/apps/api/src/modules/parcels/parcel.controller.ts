@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import { parcelService } from './parcel.service';
-import { validateRequest } from '../../utils/validateRequest';
-import { z } from 'zod';
+import { Request, Response } from "express";
+import { parcelService } from "./parcel.service";
+import { validateRequest } from "../../utils/validateRequest";
+import { z } from "zod";
 
 const registerSchema = z.object({
   unitId: z.string().uuid(),
@@ -52,13 +52,22 @@ export class ParcelController {
 
   async register(req: Request, res: Response) {
     const data = validateRequest(registerSchema, req.body);
-    const parcel = await parcelService.register(data, req.user!.userId, req.user!);
+    const parcel = await parcelService.register(
+      data,
+      req.user!.userId,
+      req.user!,
+    );
     res.status(201).json({ success: true, data: { parcel } });
   }
 
   async confirmPickup(req: Request, res: Response) {
     const { pickedUpBy, signature } = validateRequest(pickupSchema, req.body);
-    const parcel = await parcelService.confirmPickup(req.params.id, pickedUpBy, req.user!, signature);
+    const parcel = await parcelService.confirmPickup(
+      req.params.id,
+      pickedUpBy,
+      req.user!,
+      signature,
+    );
     res.json({ success: true, data: { parcel } });
   }
 
@@ -80,7 +89,10 @@ export class ParcelController {
   }
 
   async pendingByUnit(req: Request, res: Response) {
-    const parcels = await parcelService.pendingByUnit(req.params.unitId, req.user!);
+    const parcels = await parcelService.pendingByUnit(
+      req.params.unitId,
+      req.user!,
+    );
     res.json({ success: true, data: { parcels } });
   }
 }

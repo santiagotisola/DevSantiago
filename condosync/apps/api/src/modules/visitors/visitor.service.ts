@@ -180,7 +180,11 @@ export class VisitorService {
     return updated;
   }
 
-  async registerExit(visitorId: string, registeredBy: string, actor: VisitorActor) {
+  async registerExit(
+    visitorId: string,
+    registeredBy: string,
+    actor: VisitorActor,
+  ) {
     const visitor = await prisma.visitor.findUniqueOrThrow({
       where: { id: visitorId },
     });
@@ -214,7 +218,8 @@ export class VisitorService {
       where: { id: visitorId },
       data: {
         status: authorized ? VisitorStatus.AUTHORIZED : VisitorStatus.DENIED,
-        preAuthorizedBy: actor.role === UserRole.RESIDENT ? actor.userId : undefined,
+        preAuthorizedBy:
+          actor.role === UserRole.RESIDENT ? actor.userId : undefined,
       },
     });
   }

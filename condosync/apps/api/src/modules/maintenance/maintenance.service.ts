@@ -120,7 +120,7 @@ export class MaintenanceService {
         where: { id: data.unitId, condominiumId: data.condominiumId },
       });
       if (!unit) {
-        throw new ForbiddenError('Unidade não pertence a este condomínio');
+        throw new ForbiddenError("Unidade não pertence a este condomínio");
       }
     }
 

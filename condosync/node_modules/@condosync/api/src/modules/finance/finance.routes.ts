@@ -158,7 +158,10 @@ router.delete(
 );
 
 router.get("/charges/unit/:unitId", async (req: Request, res: Response) => {
-  const data = await financeService.getChargesByUnit(req.params.unitId, req.user!);
+  const data = await financeService.getChargesByUnit(
+    req.params.unitId,
+    req.user!,
+  );
   res.json({ success: true, data });
 });
 
