@@ -250,7 +250,10 @@ export class MaintenanceService {
         d.setFullYear(d.getFullYear() + 1);
         break;
       default:
-        throw new AppError(`Frequência de manutenção inválida: ${frequency}`, 422);
+        throw new AppError(
+          `Frequência de manutenção inválida: ${frequency}`,
+          422,
+        );
     }
     return d;
   }

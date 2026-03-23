@@ -112,7 +112,7 @@ router.post(
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(createResidentSchema, req.body);
-    residentService.assertResidentRoleRequiresUnit('RESIDENT', data.unitId);
+    residentService.assertResidentRoleRequiresUnit("RESIDENT", data.unitId);
     await residentService.assertResidentUnitBelongsToCondominium(
       data.condominiumId,
       data.unitId,
@@ -150,12 +150,10 @@ router.post(
       where: { userId: user.id, condominiumId: data.condominiumId },
     });
     if (existing) {
-      res
-        .status(409)
-        .json({
-          success: false,
-          message: "Morador já vinculado a este condomínio",
-        });
+      res.status(409).json({
+        success: false,
+        message: "Morador já vinculado a este condomínio",
+      });
       return;
     }
 

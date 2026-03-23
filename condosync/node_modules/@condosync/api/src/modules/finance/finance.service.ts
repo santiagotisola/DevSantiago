@@ -91,9 +91,13 @@ export class FinanceService {
     });
     if (actor.role !== UserRole.SUPER_ADMIN) {
       const membership = await prisma.condominiumUser.findFirst({
-        where: { userId: actor.userId, condominiumId: account.condominiumId, isActive: true },
+        where: {
+          userId: actor.userId,
+          condominiumId: account.condominiumId,
+          isActive: true,
+        },
       });
-      if (!membership) throw new ForbiddenError('Acesso negado a esta conta');
+      if (!membership) throw new ForbiddenError("Acesso negado a esta conta");
     }
 
     const [income, expense] = await prisma.$transaction([
@@ -413,9 +417,13 @@ export class FinanceService {
     });
     if (actor.role !== UserRole.SUPER_ADMIN) {
       const membership = await prisma.condominiumUser.findFirst({
-        where: { userId: actor.userId, condominiumId: account.condominiumId, isActive: true },
+        where: {
+          userId: actor.userId,
+          condominiumId: account.condominiumId,
+          isActive: true,
+        },
       });
-      if (!membership) throw new ForbiddenError('Acesso negado a esta conta');
+      if (!membership) throw new ForbiddenError("Acesso negado a esta conta");
     }
     const { page = 1, limit = 20, ...where } = filters;
 

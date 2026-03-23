@@ -35,7 +35,10 @@ router.get("/accounts/:condominiumId", async (req: Request, res: Response) => {
 router.get(
   "/accounts/:accountId/balance",
   async (req: Request, res: Response) => {
-    const data = await financeService.getAccountBalance(req.params.accountId, req.user!);
+    const data = await financeService.getAccountBalance(
+      req.params.accountId,
+      req.user!,
+    );
     res.json({ success: true, data });
   },
 );
@@ -178,10 +181,14 @@ router.get(
 
 // Transações
 router.get("/transactions/:accountId", async (req: Request, res: Response) => {
-  const data = await financeService.listTransactions(req.params.accountId, req.user!, {
-    page: Number(req.query.page) || 1,
-    limit: Number(req.query.limit) || 20,
-  });
+  const data = await financeService.listTransactions(
+    req.params.accountId,
+    req.user!,
+    {
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 20,
+    },
+  );
   res.json({ success: true, data });
 });
 
@@ -232,7 +239,10 @@ router.patch(
       gatewayKey: z.string().min(1),
       gatewayConfig: z.record(z.unknown()).optional(),
     });
-    const { gatewayType, gatewayKey, gatewayConfig } = validateRequest(gatewaySchema, req.body);
+    const { gatewayType, gatewayKey, gatewayConfig } = validateRequest(
+      gatewaySchema,
+      req.body,
+    );
     const account = await financeService.configureGateway(
       req.params.accountId,
       { gatewayType, gatewayKey, gatewayConfig },
