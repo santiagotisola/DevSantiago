@@ -36,12 +36,16 @@ export interface CreateReservationDTO {
 
 export class CommonAreaService {
   // ─── Guards ───────────────────────────────────────────────────
-  private async ensureCondominiumAccess(condominiumId: string, actor: CommonAreaActor) {
+  private async ensureCondominiumAccess(
+    condominiumId: string,
+    actor: CommonAreaActor,
+  ) {
     if (actor.role === UserRole.SUPER_ADMIN) return;
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: actor.userId, condominiumId, isActive: true },
     });
-    if (!membership) throw new ForbiddenError("Acesso negado a este condomínio");
+    if (!membership)
+      throw new ForbiddenError("Acesso negado a este condomínio");
   }
 
   private async ensureAreaAccess(areaId: string, actor: CommonAreaActor) {
@@ -60,11 +64,18 @@ export class CommonAreaService {
     });
     if (actor.role === UserRole.SUPER_ADMIN) return unit;
     const membership = await prisma.condominiumUser.findFirst({
-      where: { userId: actor.userId, condominiumId: unit.condominiumId, isActive: true },
+      where: {
+        userId: actor.userId,
+        condominiumId: unit.condominiumId,
+        isActive: true,
+      },
       select: { role: true, unitId: true },
     });
     if (!membership) throw new ForbiddenError("Acesso negado a esta unidade");
-    if (membership.role === UserRole.RESIDENT && membership.unitId !== unit.id) {
+    if (
+      membership.role === UserRole.RESIDENT &&
+      membership.unitId !== unit.id
+    ) {
       throw new ForbiddenError("Morador só pode acessar a própria unidade");
     }
     return unit;
@@ -99,7 +110,9 @@ export class CommonAreaService {
       membership.role === UserRole.CONDOMINIUM_ADMIN ||
       membership.role === UserRole.SYNDIC;
     if (options?.managementOnly && !isManagement) {
-      throw new ForbiddenError("Apenas a administração pode executar esta ação");
+      throw new ForbiddenError(
+        "Apenas a administração pode executar esta ação",
+      );
     }
     if (
       options?.residentOwnOnly &&
@@ -133,7 +146,10 @@ export class CommonAreaService {
 
   async deleteArea(id: string, actor: CommonAreaActor) {
     await this.ensureAreaAccess(id, actor);
-    return prisma.commonArea.update({ where: { id }, data: { isActive: false } });
+    return prisma.commonArea.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 
   async listAreaReservations(
@@ -191,9 +207,13 @@ export class CommonAreaService {
     // Valida horário de funcionamento
     if (area.openTime && area.closeTime) {
       const [openH, openM] = (area.openTime as string).split(":").map(Number);
-      const [closeH, closeM] = (area.closeTime as string).split(":").map(Number);
-      const startMinutes = data.startDate.getHours() * 60 + data.startDate.getMinutes();
-      const endMinutes = data.endDate.getHours() * 60 + data.endDate.getMinutes();
+      const [closeH, closeM] = (area.closeTime as string)
+        .split(":")
+        .map(Number);
+      const startMinutes =
+        data.startDate.getHours() * 60 + data.startDate.getMinutes();
+      const endMinutes =
+        data.endDate.getHours() * 60 + data.endDate.getMinutes();
       if (
         startMinutes < openH * 60 + openM ||
         endMinutes > closeH * 60 + closeM
@@ -232,7 +252,11 @@ export class CommonAreaService {
     });
   }
 
-  async approveReservation(id: string, approvedBy: string, actor: CommonAreaActor) {
+  async approveReservation(
+    id: string,
+    approvedBy: string,
+    actor: CommonAreaActor,
+  ) {
     const reservation = await this.ensureReservationAccess(id, actor, {
       managementOnly: true,
     });
@@ -247,7 +271,12 @@ export class CommonAreaService {
     });
   }
 
-  async cancelReservation(id: string, canceledBy: string, actor: CommonAreaActor, reason?: string) {
+  async cancelReservation(
+    id: string,
+    canceledBy: string,
+    actor: CommonAreaActor,
+    reason?: string,
+  ) {
     await this.ensureReservationAccess(id, actor, { residentOwnOnly: true });
     return prisma.reservation.update({
       where: { id },
@@ -264,7 +293,10 @@ export class CommonAreaService {
     });
   }
 
-  async listReservationsByCondominium(condominiumId: string, actor: CommonAreaActor) {
+  async listReservationsByCondominium(
+    condominiumId: string,
+    actor: CommonAreaActor,
+  ) {
     await this.ensureCondominiumAccess(condominiumId, actor);
     return prisma.reservation.findMany({
       where: { commonArea: { condominiumId } },

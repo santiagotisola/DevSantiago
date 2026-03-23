@@ -21,12 +21,16 @@ export interface CreateUnitDTO {
 export type UpdateUnitDTO = Partial<Omit<CreateUnitDTO, "condominiumId">>;
 
 export class UnitService {
-  private async ensureCondominiumAccess(condominiumId: string, actor: UnitActor) {
+  private async ensureCondominiumAccess(
+    condominiumId: string,
+    actor: UnitActor,
+  ) {
     if (actor.role === UserRole.SUPER_ADMIN) return;
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: actor.userId, condominiumId, isActive: true },
     });
-    if (!membership) throw new ForbiddenError("Acesso negado a este condomínio");
+    if (!membership)
+      throw new ForbiddenError("Acesso negado a este condomínio");
   }
 
   private async ensureUnitAccess(unitId: string, actor: UnitActor) {

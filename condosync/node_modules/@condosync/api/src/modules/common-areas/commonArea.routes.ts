@@ -77,7 +77,11 @@ router.patch(
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(updateAreaSchema, req.body);
-    const area = await commonAreaService.updateArea(req.params.id, data, req.user!);
+    const area = await commonAreaService.updateArea(
+      req.params.id,
+      data,
+      req.user!,
+    );
     res.json({ success: true, data: { area } });
   },
 );
@@ -167,7 +171,6 @@ router.get(
 );
 
 export default router;
-
 
 const router = Router();
 router.use(authenticate);

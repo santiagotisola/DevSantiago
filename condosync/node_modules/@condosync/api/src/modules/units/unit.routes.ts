@@ -1,5 +1,9 @@
 import { Router, Request, Response } from "express";
-import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
 import { unitService } from "./unit.service";
@@ -65,7 +69,6 @@ router.put(
 );
 
 export default router;
-
 
 const router = Router();
 router.use(authenticate);
