@@ -4,3 +4,8 @@ dist/
 *.log
 **/obj/
 **/bin/
+**/migrations/migration_lock.toml
+**/logs/
+**/.vite/
+uploads/
+

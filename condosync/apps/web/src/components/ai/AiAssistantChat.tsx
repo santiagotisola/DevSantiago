@@ -71,6 +71,18 @@ export function AiAssistantChat() {
   const handleSend = () => {
     const text = input.trim();
     if (!text || chatMutation.isPending) return;
+    if (!aiEnabled) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            '⚠️ O assistente de IA não está configurado neste ambiente. Peça ao administrador para definir a chave de API.',
+        },
+      ]);
+      setInput('');
+      return;
+    }
     setInput('');
     chatMutation.mutate(text);
   };
@@ -128,23 +140,30 @@ export function AiAssistantChat() {
                     <Bot className="w-4 h-4 text-white" />
                   </div>
                   <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-700 max-w-[85%]">
-                    Olá! Sou o assistente IA do CondoSync. Tenho acesso ao contexto atual do seu condomínio. Como posso ajudar?
+                    {aiEnabled
+                      ? 'Olá! Sou o assistente IA do CondoSync. Tenho acesso ao contexto atual do seu condomínio. Como posso ajudar?'
+                      : 'O assistente de IA ainda não está configurado neste ambiente. Entre em contato com o suporte ou administrador para habilitar.'}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground pl-10">Sugestões:</p>
-                  {QUICK_PROMPTS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => { setInput(p); inputRef.current?.focus(); }}
-                      className="block w-full pl-10 text-left"
-                    >
-                      <span className="inline-block text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 hover:bg-blue-100 transition-colors">
-                        {p}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                {aiEnabled && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground pl-10">Sugestões:</p>
+                    {QUICK_PROMPTS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setInput(p);
+                          inputRef.current?.focus();
+                        }}
+                        className="block w-full pl-10 text-left"
+                      >
+                        <span className="inline-block text-xs px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100 hover:bg-blue-100 transition-colors">
+                          {p}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -190,15 +209,19 @@ export function AiAssistantChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite sua pergunta… (Enter para enviar)"
+                placeholder={
+                  aiEnabled
+                    ? 'Digite sua pergunta… (Enter para enviar)'
+                    : 'Assistente IA desativado. Configure a chave de API para usar.'
+                }
                 rows={1}
                 className="flex-1 bg-transparent text-sm resize-none focus:outline-none max-h-28"
                 style={{ minHeight: '1.5rem' }}
-                disabled={chatMutation.isPending}
+                disabled={chatMutation.isPending || !aiEnabled}
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || chatMutation.isPending}
+                disabled={!input.trim() || chatMutation.isPending || !aiEnabled}
                 className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 shrink-0"
               >
                 <Send className="w-4 h-4" />
