@@ -3,17 +3,17 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copiar apenas o package.json do web (sem workspaces que dependem de api)
-COPY apps/web/package*.json ./
+# Copiar manifests do web com lockfile para build reprodutível
+COPY apps/web/package.json apps/web/package-lock.json ./
 
-# Instala deps somente do web
-RUN npm install
+# Instalar dependências com lockfile
+RUN npm ci
 
 # Copiar código fonte
 COPY apps/web/ ./
 
-# Build de produção (pula verificação de tipos para não bloquear)
-RUN npx vite build
+# Build de produção (inclui TypeScript check)
+RUN npm run build
 
 # ─── Stage 2: Production (nginx) ──────────────────────────────────────────────
 FROM nginx:1.27-alpine AS production

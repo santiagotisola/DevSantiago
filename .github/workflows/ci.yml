@@ -1,4 +1,4 @@
-name: CI/CD CondoSync
+5JNMNMNMNMHH     MW2'name: CI/CD CondoSync
 
 on:
   push:
@@ -113,7 +113,8 @@ jobs:
 
       - name: Build de produção
         env:
-          VITE_API_URL: https://condosync-api.up.railway.app/api/v1
+          # Define via GitHub Secret: VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
       - name: Verificar tamanho dos bundles
@@ -147,7 +148,8 @@ jobs:
 
       - name: Build de produção
         env:
-          VITE_API_URL: https://condosync-api.up.railway.app/api/v1
+          # Define via GitHub Secret: VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
   # ─── TypeScript type-check da API ────────────────────────────────────────────
@@ -187,12 +189,14 @@ jobs:
       - name: Deploy API
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service condosync-api --detach
+        # Nome do serviço no Railway: ajuste em Settings > General > Service Name
+        run: railway up --service ${{ vars.RAILWAY_SERVICE_API || 'condosync-api' }} --detach
 
       - name: Deploy Web
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --service condosync-web --detach
+        # Nome do serviço no Railway: ajuste em Settings > General > Service Name
+        run: railway up --service ${{ vars.RAILWAY_SERVICE_WEB || 'condosync-web' }} --detach
 
       - name: Notificar deploy concluído
         if: success()

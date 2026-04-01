@@ -8,4 +8,6 @@ dist/
 **/logs/
 **/.vite/
 uploads/
+coverage/
+dump.rdb
 
