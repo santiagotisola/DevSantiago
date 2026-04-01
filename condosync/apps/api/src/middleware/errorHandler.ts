@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import * as Sentry from '@sentry/node';
 import { logger } from '../config/logger';
 
 export class AppError extends Error {
@@ -110,6 +111,8 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     });
   }
 
+  // Capturar no Sentry apenas erros inesperados (não operacionais)
+  Sentry.captureException(err, { extra: { url: req.url, method: req.method } });
   logger.error('Erro não tratado:', { error: err.message, stack: err.stack });
 
   return res.status(500).json({

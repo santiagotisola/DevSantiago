@@ -1,3 +1,14 @@
+import * as Sentry from '@sentry/node';
+
+// Sentry deve ser inicializado antes de qualquer outro import
+if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: 0.1,
+  });
+}
+
 import "express-async-errors";
 import express from "express";
 import cors from "cors";

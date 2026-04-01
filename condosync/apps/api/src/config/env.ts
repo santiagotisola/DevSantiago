@@ -25,6 +25,10 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
+  // Resend — e-mail transacional em produção
+  RESEND_API_KEY: z.string().optional(),
+  // Sentry — monitoramento de erros em produção
+  SENTRY_DSN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

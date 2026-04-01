@@ -1,0 +1,202 @@
+name: CI/CD CondoSync
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ─── Testes e cobertura da API ───────────────────────────────────────────────
+  test-api:
+    name: Testes API (Vitest)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: condosync
+          POSTGRES_PASSWORD: condosync123
+          POSTGRES_DB: condosync_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: condosync/apps/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/apps/api/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      - name: Aplicar migrations (test DB)
+        env:
+          DATABASE_URL: postgresql://condosync:condosync123@localhost:5432/condosync_test?schema=public
+        run: npx prisma migrate deploy
+
+      - name: Executar testes com cobertura
+        env:
+          DATABASE_URL: postgresql://condosync:condosync123@localhost:5432/condosync_test?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-jwt-secret-minimum-32-chars-here
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-minimum-32-chars
+          JWT_EXPIRES_IN: 1h
+          JWT_REFRESH_EXPIRES_IN: 7d
+          NODE_ENV: test
+          BCRYPT_ROUNDS: "4"
+          CORS_ORIGINS: http://localhost:5173
+          FRONTEND_URL: http://localhost:5173
+          SMTP_HOST: ""
+          RESEND_API_KEY: ""
+        run: npm run test:coverage
+
+      - name: Upload cobertura para Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          flags: api
+          fail_ci_if_error: false
+
+  # ─── Build do frontend Web ───────────────────────────────────────────────────
+  build-web:
+    name: Build Web (Vite)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: condosync/apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/apps/web/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build de produção
+        env:
+          VITE_API_URL: https://condosync-api.up.railway.app/api/v1
+        run: npm run build
+
+      - name: Verificar tamanho dos bundles
+        run: |
+          echo "=== Tamanho dos bundles ==="
+          du -sh dist/
+          ls -lh dist/assets/*.js | sort -k5 -rh | head -10
+
+  # ─── Build Mobile ────────────────────────────────────────────────────────────
+  build-mobile:
+    name: Build Mobile (Vite PWA)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: condosync/apps/mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/apps/mobile/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build de produção
+        env:
+          VITE_API_URL: https://condosync-api.up.railway.app/api/v1
+        run: npm run build
+
+  # ─── TypeScript type-check da API ────────────────────────────────────────────
+  typecheck-api:
+    name: TypeScript Check (API)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: condosync/apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+
+  # ─── Deploy para Railway (apenas em push na main) ────────────────────────────
+  deploy:
+    name: Deploy → Railway
+    needs: [test-api, build-web, build-mobile, typecheck-api]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service condosync-api --detach
+
+      - name: Deploy Web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service condosync-web --detach
+
+      - name: Notificar deploy concluído
+        if: success()
+        run: |
+          echo "✅ Deploy concluído com sucesso!"
+          echo "🌐 API: https://condosync-api.up.railway.app"
+          echo "🖥️  Web: https://condosync-web.up.railway.app"
