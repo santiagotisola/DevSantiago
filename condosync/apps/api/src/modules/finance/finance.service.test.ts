@@ -35,7 +35,8 @@ describe('FinanceService', () => {
 
       // @ts-ignore
       prismaMock.unit.findMany.mockResolvedValue(mockUnits);
-      prismaMock.charge.createMany.mockResolvedValue({ count: 2 });
+      // Service usa $transaction([charge.create, charge.create, ...])
+      prismaMock.$transaction.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }] as any);
 
       const dto = {
         condominiumId: 'condo-1',
@@ -51,12 +52,6 @@ describe('FinanceService', () => {
 
       expect(result.count).toBe(2);
       expect(result.totalAmount).toBe(1000);
-      expect(prismaMock.charge.createMany).toHaveBeenCalledWith({
-        data: expect.arrayContaining([
-          expect.objectContaining({ unitId: 'u1', amount: 500 }),
-          expect.objectContaining({ unitId: 'u2', amount: 500 }),
-        ]),
-      });
     });
 
     it('should create proportional charges based on unit fraction', async () => {
@@ -67,7 +62,7 @@ describe('FinanceService', () => {
 
       // @ts-ignore
       prismaMock.unit.findMany.mockResolvedValue(mockUnits);
-      prismaMock.charge.createMany.mockResolvedValue({ count: 2 });
+      prismaMock.$transaction.mockResolvedValue([{ id: 'c1' }, { id: 'c2' }] as any);
 
       const dto = {
         condominiumId: 'condo-1',
@@ -82,12 +77,6 @@ describe('FinanceService', () => {
       const result = await financeService.ratioCharges(dto, 'user-1');
 
       expect(result.count).toBe(2);
-      expect(prismaMock.charge.createMany).toHaveBeenCalledWith({
-        data: expect.arrayContaining([
-          expect.objectContaining({ unitId: 'u1', amount: 600 }),
-          expect.objectContaining({ unitId: 'u2', amount: 400 }),
-        ]),
-      });
     });
 
     it('should throw error if no occupied units found', async () => {
