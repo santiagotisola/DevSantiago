@@ -1,4 +1,4 @@
-5JNMNMNMNMHH     MW2'name: CI/CD CondoSync
+name: CI/CD CondoSync
 
 on:
   push:
@@ -113,8 +113,9 @@ jobs:
 
       - name: Build de produção
         env:
-          # Define via GitHub Secret: VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
+          # Define via GitHub Variables (Settings > Secrets and variables > Variables):
+          # VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
       - name: Verificar tamanho dos bundles
@@ -148,8 +149,9 @@ jobs:
 
       - name: Build de produção
         env:
-          # Define via GitHub Secret: VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
+          # Define via GitHub Variables (Settings > Secrets and variables > Variables):
+          # VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
   # ─── TypeScript type-check da API ────────────────────────────────────────────

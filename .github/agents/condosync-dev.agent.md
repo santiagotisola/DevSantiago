@@ -12,7 +12,6 @@ tools:
   - search
   - execute
   - todo
-model: claude-sonnet-4-5
 argument-hint: "O que deseja implementar ou corrigir no CondoSync?"
 ---
 
