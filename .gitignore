@@ -1,0 +1,8 @@
+# Redis dump
+dump.rdb
+
+# Logs
+*.log
+
+# Ambiente
+.env
