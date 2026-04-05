@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+﻿import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
@@ -12,7 +12,7 @@ router.use(
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
 );
 
-/** Verifica que o ator pertence ao condomÃ­nio */
+/** Verifica que o ator pertence ao condominio */
 async function ensureCondominiumMembership(
   userId: string,
   role: string,
@@ -23,10 +23,10 @@ async function ensureCondominiumMembership(
     where: { userId, condominiumId, isActive: true },
     select: { id: true },
   });
-  if (!membership) throw new ForbiddenError("Acesso negado a este condomÃ­nio");
+  if (!membership) throw new ForbiddenError("Acesso negado a este condominio");
 }
 
-// Valores legados que o frontend antigo enviava — mapeamos para o enum correto do banco
+// Mapeia valores legados do frontend para o enum correto do banco
 const SHIFT_ALIASES: Record<string, string> = {
   FULL_TIME: "FULL_DAY",
   ON_CALL: "MORNING",
@@ -35,16 +35,11 @@ const SHIFT_ALIASES: Record<string, string> = {
 const employeeSchema = z.object({
   condominiumId: z.string().uuid(),
   name: z.string().min(2),
-  cpf: z.string().length(11).optional(),
+  cpf: z.string().optional(),
   role: z.string().min(2),
-  phone: z.string().optional().transform(v => v || undefined),
-  email: z.union([z.string().email(), z.literal("")]).optional().transform(v => v || undefined),
-  shift: z
-    .string()
-    .optional()
-    .default("MORNING")
-    .transform(v => SHIFT_ALIASES[v] ?? v),
-  shiftType: z.string().optional().transform(v => (v ? SHIFT_ALIASES[v] ?? v : undefined)),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  shift: z.enum(["MORNING", "AFTERNOON", "NIGHT", "FULL_DAY"]).optional().default("MORNING"),
   admissionDate: z.string().datetime().optional(),
   salaryAmount: z.number().positive().optional(),
   notes: z.string().optional(),
@@ -67,72 +62,78 @@ router.get(
   },
 );
 
-// E3 â€” verifica membership para condominiumId do body
 router.post("/", async (req: Request, res: Response) => {
-  const data = validateRequest(employeeSchema, req.body);
-  await ensureCondominiumMembership(
-    req.user!.userId,
-    req.user!.role,
-    data.condominiumId,
-  );
-  const shift = (data.shift && data.shift !== "MORNING" ? data.shift : data.shiftType) ?? data.shift ?? "MORNING";
-  const { shiftType: _st, ...rest } = data;
+  // Normaliza antes do Zod: mapeia aliases de turno, remove strings vazias
+  const rawShift = req.body.shift ?? req.body.shiftType ?? "MORNING";
+  const normalizedBody = {
+    ...req.body,
+    shift: SHIFT_ALIASES[rawShift] ?? rawShift,
+    email: req.body.email || undefined,
+    phone: req.body.phone || undefined,
+    cpf: req.body.cpf || undefined,
+  };
+
+  const data = validateRequest(employeeSchema, normalizedBody);
+  await ensureCondominiumMembership(req.user!.userId, req.user!.role, data.condominiumId);
+
   const employee = await prisma.employee.create({
     data: {
-      ...rest,
-      shift,
-      cpf: rest.cpf ?? "",
-      admissionDate: data.admissionDate
-        ? new Date(data.admissionDate)
-        : new Date(),
+      condominiumId: data.condominiumId,
+      name:          data.name,
+      role:          data.role,
+      cpf:           data.cpf ?? "",
+      shift:         data.shift ?? "MORNING",
+      phone:         data.phone,
+      email:         data.email,
+      salaryAmount:  data.salaryAmount,
+      notes:         data.notes,
+      admissionDate: data.admissionDate ? new Date(data.admissionDate) : new Date(),
     },
   });
   res.status(201).json({ success: true, data: { employee } });
 });
 
-// E1 â€” IDOR fix: busca funcionÃ¡rio, verifica condomÃ­nio antes de editar
 router.put("/:id", async (req: Request, res: Response) => {
   const existing = await prisma.employee.findUniqueOrThrow({
     where: { id: req.params.id },
     select: { condominiumId: true },
   });
-  await ensureCondominiumMembership(
-    req.user!.userId,
-    req.user!.role,
-    existing.condominiumId,
-  );
-  const data = validateRequest(employeeSchema.partial(), req.body);
+  await ensureCondominiumMembership(req.user!.userId, req.user!.role, existing.condominiumId);
+
+  const rawShift = req.body.shift ?? req.body.shiftType;
+  const normalizedBody = {
+    ...req.body,
+    shift: rawShift ? (SHIFT_ALIASES[rawShift] ?? rawShift) : undefined,
+    email: req.body.email || undefined,
+    phone: req.body.phone || undefined,
+  };
+
+  const data = validateRequest(employeeSchema.partial(), normalizedBody);
   const employee = await prisma.employee.update({
     where: { id: req.params.id },
     data: {
-      ...data,
-      admissionDate: data.admissionDate
-        ? new Date(data.admissionDate)
-        : undefined,
+      name:          data.name,
+      role:          data.role,
+      phone:         data.phone,
+      email:         data.email,
+      shift:         data.shift,
+      admissionDate: data.admissionDate ? new Date(data.admissionDate) : undefined,
     },
   });
   res.json({ success: true, data: { employee } });
 });
 
-// E2 â€” IDOR fix: busca funcionÃ¡rio, verifica condomÃ­nio antes de desativar
 router.delete("/:id", async (req: Request, res: Response) => {
   const existing = await prisma.employee.findUniqueOrThrow({
     where: { id: req.params.id },
     select: { condominiumId: true },
   });
-  await ensureCondominiumMembership(
-    req.user!.userId,
-    req.user!.role,
-    existing.condominiumId,
-  );
-  await prisma.employee.update({
-    where: { id: req.params.id },
-    data: { isActive: false },
-  });
+  await ensureCondominiumMembership(req.user!.userId, req.user!.role, existing.condominiumId);
+  await prisma.employee.update({ where: { id: req.params.id }, data: { isActive: false } });
   res.json({ success: true });
 });
 
-// POST /employees/:id/grant-access — cria ou vincula conta de acesso ao sistema
+// POST /employees/:id/grant-access
 const grantAccessSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -147,21 +148,17 @@ router.post("/:id/grant-access", async (req: Request, res: Response) => {
   await ensureCondominiumMembership(req.user!.userId, req.user!.role, employee.condominiumId);
 
   if (employee.userId) {
-    throw new ConflictError("Este funcionário já possui uma conta de acesso vinculada");
+    throw new ConflictError("Este funcionario ja possui uma conta de acesso vinculada");
   }
 
   const data = validateRequest(grantAccessSchema, req.body);
-
-  // Verificar se o e-mail já existe no sistema
   const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
 
   let userId: string;
 
   if (existingUser) {
-    // Vincular conta existente ao funcionário
     userId = existingUser.id;
   } else {
-    // Criar nova conta de usuário
     const rounds = parseInt(process.env.BCRYPT_ROUNDS ?? "10");
     const passwordHash = await bcrypt.hash(data.password, rounds);
     const newUser = await prisma.user.create({
@@ -176,7 +173,6 @@ router.post("/:id/grant-access", async (req: Request, res: Response) => {
     userId = newUser.id;
   }
 
-  // Verificar se já existe vínculo com o condomínio
   const existingMembership = await prisma.condominiumUser.findUnique({
     where: { userId_condominiumId: { userId, condominiumId: employee.condominiumId } },
   });
@@ -186,23 +182,18 @@ router.post("/:id/grant-access", async (req: Request, res: Response) => {
       data: { userId, condominiumId: employee.condominiumId, role: data.systemRole, isActive: true },
     });
   } else {
-    // Atualizar role se já existe vínculo
     await prisma.condominiumUser.update({
       where: { userId_condominiumId: { userId, condominiumId: employee.condominiumId } },
       data: { role: data.systemRole, isActive: true },
     });
   }
 
-  // Vincular o userId ao Employee
-  await prisma.employee.update({
-    where: { id: employee.id },
-    data: { userId },
-  });
+  await prisma.employee.update({ where: { id: employee.id }, data: { userId } });
 
   res.status(201).json({ success: true, message: "Acesso ao sistema concedido com sucesso" });
 });
 
-// DELETE /employees/:id/revoke-access — remove o vínculo de acesso sem apagar o usuário
+// DELETE /employees/:id/revoke-access
 router.delete("/:id/revoke-access", async (req: Request, res: Response) => {
   const employee = await prisma.employee.findUniqueOrThrow({
     where: { id: req.params.id },
@@ -211,7 +202,7 @@ router.delete("/:id/revoke-access", async (req: Request, res: Response) => {
   await ensureCondominiumMembership(req.user!.userId, req.user!.role, employee.condominiumId);
 
   if (!employee.userId) {
-    throw new ConflictError("Este funcionário não possui conta de acesso vinculada");
+    throw new ConflictError("Este funcionario nao possui conta de acesso vinculada");
   }
 
   await prisma.condominiumUser.updateMany({
@@ -219,10 +210,7 @@ router.delete("/:id/revoke-access", async (req: Request, res: Response) => {
     data: { isActive: false },
   });
 
-  await prisma.employee.update({
-    where: { id: employee.id },
-    data: { userId: null },
-  });
+  await prisma.employee.update({ where: { id: employee.id }, data: { userId: null } });
 
   res.json({ success: true, message: "Acesso revogado com sucesso" });
 });
