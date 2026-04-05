@@ -47,6 +47,7 @@ import { FinanceCategoriesPage } from "./pages/finance/FinanceCategoriesPage";
 import { VisitorRecurrencesPage } from "./pages/minha-portaria/VisitorRecurrencesPage";
 import MarketplaceAdminPage from "./pages/marketplace/MarketplaceAdminPage";
 import LandingPage from "./pages/landing/LandingPage";
+import AccessControlPage from "./pages/access/AccessControlPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -63,6 +64,14 @@ const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 const COMMUNITY = [
   "RESIDENT",
   "DOORMAN",
+  "CONDOMINIUM_ADMIN",
+  "SYNDIC",
+  "SUPER_ADMIN",
+  "SERVICE_PROVIDER",
+];
+// Áreas sem acesso de porteiro nem prestador (conteúdo de moradores/gestão)
+const RESIDENT_MANAGEMENT = [
+  "RESIDENT",
   "CONDOMINIUM_ADMIN",
   "SYNDIC",
   "SUPER_ADMIN",
@@ -177,7 +186,7 @@ export default function App() {
           <Route
             path="unidades"
             element={
-              <RoleGuard roles={STAFF}>
+              <RoleGuard roles={MANAGEMENT}>
                 <UnitsPage />
               </RoleGuard>
             }
@@ -223,7 +232,7 @@ export default function App() {
           <Route
             path="areas-comuns"
             element={
-              <RoleGuard roles={COMMUNITY}>
+              <RoleGuard roles={RESIDENT_MANAGEMENT}>
                 <CommonAreasPage />
               </RoleGuard>
             }
@@ -249,7 +258,7 @@ export default function App() {
           <Route
             path="comunicacao/achados-e-perdidos"
             element={
-              <RoleGuard roles={COMMUNITY}>
+              <RoleGuard roles={RESIDENT_MANAGEMENT}>
                 <LostAndFoundPage />
               </RoleGuard>
             }
@@ -273,7 +282,7 @@ export default function App() {
           <Route
             path="pets"
             element={
-              <RoleGuard roles={STAFF}>
+              <RoleGuard roles={MANAGEMENT}>
                 <PetPage />
               </RoleGuard>
             }
@@ -357,7 +366,7 @@ export default function App() {
           <Route
             path="documentos"
             element={
-              <RoleGuard roles={COMMUNITY}>
+              <RoleGuard roles={RESIDENT_MANAGEMENT}>
                 <DocumentsPage />
               </RoleGuard>
             }
@@ -387,7 +396,7 @@ export default function App() {
           <Route
             path="galeria"
             element={
-              <RoleGuard roles={COMMUNITY}>
+              <RoleGuard roles={RESIDENT_MANAGEMENT}>
                 <GalleryPage />
               </RoleGuard>
             }
@@ -409,6 +418,16 @@ export default function App() {
             element={
               <RoleGuard roles={["SUPER_ADMIN"]}>
                 <MarketplaceAdminPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Controle de Acesso */}
+          <Route
+            path="acesso"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <AccessControlPage />
               </RoleGuard>
             }
           />

@@ -28,6 +28,7 @@ import PanicoPage from './pages/shared/PanicoPage';
 import MarketplacePage from './pages/marketplace/MarketplacePage';
 
 const DOORMAN_ROLES = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'];
+const SERVICE_PROVIDER_ROLES = ['SERVICE_PROVIDER'];
 
 function PrivateRoute() {
   const { isAuthenticated } = useAuthStore();
@@ -96,6 +97,11 @@ export default function App() {
           </Route>
           <Route element={<MobileLayout title="Meus Pets" showBack />}>
             <Route path="/pets" element={<Pets />} />
+          </Route>
+
+          {/* Chamados (morador + porteiro + prestador) */}
+          <Route element={<MobileLayout title="Chamados" showBack />}>
+            <Route path="/chamados" element={<Avisos />} />
           </Route>
           <Route element={<MobileLayout title="Perfil" showBack />}>
             <Route path="/perfil" element={<PerfilPage />} />

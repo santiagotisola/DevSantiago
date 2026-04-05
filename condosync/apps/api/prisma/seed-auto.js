@@ -1,4 +1,4 @@
-// Seed automático mínimo — cria apenas o Super Admin se o banco estiver vazio.
+// Seed automático — cria Super Admin e condomínio base (idempotente via upsert).
 // Executado automaticamente pelo entrypoint.sh na inicialização do container.
 "use strict";
 
@@ -8,31 +8,100 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-  const count = await prisma.user.count();
+  console.log("🌱 Aplicando seed base (idempotente)...");
 
-  if (count > 0) {
-    console.log("ℹ️  Banco já possui dados — seed ignorado.");
-    return;
-  }
-
-  console.log("🌱 Banco vazio — criando dados iniciais...");
-
+  // ── Super Admin ──────────────────────────────────────────────────────────
   const password = await bcrypt.hash("Admin@2026", 12);
-
-  await prisma.user.create({
-    data: {
+  const superAdmin = await prisma.user.upsert({
+    where: { email: "admin@condosync.com.br" },
+    update: {},
+    create: {
       name: "Super Admin",
       email: "admin@condosync.com.br",
       passwordHash: password,
       role: "SUPER_ADMIN",
       isActive: true,
+      emailVerified: true,
     },
   });
+  console.log("✅ Super admin:", superAdmin.email);
 
-  console.log("✅ Super admin criado: admin@condosync.com.br / Admin@2026");
-  console.log(
-    "ℹ️  Para dados completos de demo, rode: docker compose exec api npx tsx prisma/seed.ts",
-  );
+  // ── Condomínio base: Residencial Veredas do Bosque ───────────────────────
+  const condominium = await prisma.condominium.upsert({
+    where: { cnpj: "12345678000195" },
+    update: {},
+    create: {
+      name: "Residencial Veredas do Bosque",
+      cnpj: "12345678000195",
+      address: "Rua das Palmeiras, 500",
+      city: "Goiânia",
+      state: "GO",
+      zipCode: "74000000",
+      phone: "(62) 3000-0000",
+      email: "admin@veredasdobosque.com.br",
+      plan: "professional",
+      maxUnits: 80,
+    },
+  });
+  console.log("✅ Condomínio:", condominium.name);
+
+  // ── Associar Super Admin ao condomínio ───────────────────────────────────
+  await prisma.condominiumUser.upsert({
+    where: { userId_condominiumId: { userId: superAdmin.id, condominiumId: condominium.id } },
+    update: {},
+    create: {
+      userId: superAdmin.id,
+      condominiumId: condominium.id,
+      role: "SUPER_ADMIN",
+      isActive: true,
+    },
+  });
+  console.log("✅ Super admin associado ao condomínio");
+
+  // ── Síndico padrão ───────────────────────────────────────────────────────
+  const syndicPwd = await bcrypt.hash("Sindico@2026", 12);
+  const syndic = await prisma.user.upsert({
+    where: { email: "sindico@veredasdobosque.com.br" },
+    update: {},
+    create: {
+      name: "Carlos Silva",
+      email: "sindico@veredasdobosque.com.br",
+      passwordHash: syndicPwd,
+      phone: "(62) 99100-0001",
+      role: "SYNDIC",
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  await prisma.condominiumUser.upsert({
+    where: { userId_condominiumId: { userId: syndic.id, condominiumId: condominium.id } },
+    update: {},
+    create: { userId: syndic.id, condominiumId: condominium.id, role: "SYNDIC", isActive: true },
+  });
+
+  // ── Porteiro padrão ──────────────────────────────────────────────────────
+  const doormanPwd = await bcrypt.hash("Porteiro@2026", 12);
+  const doorman = await prisma.user.upsert({
+    where: { email: "porteiro@veredasdobosque.com.br" },
+    update: {},
+    create: {
+      name: "João Porteiro",
+      email: "porteiro@veredasdobosque.com.br",
+      passwordHash: doormanPwd,
+      phone: "(62) 99100-0002",
+      role: "DOORMAN",
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  await prisma.condominiumUser.upsert({
+    where: { userId_condominiumId: { userId: doorman.id, condominiumId: condominium.id } },
+    update: {},
+    create: { userId: doorman.id, condominiumId: condominium.id, role: "DOORMAN", isActive: true },
+  });
+
+  console.log("✅ Síndico e porteiro criados/verificados");
+  console.log("ℹ️  Para dados de demo completos rode: node prisma/seed-demo.js");
 }
 
 main()

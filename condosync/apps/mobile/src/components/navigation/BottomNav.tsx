@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Shield, Package, Bell, User, AlertTriangle, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Shield, Package, Bell, User, AlertTriangle, Ticket, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const DOORMAN_ROLES = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'];
@@ -11,6 +11,7 @@ export default function BottomNav() {
 
   const isDoorman = DOORMAN_ROLES.includes(role);
   const isResident = RESIDENT_ROLES.includes(role);
+  const isServiceProvider = role === 'SERVICE_PROVIDER';
 
   type Tab = { to: string; icon: LucideIcon; label: string; danger?: boolean };
 
@@ -30,7 +31,14 @@ export default function BottomNav() {
     { to: '/perfil', icon: User, label: 'Perfil' },
   ];
 
-  const tabs = isDoorman ? doormanTabs : residentTabs;
+  const serviceTabs: Tab[] = [
+    { to: '/', icon: LayoutDashboard, label: 'Início' },
+    { to: '/avisos', icon: Bell, label: 'Avisos' },
+    { to: '/chamados', icon: Ticket, label: 'Chamados' },
+    { to: '/perfil', icon: User, label: 'Perfil' },
+  ];
+
+  const tabs = isDoorman ? doormanTabs : isServiceProvider ? serviceTabs : residentTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-bottom">

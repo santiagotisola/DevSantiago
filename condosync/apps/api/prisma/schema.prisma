@@ -168,6 +168,7 @@ model User {
   ticketsCreated     Ticket[]       @relation("TicketCreator")
   ticketsAssigned    Ticket[]       @relation("TicketAssignee")
   ticketMessages     TicketMessage[] @relation("TicketMessages")
+  employee           Employee?
 
   @@map("users")
 }
@@ -364,6 +365,10 @@ model Employee {
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  // Vínculo opcional com conta de acesso ao sistema
+  user          User?       @relation(fields: [userId], references: [id])
+  userId        String?     @unique
 
   @@map("employees")
 }

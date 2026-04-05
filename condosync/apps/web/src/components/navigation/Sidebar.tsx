@@ -29,6 +29,7 @@ import {
   HardHat,
   DoorOpen,
   CreditCard,
+  KeyRound,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -37,9 +38,12 @@ interface NavItem {
   label: string;
   to?: string;
   icon: React.ElementType;
-  children?: { label: string; to: string }[];
+  children?: { label: string; to: string; roles?: string[] }[];
   roles?: string[];
 }
+
+const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+const RESIDENT_MANAGEMENT = ["RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -51,14 +55,14 @@ const navItems: NavItem[] = [
       { label: "Visitantes", to: "/portaria/visitantes" },
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
-      { label: "Prestadores", to: "/prestadores" },
+      { label: "Prestadores", to: "/prestadores", roles: MANAGEMENT },
     ],
   },
   {
     label: "Unidades",
     to: "/unidades",
     icon: Home,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
   },
   {
     label: "Moradores",
@@ -70,56 +74,83 @@ const navItems: NavItem[] = [
     label: "Pets",
     to: "/pets",
     icon: PawPrint,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
   },
   {
     label: "Financeiro",
     icon: DollarSign,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
     children: [
       { label: "Visão Geral", to: "/financeiro" },
       { label: "Cobranças", to: "/financeiro/cobrancas" },
       { label: "Categorias", to: "/financeiro/categorias" },
     ],
   },
-  { label: "Manutenção", to: "/manutencao", icon: Wrench, roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"] },
-  { label: "Áreas Comuns", to: "/areas-comuns", icon: CalendarDays },
+  { label: "Manutenção", to: "/manutencao", icon: Wrench, roles: MANAGEMENT },
+  {
+    label: "Áreas Comuns",
+    to: "/areas-comuns",
+    icon: CalendarDays,
+    roles: RESIDENT_MANAGEMENT,
+  },
   {
     label: "Comunicação",
     icon: Megaphone,
+    roles: ["RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
     children: [
       { label: "Avisos", to: "/comunicacao/avisos" },
       { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
-      { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos" },
-      { label: "Assembleias", to: "/assembleias" },
+      { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos", roles: RESIDENT_MANAGEMENT },
+      { label: "Assembleias", to: "/assembleias", roles: MANAGEMENT },
     ],
   },
-  { label: "Documentos", to: "/documentos", icon: FileText },
-  { label: "Chamados", to: "/chamados", icon: Ticket },
-  { label: "Galeria", to: "/galeria", icon: Image },
+  {
+    label: "Documentos",
+    to: "/documentos",
+    icon: FileText,
+    roles: RESIDENT_MANAGEMENT,
+  },
+  {
+    label: "Chamados",
+    to: "/chamados",
+    icon: Ticket,
+    roles: ["RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
+  },
+  {
+    label: "Galeria",
+    to: "/galeria",
+    icon: Image,
+    roles: RESIDENT_MANAGEMENT,
+  },
   {
     label: "Estoque",
     to: "/estoque",
     icon: Package,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
   },
   {
     label: "Obras",
     to: "/obras",
     icon: HardHat,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
   },
   {
     label: "Relatórios",
     to: "/relatorios",
     icon: BarChart3,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
   },
   {
     label: "Funcionários",
     to: "/funcionarios",
     icon: UserCog,
-    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"],
+    roles: MANAGEMENT,
+  },
+  {
+    label: "Controle de Acesso",
+    to: "/acesso",
+    icon: KeyRound,
+    roles: MANAGEMENT,
   },
   {
     label: "Condomínios",
@@ -287,7 +318,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
                     {isExpanded && (
                       <div className="ml-7 mt-1 space-y-1">
-                        {item.children.map((child) => (
+                        {item.children
+                          .filter((child) => !child.roles || child.roles.includes(user?.role || ""))
+                          .map((child) => (
                           <NavLink
                             key={child.to}
                             to={child.to}

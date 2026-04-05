@@ -2,8 +2,9 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
-import { ForbiddenError } from "../../middleware/errorHandler";
+import { ForbiddenError, ConflictError } from "../../middleware/errorHandler";
 import { z } from "zod";
+import bcrypt from "bcrypt";
 
 const router = Router();
 router.use(
@@ -53,6 +54,7 @@ router.get(
     const employees = await prisma.employee.findMany({
       where: { condominiumId: req.params.condominiumId, isActive: true },
       orderBy: { name: "asc" },
+      include: { user: { select: { id: true, email: true, role: true, isActive: true } } },
     });
     res.json({ success: true, data: { employees } });
   },
@@ -121,6 +123,101 @@ router.delete("/:id", async (req: Request, res: Response) => {
     data: { isActive: false },
   });
   res.json({ success: true });
+});
+
+// POST /employees/:id/grant-access — cria ou vincula conta de acesso ao sistema
+const grantAccessSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  systemRole: z.enum(["DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "COUNCIL_MEMBER", "SERVICE_PROVIDER"]),
+});
+
+router.post("/:id/grant-access", async (req: Request, res: Response) => {
+  const employee = await prisma.employee.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { id: true, condominiumId: true, name: true, userId: true },
+  });
+  await ensureCondominiumMembership(req.user!.userId, req.user!.role, employee.condominiumId);
+
+  if (employee.userId) {
+    throw new ConflictError("Este funcionário já possui uma conta de acesso vinculada");
+  }
+
+  const data = validateRequest(grantAccessSchema, req.body);
+
+  // Verificar se o e-mail já existe no sistema
+  const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
+
+  let userId: string;
+
+  if (existingUser) {
+    // Vincular conta existente ao funcionário
+    userId = existingUser.id;
+  } else {
+    // Criar nova conta de usuário
+    const rounds = parseInt(process.env.BCRYPT_ROUNDS ?? "10");
+    const passwordHash = await bcrypt.hash(data.password, rounds);
+    const newUser = await prisma.user.create({
+      data: {
+        email: data.email,
+        name: employee.name,
+        passwordHash,
+        role: data.systemRole,
+        isActive: true,
+      },
+    });
+    userId = newUser.id;
+  }
+
+  // Verificar se já existe vínculo com o condomínio
+  const existingMembership = await prisma.condominiumUser.findUnique({
+    where: { userId_condominiumId: { userId, condominiumId: employee.condominiumId } },
+  });
+
+  if (!existingMembership) {
+    await prisma.condominiumUser.create({
+      data: { userId, condominiumId: employee.condominiumId, role: data.systemRole, isActive: true },
+    });
+  } else {
+    // Atualizar role se já existe vínculo
+    await prisma.condominiumUser.update({
+      where: { userId_condominiumId: { userId, condominiumId: employee.condominiumId } },
+      data: { role: data.systemRole, isActive: true },
+    });
+  }
+
+  // Vincular o userId ao Employee
+  await prisma.employee.update({
+    where: { id: employee.id },
+    data: { userId },
+  });
+
+  res.status(201).json({ success: true, message: "Acesso ao sistema concedido com sucesso" });
+});
+
+// DELETE /employees/:id/revoke-access — remove o vínculo de acesso sem apagar o usuário
+router.delete("/:id/revoke-access", async (req: Request, res: Response) => {
+  const employee = await prisma.employee.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { id: true, condominiumId: true, userId: true },
+  });
+  await ensureCondominiumMembership(req.user!.userId, req.user!.role, employee.condominiumId);
+
+  if (!employee.userId) {
+    throw new ConflictError("Este funcionário não possui conta de acesso vinculada");
+  }
+
+  await prisma.condominiumUser.updateMany({
+    where: { userId: employee.userId, condominiumId: employee.condominiumId },
+    data: { isActive: false },
+  });
+
+  await prisma.employee.update({
+    where: { id: employee.id },
+    data: { userId: null },
+  });
+
+  res.json({ success: true, message: "Acesso revogado com sucesso" });
 });
 
 export default router;

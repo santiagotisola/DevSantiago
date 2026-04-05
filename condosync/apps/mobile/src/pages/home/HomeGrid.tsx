@@ -14,6 +14,7 @@ import {
   BarChart3,
   AlertTriangle,
   ShoppingBag,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
@@ -34,6 +35,7 @@ export default function HomeGrid() {
   const { user } = useAuthStore();
   const role = user?.role ?? '';
   const isDoorman = DOORMAN_ROLES.includes(role);
+  const isServiceProvider = role === 'SERVICE_PROVIDER';
 
   const residentTiles: Tile[] = [
     { to: '/visitantes', icon: Shield, label: 'Visitantes', color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -65,7 +67,13 @@ export default function HomeGrid() {
     },
   ];
 
-  const tiles = isDoorman ? doormanTiles : residentTiles;
+  const serviceTiles: Tile[] = [
+    { to: '/avisos', icon: Bell, label: 'Avisos', color: 'text-purple-600', bg: 'bg-purple-50' },
+    { to: '/chamados', icon: Ticket, label: 'Chamados', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { to: '/manutencao', icon: Wrench, label: 'Manutenção', color: 'text-blue-600', bg: 'bg-blue-50' },
+  ];
+
+  const tiles = isDoorman ? doormanTiles : isServiceProvider ? serviceTiles : residentTiles;
 
   return (
     <div className="p-4">
