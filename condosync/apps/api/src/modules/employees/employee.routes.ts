@@ -26,18 +26,25 @@ async function ensureCondominiumMembership(
   if (!membership) throw new ForbiddenError("Acesso negado a este condomÃ­nio");
 }
 
+// Valores legados que o frontend antigo enviava — mapeamos para o enum correto do banco
+const SHIFT_ALIASES: Record<string, string> = {
+  FULL_TIME: "FULL_DAY",
+  ON_CALL: "MORNING",
+};
+
 const employeeSchema = z.object({
   condominiumId: z.string().uuid(),
   name: z.string().min(2),
   cpf: z.string().length(11).optional(),
   role: z.string().min(2),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
+  phone: z.string().optional().transform(v => v || undefined),
+  email: z.union([z.string().email(), z.literal("")]).optional().transform(v => v || undefined),
   shift: z
-    .enum(["MORNING", "AFTERNOON", "NIGHT", "FULL_DAY"])
+    .string()
     .optional()
-    .default("MORNING"),
-  shiftType: z.enum(["MORNING", "AFTERNOON", "NIGHT", "FULL_DAY"]).optional(),
+    .default("MORNING")
+    .transform(v => SHIFT_ALIASES[v] ?? v),
+  shiftType: z.string().optional().transform(v => (v ? SHIFT_ALIASES[v] ?? v : undefined)),
   admissionDate: z.string().datetime().optional(),
   salaryAmount: z.number().positive().optional(),
   notes: z.string().optional(),
@@ -68,7 +75,7 @@ router.post("/", async (req: Request, res: Response) => {
     req.user!.role,
     data.condominiumId,
   );
-  const shift = data.shift ?? data.shiftType ?? "MORNING";
+  const shift = (data.shift && data.shift !== "MORNING" ? data.shift : data.shiftType) ?? data.shift ?? "MORNING";
   const { shiftType: _st, ...rest } = data;
   const employee = await prisma.employee.create({
     data: {
