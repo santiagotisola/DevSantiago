@@ -29,9 +29,21 @@ export function EmployeesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (d: typeof form) => api.post('/employees', { ...d, condominiumId: selectedCondominiumId }),
+    mutationFn: (d: typeof form) => api.post('/employees', {
+      name: d.name,
+      role: d.role,
+      email: d.email || undefined,
+      phone: d.phone || undefined,
+      shift: d.shiftType,
+      condominiumId: selectedCondominiumId,
+    }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['employees'] }); setShowModal(false); setForm({ name: '', role: '', email: '', phone: '', shiftType: 'MORNING' }); setCreateErrors({}); },
-    onError: (err: any) => { const msg = err?.response?.data?.message ?? 'Erro ao cadastrar funcionário'; setCreateErrors({ general: msg }); },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error?.message
+        ?? err?.response?.data?.message
+        ?? 'Erro ao cadastrar funcionário';
+      setCreateErrors({ general: msg });
+    },
   });
 
   const updateMutation = useMutation({
@@ -41,6 +53,12 @@ export function EmployeesPage() {
       setEditModal(false);
       setEditTarget(null);
       setEditErrors({});
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error?.message
+        ?? err?.response?.data?.message
+        ?? 'Erro ao atualizar funcionário';
+      setEditErrors({ general: msg });
     },
   });
 
@@ -60,7 +78,9 @@ export function EmployeesPage() {
       setAccessErrors({});
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Erro ao vincular acesso';
+      const msg = err?.response?.data?.error?.message
+        ?? err?.response?.data?.message
+        ?? 'Erro ao vincular acesso';
       setAccessErrors({ general: msg });
     },
   });
@@ -262,6 +282,9 @@ export function EmployeesPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
             <h2 className="text-lg font-semibold">Editar Funcionário</h2>
+            {editErrors.general && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">{editErrors.general}</div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
                 <label className="text-sm font-medium">Nome *</label>

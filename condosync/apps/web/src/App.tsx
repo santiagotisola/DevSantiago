@@ -434,7 +434,14 @@ export default function App() {
 
           {/* Perfil e Configurações */}
           <Route path="perfil" element={<ProfilePage />} />
-          <Route path="configuracoes" element={<SettingsPage />} />
+          <Route
+            path="configuracoes"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <SettingsPage />
+              </RoleGuard>
+            }
+          />
         </Route>
 
         {/* Redirecionar rotas desconhecidas */}

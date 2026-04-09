@@ -30,6 +30,8 @@ import {
   DoorOpen,
   CreditCard,
   KeyRound,
+  Settings,
+  User,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -44,6 +46,7 @@ interface NavItem {
 
 const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 const RESIDENT_MANAGEMENT = ["RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
+const COUNCIL_COMMUNITY = ["RESIDENT", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -91,36 +94,36 @@ const navItems: NavItem[] = [
     label: "Áreas Comuns",
     to: "/areas-comuns",
     icon: CalendarDays,
-    roles: RESIDENT_MANAGEMENT,
+    roles: COUNCIL_COMMUNITY,
   },
   {
     label: "Comunicação",
     icon: Megaphone,
-    roles: ["RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
+    roles: ["RESIDENT", "DOORMAN", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
     children: [
       { label: "Avisos", to: "/comunicacao/avisos" },
       { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
       { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos", roles: RESIDENT_MANAGEMENT },
-      { label: "Assembleias", to: "/assembleias", roles: MANAGEMENT },
+      { label: "Assembleias", to: "/assembleias", roles: ["COUNCIL_MEMBER", ...MANAGEMENT] },
     ],
   },
   {
     label: "Documentos",
     to: "/documentos",
     icon: FileText,
-    roles: RESIDENT_MANAGEMENT,
+    roles: COUNCIL_COMMUNITY,
   },
   {
     label: "Chamados",
     to: "/chamados",
     icon: Ticket,
-    roles: ["RESIDENT", "DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
+    roles: ["RESIDENT", "DOORMAN", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"],
   },
   {
     label: "Galeria",
     to: "/galeria",
     icon: Image,
-    roles: RESIDENT_MANAGEMENT,
+    roles: COUNCIL_COMMUNITY,
   },
   {
     label: "Estoque",
@@ -147,10 +150,13 @@ const navItems: NavItem[] = [
     roles: MANAGEMENT,
   },
   {
-    label: "Controle de Acesso",
-    to: "/acesso",
-    icon: KeyRound,
+    label: "Configurações",
+    icon: Settings,
     roles: MANAGEMENT,
+    children: [
+      { label: "Controle de Acesso", to: "/acesso", roles: MANAGEMENT },
+      { label: "Dados do Condomínio", to: "/configuracoes", roles: MANAGEMENT },
+    ],
   },
   {
     label: "Condomínios",
@@ -190,6 +196,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     "Portaria",
     "Financeiro",
     "Comunicação",
+    "Configurações",
   ]);
   const [condominiums, setCondominiums] = useState<
     { id: string; name: string }[]
@@ -257,6 +264,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <button
             onClick={onClose}
+            title="Fechar menu"
             className="lg:hidden text-slate-400 hover:text-white"
           >
             <X className="w-5 h-5" />
@@ -268,6 +276,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="px-4 py-3 bg-slate-800 mx-3 mt-3 rounded-lg">
             <p className="text-xs text-slate-400 mb-1">Condomínio ativo</p>
             <select
+              aria-label="Selecionar condomínio"
               value={selectedCondominiumId ?? ""}
               onChange={(e) => setSelectedCondominium(e.target.value)}
               className="w-full bg-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -374,6 +383,20 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
+          <NavLink
+            to="/perfil"
+            className={({ isActive }) =>
+              cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors mb-1",
+                isActive
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-white",
+              )
+            }
+          >
+            <User className="w-4 h-4" />
+            <span>Meu Perfil</span>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white text-sm transition-colors"
