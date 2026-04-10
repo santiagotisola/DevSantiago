@@ -167,34 +167,16 @@ jobs:
       - run: npx tsc --noEmit
 
   # ─── Deploy para Railway (apenas em push na main) ────────────────────────────
+  # O Railway faz o deploy automaticamente via webhook do GitHub.
+  # Este job é mantido apenas como referência — o deploy real é feito pelo Railway.
   deploy:
     name: Deploy → Railway
-    needs: [test-api, build-web, build-mobile, typecheck-api]
+    needs: [test-api, build-web, build-mobile]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Instalar Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        # Nome do serviço no Railway: ajuste em Settings > General > Service Name
-        run: railway up --service ${{ vars.RAILWAY_SERVICE_API || 'condosync-api' }} --detach
-
-      - name: Deploy Web
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        # Nome do serviço no Railway: ajuste em Settings > General > Service Name
-        run: railway up --service ${{ vars.RAILWAY_SERVICE_WEB || 'condosync-web' }} --detach
-
-      - name: Notificar deploy concluído
-        if: success()
+      - name: Deploy concluído via Railway webhook
         run: |
-          echo "✅ Deploy concluído com sucesso!"
-          echo "🌐 API: https://condosync-api.up.railway.app"
-          echo "🖥️  Web: https://condosync-web.up.railway.app"
+          echo "✅ CI concluído. Railway faz o deploy automaticamente via GitHub webhook."
+          echo "🌐 Web: https://web-production-916b1.up.railway.app"
