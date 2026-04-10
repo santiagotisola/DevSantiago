@@ -3,11 +3,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copiar manifests do web com lockfile para build reprodutível
-COPY apps/web/package.json apps/web/package-lock.json ./
+# Copiar manifests do web
+COPY apps/web/package.json ./
 
-# Instalar dependências com lockfile
-RUN npm ci
+# Instalar dependências
+RUN npm install
 
 # Copiar código fonte
 COPY apps/web/ ./

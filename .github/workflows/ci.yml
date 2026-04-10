@@ -49,11 +49,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: condosync/apps/api/package-lock.json
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Gerar Prisma Client
         run: npx prisma generate
@@ -105,11 +103,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: condosync/apps/web/package-lock.json
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Build de produção
         env:
@@ -141,11 +137,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: condosync/apps/mobile/package-lock.json
 
       - name: Instalar dependências
-        run: npm ci
+        run: npm install
 
       - name: Build de produção
         env:
@@ -168,9 +162,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: condosync/apps/api/package-lock.json
-      - run: npm ci
+      - run: npm install
       - run: npx prisma generate
       - run: npx tsc --noEmit
 
