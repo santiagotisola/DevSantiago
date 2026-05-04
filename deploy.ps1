@@ -48,6 +48,10 @@ function Deploy-Web {
 
     Ensure-ServiceInConfig $Condo $WEB_SERVICE
 
+    # Railway CLI lê railway.toml — copiar temporariamente o web toml
+    $tomlPath = Join-Path $Condo "railway.toml"
+    Copy-Item (Join-Path $Condo "railway.web.toml") $tomlPath -Force
+
     Push-Location $Condo
     try {
         railway up --service "Web"
@@ -60,6 +64,7 @@ function Deploy-Web {
         }
     } finally {
         Pop-Location
+        Remove-Item $tomlPath -ErrorAction SilentlyContinue
     }
 }
 

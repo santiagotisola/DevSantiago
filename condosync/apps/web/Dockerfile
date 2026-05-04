@@ -27,6 +27,9 @@ COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
 # Copiar o build do Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Fallback para API_URL — substituído pela env var do Railway se definida
+ENV API_URL=https://devsantiago-production.up.railway.app
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
