@@ -31,8 +31,8 @@ services:
   # ─── API (Backend) ────────────────────────────────────────────────────────
   api:
     build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+      context: apps/api
+      dockerfile: Dockerfile
     container_name: condosync-api
     restart: unless-stopped
     depends_on:
