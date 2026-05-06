@@ -17,7 +17,7 @@ COPY . ./
 RUN ./node_modules/.bin/prisma generate
 
 # Compilar TypeScript → dist/
-RUN node_modules/.bin/tsc --skipLibCheck --noEmitOnError false; exit 0
+RUN rm -rf dist && node_modules/.bin/tsc --skipLibCheck --noEmitOnError false; exit 0
 RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
 
 # Remover devDependencies antes de copiar para produção
