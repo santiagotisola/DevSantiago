@@ -86,35 +86,7 @@ const testimonials = [
   },
 ];
 
-const plans = [
-  {
-    name: 'Starter',
-    desc: 'Ideal para condomínios pequenos',
-    price: 'R$ 149',
-    period: '/mês',
-    highlight: false,
-    items: ['Até 50 unidades', 'Portaria digital', 'Financeiro básico', 'Suporte por e-mail'],
-    cta: 'Começar grátis',
-  },
-  {
-    name: 'Pro',
-    desc: 'Para condomínios em crescimento',
-    price: 'R$ 299',
-    period: '/mês',
-    highlight: true,
-    items: ['Até 200 unidades', 'Tudo do Starter', 'Áreas comuns', 'Assembleias digitais', 'Suporte prioritário'],
-    cta: 'Começar grátis',
-  },
-  {
-    name: 'Enterprise',
-    desc: 'Para grandes empreendimentos',
-    price: 'Sob consulta',
-    period: '',
-    highlight: false,
-    items: ['Unidades ilimitadas', 'Tudo do Pro', 'Multi-condomínio', 'API personalizada', 'Gerente dedicado'],
-    cta: 'Falar com vendas',
-  },
-];
+
 
 const stats = [
   { value: '+500', label: 'Condomínios ativos' },
@@ -157,9 +129,6 @@ export default function LandingPage() {
             </button>
             <button onClick={() => scrollTo('testimonials')} className="hover:text-primary-600 transition-colors">
               Depoimentos
-            </button>
-            <button onClick={() => scrollTo('pricing')} className="hover:text-primary-600 transition-colors">
-              Planos
             </button>
           </nav>
           <Link
@@ -280,67 +249,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary-600">Planos</span>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mt-2">Preço justo para todo tamanho</h2>
-            <p className="text-gray-500 mt-3">Comece grátis por 14 dias. Sem cartão de crédito.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {plans.map(({ name, desc, price, period, highlight, items, cta }) => (
-              <div
-                key={name}
-                className={[
-                  'rounded-2xl p-8 border relative',
-                  highlight
-                    ? 'bg-primary-600 text-white border-primary-500 shadow-xl shadow-primary-200 scale-105'
-                    : 'bg-white text-gray-900 border-gray-200 shadow-sm',
-                ].join(' ')}
-              >
-                {highlight && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
-                    Mais popular
-                  </span>
-                )}
-                <h3 className={['font-bold text-xl mb-1', highlight ? 'text-white' : 'text-gray-900'].join(' ')}>
-                  {name}
-                </h3>
-                <p className={['text-sm mb-6', highlight ? 'text-primary-200' : 'text-gray-500'].join(' ')}>{desc}</p>
-                <div className="mb-8">
-                  <span className={['text-4xl font-extrabold', highlight ? 'text-white' : 'text-gray-900'].join(' ')}>
-                    {price}
-                  </span>
-                  {period && <span className={highlight ? 'text-primary-200' : 'text-gray-500'}>{period}</span>}
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {items.map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2
-                        size={16}
-                        className={highlight ? 'text-green-300' : 'text-green-500'}
-                      />
-                      <span className={highlight ? 'text-primary-100' : 'text-gray-600'}>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/login"
-                  className={[
-                    'block text-center font-semibold px-6 py-3 rounded-xl transition-colors text-sm',
-                    highlight
-                      ? 'bg-white text-primary-700 hover:bg-primary-50'
-                      : 'bg-primary-600 text-white hover:bg-primary-700',
-                  ].join(' ')}
-                >
-                  {cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* ── CTA ────────────────────────────────────────────────────────── */}
       <section className="py-24 bg-primary-600">
@@ -372,9 +281,6 @@ export default function LandingPage() {
           <nav className="flex gap-6">
             <button onClick={() => scrollTo('features')} className="hover:text-white transition-colors">
               Funcionalidades
-            </button>
-            <button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors">
-              Planos
             </button>
             <Link to="/login" className="hover:text-white transition-colors">
               Entrar
