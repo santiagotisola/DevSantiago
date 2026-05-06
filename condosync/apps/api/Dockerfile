@@ -6,14 +6,14 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Instalar todas as dependências (incluindo dev) com lockfile para build reprodutível
-COPY package.json package-lock.json ./
-RUN npm ci
+# Instalar todas as dependências (incluindo dev)
+COPY package.json ./
+RUN npm install --ignore-scripts
 
 # Copiar todo o código-fonte da API
 COPY . ./
 
-# Gerar o Prisma Client (usa o binário instalado, não baixa versão latest via npx)
+# Gerar o Prisma Client
 RUN ./node_modules/.bin/prisma generate
 
 # Compilar TypeScript → dist/
@@ -21,7 +21,7 @@ RUN node_modules/.bin/tsc --skipLibCheck --noEmitOnError false
 RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
 
 # Remover devDependencies antes de copiar para produção
-RUN npm ci --omit=dev
+RUN npm install --omit=dev --ignore-scripts
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:22-alpine AS production
