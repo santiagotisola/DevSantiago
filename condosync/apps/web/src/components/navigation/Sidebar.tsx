@@ -32,6 +32,9 @@ import {
   KeyRound,
   Settings,
   User,
+  Tv,
+  FileSignature,
+  Gavel,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -141,6 +144,24 @@ const navItems: NavItem[] = [
     label: "Relatórios",
     to: "/relatorios",
     icon: BarChart3,
+    roles: MANAGEMENT,
+  },
+  {
+    label: "Multas",
+    to: "/multas",
+    icon: Gavel,
+    roles: MANAGEMENT,
+  },
+  {
+    label: "Contratos",
+    to: "/contratos",
+    icon: FileSignature,
+    roles: MANAGEMENT,
+  },
+  {
+    label: "TV Elevador",
+    to: "/digital-signage",
+    icon: Tv,
     roles: MANAGEMENT,
   },
   {

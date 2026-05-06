@@ -8,6 +8,7 @@
     "git commit": true,
     "git push": true,
     "npx tsc": true,
-    "ForEach-Object": true
+    "ForEach-Object": true,
+    "ssh": true
   }
 }

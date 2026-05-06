@@ -48,6 +48,10 @@ import { VisitorRecurrencesPage } from "./pages/minha-portaria/VisitorRecurrence
 import MarketplaceAdminPage from "./pages/marketplace/MarketplaceAdminPage";
 import LandingPage from "./pages/landing/LandingPage";
 import AccessControlPage from "./pages/access/AccessControlPage";
+import DigitalSignagePage from "./pages/digital-signage/DigitalSignagePage";
+import DisplayPage from "./pages/digital-signage/DisplayPage";
+import FinesPage from "./pages/fines/FinesPage";
+import ContractsPage from "./pages/contracts/ContractsPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -114,6 +118,9 @@ export default function App() {
             </PublicRoute>
           }
         />
+
+        {/* Display TV — rota pública, sem layout */}
+        <Route path="/display/:token" element={<DisplayPage />} />
 
         {/* Rotas públicas */}
         <Route
@@ -428,6 +435,36 @@ export default function App() {
             element={
               <RoleGuard roles={MANAGEMENT}>
                 <AccessControlPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Multas condominiais */}
+          <Route
+            path="multas"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <FinesPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Contratos condominiais */}
+          <Route
+            path="contratos"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <ContractsPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Digital Signage */}
+          <Route
+            path="digital-signage"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <DigitalSignagePage />
               </RoleGuard>
             }
           />

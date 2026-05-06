@@ -166,3 +166,4 @@ router.post('/', authenticate, authorize(['CONDOMINIUM_ADMIN', 'SYNDIC']), async
 | Enviar notificação in-app + email | `apps/api/src/services/notification.service.ts` |
 | Emitir evento Socket.IO | `req.app.get('io').to(room).emit(event, data)` |
 | Enfileirar job BullMQ | `apps/api/src/services/queue.service.ts` |
+ini

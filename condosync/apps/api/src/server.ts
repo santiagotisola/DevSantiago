@@ -31,6 +31,9 @@ import type { JwtPayload } from "./middleware/auth";
 import "./notifications/notification.worker";
 import { registerMaintenanceAlertsSchedule } from "./modules/maintenance/maintenance.alerts.worker";
 import { registerFinanceSchedule } from "./modules/finance/finance.scheduler";
+import { registerContractAlertsSchedule } from "./modules/condominium-contracts/contract.alerts.worker";
+import { registerCollectionSchedule } from "./modules/collection-rules/collection.worker";
+import { registerBalanceteSchedule } from "./modules/finance/balancete.worker";
 
 // Rotas
 import authRoutes from "./modules/auth/auth.routes";
@@ -64,6 +67,12 @@ import panicRoutes from "./modules/panic/panic.routes";
 import visitorRecurrenceRoutes from "./modules/visitors/recurrence.routes";
 import financeCategoryRoutes from "./modules/finance/financeCategories.routes";
 import permissionsRoutes from "./modules/permissions/permissions.routes";
+// Novos módulos Sprint 2
+import visitorQRCodeRoutes from "./modules/visitor-qrcode/visitor-qrcode.routes";
+import condominiumContractsRoutes from "./modules/condominium-contracts/condominium-contracts.routes";
+import finesRoutes from "./modules/fines/fines.routes";
+import collectionRulesRoutes from "./modules/collection-rules/collection-rules.routes";
+import digitalSignageRoutes from "./modules/digital-signage/digital-signage.routes";
 const app = express();
 const httpServer = createServer(app);
 
@@ -235,6 +244,12 @@ app.use(`${API}/panic`, panicRoutes);
 app.use(`${API}/visitor-recurrences`, visitorRecurrenceRoutes);
 app.use(`${API}/finance-categories`, financeCategoryRoutes);
 app.use(`${API}/permissions`, permissionsRoutes);
+// Novos módulos Sprint 2
+app.use(`${API}/visitor-qrcode`, visitorQRCodeRoutes);
+app.use(`${API}/condominium-contracts`, condominiumContractsRoutes);
+app.use(`${API}/fines`, finesRoutes);
+app.use(`${API}/collection-rules`, collectionRulesRoutes);
+app.use(`${API}/digital-signage`, digitalSignageRoutes);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Error Handlers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.use(notFoundHandler);
@@ -249,6 +264,9 @@ httpServer.listen(PORT, async () => {
   logger.info(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â URL: http://localhost:${PORT}`);
   await registerMaintenanceAlertsSchedule();
   await registerFinanceSchedule();
+  await registerContractAlertsSchedule();
+  await registerCollectionSchedule();
+  await registerBalanceteSchedule();
 });
 
 export default app;

@@ -310,6 +310,7 @@ model Unit {
   pets          Pet[]
   renovations   Renovation[]
   visitorRecurrences VisitorRecurrence[]
+  visitorQRCodes     VisitorQRCode[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -1241,4 +1242,163 @@ model VisitorRecurrence {
   updatedAt     DateTime    @updatedAt
 
   @@map("visitor_recurrences")
+}
+
+// ─────────────────────────────────────────────────────────────
+// QR CODE DE VISITANTE
+// ─────────────────────────────────────────────────────────────
+
+model VisitorQRCode {
+  id           String         @id @default(uuid())
+  unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId       String
+  createdBy    String         // userId do morador
+  visitorName  String
+  visitorDoc   String?
+  visitorPhone String?
+  reason       String?
+  validFrom    DateTime
+  validUntil   DateTime
+  maxUses      Int            @default(1)
+  usedCount    Int            @default(0)
+  token        String         @unique @default(uuid())
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+
+  uses         VisitorQRUse[]
+
+  @@map("visitor_qrcodes")
+}
+
+model VisitorQRUse {
+  id         String        @id @default(uuid())
+  qrcode     VisitorQRCode @relation(fields: [qrcodeId], references: [id], onDelete: Cascade)
+  qrcodeId   String
+  visitorId  String?       // Visitor criado ao escanear (opcional)
+  scannedAt  DateTime      @default(now())
+  scannedBy  String        // userId do porteiro
+
+  @@map("visitor_qrcode_uses")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTRATOS CONDOMINIAIS (independente de prestador cadastrado)
+// ─────────────────────────────────────────────────────────────
+
+model CondominiumContract {
+  id              String   @id @default(uuid())
+  condominiumId   String
+  title           String   // "Contrato Elevador Atlas 2026"
+  vendor          String   // nome da empresa contratada
+  contractType    String   // ELEVATOR | INSURANCE | CLEANING | SECURITY | MAINTENANCE | OTHER
+  startDate       DateTime
+  endDate         DateTime
+  value           Decimal  @db.Decimal(12,2)
+  adjustmentIndex String?  // INPC | IGPM | IPCA
+  fileUrl         String?
+  notes           String?
+  autoRenew       Boolean  @default(false)
+  alertDaysBefore Int      @default(60) // alertar N dias antes do vencimento
+  status          String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("condominium_contracts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SISTEMA DE MULTAS CONDOMINIAIS
+// ─────────────────────────────────────────────────────────────
+
+model Fine {
+  id             String   @id @default(uuid())
+  condominiumId  String
+  unitId         String
+  reportedBy     String   // userId do síndico/admin
+  description    String
+  regulation     String   // artigo do regimento/convenção
+  photoUrls      String[]
+  amount         Decimal  @db.Decimal(10,2)
+  appealDeadline DateTime // prazo para recurso (padrão 15 dias)
+  appealText     String?  // recurso enviado pelo morador
+  appealedAt     DateTime?
+  appealStatus   String?  // ACCEPTED | REJECTED
+  appealResponse String?  // resposta do síndico
+  status         String   @default("PENDING") // PENDING | APPEAL | CONFIRMED | CANCELED | CONVERTED
+  chargeId       String?  // cobrança gerada após confirmação (ASAAS)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("fines")
+}
+
+// ─────────────────────────────────────────────────────────────
+// RÉGUA DE COBRANÇA AUTOMÁTICA
+// ─────────────────────────────────────────────────────────────
+
+model CollectionRule {
+  id            String           @id @default(uuid())
+  condominiumId String
+  name          String           // "Régua Padrão 2026"
+  isActive      Boolean          @default(true)
+  steps         CollectionStep[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("collection_rules")
+}
+
+model CollectionStep {
+  id              String         @id @default(uuid())
+  rule            CollectionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId          String
+  daysAfterDue    Int            // D+1, D+7, D+30, D+60
+  channels        String[]       // ["email","inapp"]
+  messageTemplate String         // "Olá {{nome}}, sua cota venceu. Valor: R$ {{valor}}"
+  action          String         @default("notify") // notify | block_amenities
+
+  @@map("collection_steps")
+}
+
+// ─────────────────────────────────────────────────────────────
+// DIGITAL SIGNAGE — TV/MONITOR ELEVADOR
+// ─────────────────────────────────────────────────────────────
+
+model DigitalSignageScreen {
+  id            String                @id @default(uuid())
+  condominiumId String
+  name          String                // "Elevador Torre A", "Hall Social"
+  location      String                // localização física
+  token         String                @unique @default(uuid())
+  isActive      Boolean               @default(true)
+  slideDuration Int                   @default(8)  // segundos por slide (padrão)
+  primaryColor  String                @default("#1e40af") // cor tema da tela
+  logoUrl       String?               // logo do condomínio na tela
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  slides        DigitalSignageSlide[]
+
+  @@map("digital_signage_screens")
+}
+
+model DigitalSignageSlide {
+  id              String               @id @default(uuid())
+  screen          DigitalSignageScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenId        String
+  type            String               // TEXT | IMAGE | ANNOUNCEMENT | BIRTHDAY | CLOCK | MARKETPLACE
+  title           String?
+  content         String?
+  imageUrl        String?
+  backgroundColor String?              // hex color ex: "#0f172a"
+  textColor       String?              // hex color ex: "#ffffff"
+  order           Int                  @default(0)
+  duration        Int?                 // segundos (sobrescreve padrão da tela)
+  isActive        Boolean              @default(true)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@map("digital_signage_slides")
 }
