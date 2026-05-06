@@ -86,52 +86,7 @@ const testimonials = [
   },
 ];
 
-const plans = [
-  {
-    name: "Starter",
-    price: "R$ 149",
-    period: "/mês",
-    desc: "Ideal para condomínios pequenos",
-    features: [
-      "Até 50 unidades",
-      "Portaria digital",
-      "Financeiro básico",
-      "Suporte por e-mail",
-    ],
-    cta: "Começar grátis",
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "R$ 299",
-    period: "/mês",
-    desc: "Para condomínios em crescimento",
-    features: [
-      "Até 200 unidades",
-      "Tudo do Starter",
-      "Áreas comuns",
-      "Assembleias digitais",
-      "Suporte prioritário",
-    ],
-    cta: "Começar grátis",
-    highlight: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Sob consulta",
-    period: "",
-    desc: "Para grandes empreendimentos",
-    features: [
-      "Unidades ilimitadas",
-      "Tudo do Pro",
-      "Multi-condomínio",
-      "API personalizada",
-      "Gerente dedicado",
-    ],
-    cta: "Falar com vendas",
-    highlight: false,
-  },
-];
+
 
 export default function LandingPage() {
   const navigate = useNavigate();
