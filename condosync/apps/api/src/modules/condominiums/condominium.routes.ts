@@ -6,6 +6,7 @@ import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { residentService } from "../residents/resident.service";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 router.use(authenticate);
@@ -118,7 +119,59 @@ router.put(
   },
 );
 
-// Adicionar membro ao condomÃ­nio
+// ── Setup Admin ─────────────────────────────────────────────────
+// Cria um usuário CONDOMINIUM_ADMIN e vincula ao condomínio (SUPER_ADMIN only)
+router.post(
+  "/:id/setup-admin",
+  authorize("SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const schema = z.object({
+      name: z.string().min(2),
+      email: z.string().email(),
+      password: z.string().min(6),
+    });
+    const { name, email, password } = validateRequest(schema, req.body);
+
+    // Verifica que o condomínio existe
+    await prisma.condominium.findUniqueOrThrow({ where: { id: req.params.id } });
+
+    const rounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    const passwordHash = await bcrypt.hash(password, rounds);
+
+    const { user, membership } = await prisma.$transaction(async (tx) => {
+      // Cria o usuário (ou reutiliza se email já existe no sistema)
+      let user = await tx.user.findUnique({ where: { email } });
+      if (user) {
+        // Se já existe, só atualiza a senha
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: { passwordHash, role: UserRole.CONDOMINIUM_ADMIN, isActive: true },
+        });
+      } else {
+        user = await tx.user.create({
+          data: { name, email, passwordHash, role: UserRole.CONDOMINIUM_ADMIN },
+        });
+      }
+      // Vincula como CONDOMINIUM_ADMIN do condomínio
+      const membership = await tx.condominiumUser.upsert({
+        where: { userId_condominiumId: { userId: user.id, condominiumId: req.params.id } },
+        update: { role: UserRole.CONDOMINIUM_ADMIN, isActive: true },
+        create: { userId: user.id, condominiumId: req.params.id, role: UserRole.CONDOMINIUM_ADMIN },
+      });
+      return { user, membership };
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        membership,
+      },
+    });
+  },
+);
+
+// Adicionar membro ao condomínio
 router.post(
   "/:id/members",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),

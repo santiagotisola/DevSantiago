@@ -45,9 +45,16 @@ function isCnpjComplete(value: string) {
 
 export function CondominiumsPage() {
   const queryClient = useQueryClient();
+
+  // ── Create — step 1: condomínio, step 2: admin ─────────────────
   const [showModal, setShowModal] = useState(false);
+  const [createStep, setCreateStep] = useState<1 | 2>(1);
+  const [createdCondoId, setCreatedCondoId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', email: '', password: '' });
+  const [adminErrors, setAdminErrors] = useState<Record<string, string>>({});
+  const [showAdminPwd, setShowAdminPwd] = useState(false);
 
   // ── Edit ───────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
@@ -75,11 +82,25 @@ export function CondominiumsPage() {
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/condominiums', d),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setCreatedCondoId(res.data.data.condominium.id);
+      setCreateStep(2);
+    },
+  });
+
+  const setupAdminMutation = useMutation({
+    mutationFn: (d: typeof adminForm) =>
+      api.post(`/condominiums/${createdCondoId}/setup-admin`, d),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['condominiums'] });
       setShowModal(false);
+      setCreateStep(1);
+      setCreatedCondoId(null);
       setFormErrors({});
+      setAdminErrors({});
       setForm({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
+      setAdminForm({ name: '', email: '', password: '' });
     },
   });
 
@@ -211,63 +232,162 @@ export function CondominiumsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Novo Condomínio</h2>
-            <div className="space-y-3">
-              {[
-                ['Nome *', 'name', 'text'],
-                ['Endereço', 'address', 'text'],
-                ['Cidade', 'city', 'text'],
-                ['Estado (UF)', 'state', 'text'],
-                ['CEP', 'zipCode', 'text'],
-                ['CNPJ', 'cnpj', 'text'],
-                ['Telefone', 'phone', 'text'],
-                ['E-mail', 'email', 'email'],
-              ].map(([label, key, type]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium">{label}</label>
-                  <input
-                    type={type}
-                    value={(form as any)[key]}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const nextValue =
-                        key === 'cnpj' ? formatCnpj(value)
-                        : key === 'phone' ? maskPhone(value)
-                        : value;
-                      setForm({ ...form, [key]: nextValue });
-                    }}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[key] ? 'border-red-400' : ''}`}
-                  />
-                  {key === 'cnpj' && form.cnpj && !isCnpjComplete(form.cnpj) && (
-                    <p className="text-xs text-red-600">CNPJ incompleto. Preencha os 14 dígitos.</p>
-                  )}
-                  {formErrors[key] && <p className="text-xs text-red-500 mt-0.5">{formErrors[key]}</p>}
+
+            {/* ── Indicador de etapa ── */}
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${createStep === 1 ? 'bg-blue-600 text-white' : 'bg-green-500 text-white'}`}>
+                {createStep === 1 ? '1' : '✓'}
+              </div>
+              <div className="flex-1 h-1 rounded bg-gray-200">
+                <div className={`h-1 rounded bg-blue-500 transition-all ${createStep === 2 ? 'w-full' : 'w-0'}`} />
+              </div>
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${createStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+            </div>
+
+            {createStep === 1 ? (
+              <>
+                <h2 className="text-lg font-semibold">Novo Condomínio</h2>
+                <div className="space-y-3">
+                  {[
+                    ['Nome *', 'name', 'text'],
+                    ['Endereço', 'address', 'text'],
+                    ['Cidade', 'city', 'text'],
+                    ['Estado (UF)', 'state', 'text'],
+                    ['CEP', 'zipCode', 'text'],
+                    ['CNPJ', 'cnpj', 'text'],
+                    ['Telefone', 'phone', 'text'],
+                    ['E-mail', 'email', 'email'],
+                  ].map(([label, key, type]) => (
+                    <div key={key} className="space-y-1">
+                      <label className="text-sm font-medium">{label}</label>
+                      <input
+                        type={type}
+                        value={(form as any)[key]}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const nextValue =
+                            key === 'cnpj' ? formatCnpj(value)
+                            : key === 'phone' ? maskPhone(value)
+                            : value;
+                          setForm({ ...form, [key]: nextValue });
+                        }}
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[key] ? 'border-red-400' : ''}`}
+                      />
+                      {key === 'cnpj' && form.cnpj && !isCnpjComplete(form.cnpj) && (
+                        <p className="text-xs text-red-600">CNPJ incompleto. Preencha os 14 dígitos.</p>
+                      )}
+                      {formErrors[key] && <p className="text-xs text-red-500 mt-0.5">{formErrors[key]}</p>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowModal(false); setFormErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  const errs: Record<string, string> = {};
-                  const phoneErr = validatePhone(form.phone);
-                  if (phoneErr) errs.phone = phoneErr;
-                  const emailErr = validateEmail(form.email);
-                  if (emailErr) errs.email = emailErr;
-                  if (Object.keys(errs).length) { setFormErrors(errs); return; }
-                  setFormErrors({});
-                  createMutation.mutate(form);
-                }}
-                disabled={!form.name || createMutation.isPending || !isCnpjComplete(form.cnpj)}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-              >
-                {createMutation.isPending ? 'Criando...' : 'Criar'}
-              </button>
-            </div>
-            {createMutation.isError && (
-              <p className="text-sm text-red-600">Erro ao criar condomínio. Verifique os dados.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => { setShowModal(false); setFormErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      const errs: Record<string, string> = {};
+                      const phoneErr = validatePhone(form.phone);
+                      if (phoneErr) errs.phone = phoneErr;
+                      const emailErr = validateEmail(form.email);
+                      if (emailErr) errs.email = emailErr;
+                      if (Object.keys(errs).length) { setFormErrors(errs); return; }
+                      setFormErrors({});
+                      createMutation.mutate(form);
+                    }}
+                    disabled={!form.name || createMutation.isPending || !isCnpjComplete(form.cnpj)}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {createMutation.isPending ? 'Criando...' : 'Próximo →'}
+                  </button>
+                </div>
+                {createMutation.isError && (
+                  <p className="text-sm text-red-600">Erro ao criar condomínio. Verifique os dados.</p>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold">Administrador do Condomínio</h2>
+                <p className="text-sm text-muted-foreground">Crie o usuário que irá gerenciar este condomínio. Você pode pular esta etapa e configurar depois.</p>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Nome *</label>
+                    <input
+                      type="text"
+                      value={adminForm.name}
+                      onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.name ? 'border-red-400' : ''}`}
+                      placeholder="Nome completo"
+                    />
+                    {adminErrors.name && <p className="text-xs text-red-500">{adminErrors.name}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">E-mail *</label>
+                    <input
+                      type="email"
+                      value={adminForm.email}
+                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.email ? 'border-red-400' : ''}`}
+                      placeholder="admin@exemplo.com"
+                    />
+                    {adminErrors.email && <p className="text-xs text-red-500">{adminErrors.email}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Senha *</label>
+                    <div className="relative">
+                      <input
+                        type={showAdminPwd ? 'text' : 'password'}
+                        value={adminForm.password}
+                        onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.password ? 'border-red-400' : ''}`}
+                        placeholder="Mínimo 6 caracteres"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPwd((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showAdminPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {adminErrors.password && <p className="text-xs text-red-500">{adminErrors.password}</p>}
+                  </div>
+                </div>
+                {setupAdminMutation.isError && (
+                  <p className="text-sm text-red-600">Erro ao criar administrador. Verifique os dados.</p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      // Pular: fecha sem criar admin
+                      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+                      setShowModal(false);
+                      setCreateStep(1);
+                      setCreatedCondoId(null);
+                      setAdminForm({ name: '', email: '', password: '' });
+                      setForm({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
+                    }}
+                    className="flex-1 px-4 py-2 border rounded-lg text-sm"
+                  >
+                    Pular
+                  </button>
+                  <button
+                    onClick={() => {
+                      const errs: Record<string, string> = {};
+                      if (!adminForm.name || adminForm.name.length < 2) errs.name = 'Nome obrigatório (mín. 2 caracteres)';
+                      if (!adminForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminForm.email)) errs.email = 'E-mail inválido';
+                      if (!adminForm.password || adminForm.password.length < 6) errs.password = 'Senha deve ter pelo menos 6 caracteres';
+                      if (Object.keys(errs).length) { setAdminErrors(errs); return; }
+                      setAdminErrors({});
+                      setupAdminMutation.mutate(adminForm);
+                    }}
+                    disabled={setupAdminMutation.isPending}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {setupAdminMutation.isPending ? 'Criando...' : 'Criar Admin'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
