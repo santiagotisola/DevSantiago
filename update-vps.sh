@@ -26,6 +26,13 @@ echo ">> [2/3] Reconstruindo containers (banco preservado)..."
 cd "$APP_DIR/condosync"
 $COMPOSE up -d --build
 
+# Workaround: após rebuild o container api pode ficar em "Created"
+sleep 5
+if [ "$(docker inspect -f '{{.State.Status}}' condosync-api 2>/dev/null)" = "created" ]; then
+  echo "   ⚠  condosync-api estava em Created, iniciando..."
+  docker start condosync-api
+fi
+
 # ── 3. Verificar status ──────────────────────────────────────
 echo ""
 echo ">> [3/3] Verificando containers..."
