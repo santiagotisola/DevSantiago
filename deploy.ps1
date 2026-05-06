@@ -1,25 +1,64 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # ============================================================
 # deploy.ps1 — Deploy CondoSync para Railway
 # ============================================================
 # USO:
-#   .\deploy.ps1             → deploya Web e API
-#   .\deploy.ps1 -Service web  → só o frontend
-#   .\deploy.ps1 -Service api  → só a API
+#   .\deploy.ps1                    -> deploya API e Web
+#   .\deploy.ps1 -Service web       -> so o frontend
+#   .\deploy.ps1 -Service api       -> so a API
+#   .\deploy.ps1 -SkipHealthCheck   -> pula verificacao de saude pos-deploy
+#
+# COMO FUNCIONA:
+#   - Ambos os servicos usam o mesmo diretorio condosync/ como contexto
+#   - railway.toml em condosync/ e compartilhado; o script troca seu conteudo
+#     temporariamente para cada servico e restaura ao final
+#   - --no-gitignore e necessario para enviar Dockerfile.api e railway.toml
+#     (que podem estar no .gitignore) para o Railway
+#   - O toml padrao (comittado) aponta para Dockerfile.api (API)
 # ============================================================
 
 param(
     [ValidateSet("web", "api", "all")]
-    [string]$Service = "all"
+    [string]$Service = "all",
+    [switch]$SkipHealthCheck
 )
 
-$Root   = $PSScriptRoot                             # C:\...\DevSantiago
-$Condo  = Join-Path $Root "condosync"               # C:\...\DevSantiago\condosync
+$Root   = $PSScriptRoot
+$Condo  = Join-Path $Root "condosync"
 
-# IDs Railway (não alterar sem motivo)
-$PROJECT_ID = "6d78f8d7-d2f0-43c1-9d55-fc6e42064c37"
-$WEB_SERVICE = "f34230c3-0753-4a8e-b46d-e4a9a8341b9a"   # serviço "Web"
-$API_SERVICE = "154c9107-8661-4d15-9493-f10e419bb4e9"   # serviço "DevSantiago"
+# IDs Railway — nao alterar sem motivo
+$WEB_SERVICE = "f34230c3-0753-4a8e-b46d-e4a9a8341b9a"
+$API_SERVICE = "154c9107-8661-4d15-9493-f10e419bb4e9"
+
+$WEB_URL = "https://web-production-916b1.up.railway.app"
+$API_URL = "https://devsantiago-production.up.railway.app"
+
+# Conteudo do railway.toml para cada servico
+$TOML_API = @"
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.api"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+"@
+
+$TOML_WEB = @"
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+"@
+
+$script:DeployErrors = @()
 
 function Show-Header($msg) {
     Write-Host ""
@@ -28,9 +67,30 @@ function Show-Header($msg) {
     Write-Host "========================================" -ForegroundColor Cyan
 }
 
+function Show-CommitsSummary {
+    Write-Host ""
+    Write-Host "-- Ultimos commits no branch main --" -ForegroundColor DarkGray
+    git -C $Root log --oneline -8 2>$null | ForEach-Object {
+        Write-Host "  $_" -ForegroundColor DarkGray
+    }
+    $branch = git -C $Root rev-parse --abbrev-ref HEAD 2>$null
+    $sha    = git -C $Root rev-parse --short HEAD 2>$null
+    Write-Host "  Branch: $branch  |  HEAD: $sha" -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+function Set-RailwayToml($content) {
+    $tomlPath = Join-Path $Condo "railway.toml"
+    [System.IO.File]::WriteAllText($tomlPath, $content, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Ensure-ServiceInConfig($path, $serviceId) {
     $configPath = "$env:USERPROFILE\.railway\config.json"
-    $cfg = Get-Content $configPath | ConvertFrom-Json
+    if (-not (Test-Path $configPath)) {
+        Write-Host "  AVISO: Railway config nao encontrado em $configPath" -ForegroundColor Yellow
+        return
+    }
+    $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
     $key = $path.Replace("/", "\")
     if ($cfg.projects.PSObject.Properties[$key]) {
         $cfg.projects.$key.service = $serviceId
@@ -38,68 +98,89 @@ function Ensure-ServiceInConfig($path, $serviceId) {
     $cfg | ConvertTo-Json -Depth 10 | Set-Content $configPath
 }
 
-# ── Deploy WEB ───────────────────────────────────────────────
-function Deploy-Web {
-    Show-Header "Deployando WEB (nginx + React)"
-    Write-Host ">> Contexto: $Condo" -ForegroundColor Yellow
-    Write-Host ">> Serviço : Web ($WEB_SERVICE)" -ForegroundColor Yellow
-    Write-Host ">> Dockerfile: condosync/Dockerfile (multi-stage: vite build + nginx)" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Ensure-ServiceInConfig $Condo $WEB_SERVICE
-
-    # Railway CLI lê railway.toml — copiar temporariamente o web toml
-    $tomlPath = Join-Path $Condo "railway.toml"
-    Copy-Item (Join-Path $Condo "railway.web.toml") $tomlPath -Force
-
-    Push-Location $Condo
-    try {
-        railway up --service "Web"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "`n✅ Web deployada com sucesso!" -ForegroundColor Green
-            Write-Host "   URL: https://web-production-916b1.up.railway.app" -ForegroundColor Green
-        } else {
-            Write-Host "`n❌ Deploy Web falhou. Verifique os logs:" -ForegroundColor Red
-            Write-Host "   railway logs --service Web" -ForegroundColor Red
-        }
-    } finally {
-        Pop-Location
-        Remove-Item $tomlPath -ErrorAction SilentlyContinue
+function Test-HealthEndpoint($url, $label) {
+    if ($SkipHealthCheck) { return }
+    Write-Host "  >> Aguardando $label inicializar..." -NoNewline
+    $maxAttempts = 12
+    for ($i = 1; $i -le $maxAttempts; $i++) {
+        Start-Sleep -Seconds 10
+        try {
+            $resp = Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+            if ($resp.StatusCode -lt 400) {
+                Write-Host " OK (HTTP $($resp.StatusCode))" -ForegroundColor Green
+                return
+            }
+        } catch { }
+        Write-Host "." -NoNewline
     }
+    Write-Host " AVISO: Sem resposta apos $($maxAttempts * 10)s" -ForegroundColor Yellow
+    Write-Host "  -> Verifique: railway logs --service $label" -ForegroundColor Yellow
 }
 
 # ── Deploy API ───────────────────────────────────────────────
 function Deploy-Api {
-    Show-Header "Deployando API (Node + Prisma)"
-    Write-Host ">> Contexto: $Condo" -ForegroundColor Yellow
-    Write-Host ">> Servico : DevSantiago ($API_SERVICE)" -ForegroundColor Yellow
-    Write-Host ">> Dockerfile: condosync/Dockerfile.api (via railway.toml + --no-gitignore)" -ForegroundColor DarkGray
+    Show-Header "Deployando API (Node.js + Prisma)"
+    Write-Host "  Contexto  : $Condo" -ForegroundColor Yellow
+    Write-Host "  Servico   : DevSantiago ($API_SERVICE)" -ForegroundColor Yellow
+    Write-Host "  Dockerfile: condosync/Dockerfile.api" -ForegroundColor DarkGray
     Write-Host ""
 
-    # Cria railway.toml temporario apontando para Dockerfile.api
-    # IMPORTANTE: usa --no-gitignore para que arquivos nao commitados (Dockerfile.api e railway.toml) sejam enviados
-    $tomlPath = Join-Path $Condo "railway.toml"
-    Set-Content $tomlPath -Value "[build]`nbuilder = `"dockerfile`"`ndockerfilePath = `"Dockerfile.api`"" -Encoding UTF8
-
+    Set-RailwayToml $TOML_API
     Ensure-ServiceInConfig $Condo $API_SERVICE
 
     Push-Location $Condo
     try {
         railway up --no-gitignore --service "DevSantiago"
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "`n>> API deployada com sucesso!" -ForegroundColor Green
-            Write-Host "   URL: https://devsantiago-production.up.railway.app" -ForegroundColor Green
+            Write-Host "`n  OK API deployada com sucesso!" -ForegroundColor Green
+            Write-Host "     URL: $API_URL" -ForegroundColor Green
+            Test-HealthEndpoint "$API_URL/health" "DevSantiago"
         } else {
-            Write-Host "`n>> Deploy API falhou. Verifique os logs:" -ForegroundColor Red
-            Write-Host "   railway logs --service DevSantiago" -ForegroundColor Red
+            Write-Host "`n  ERRO Deploy API falhou." -ForegroundColor Red
+            Write-Host "     -> railway logs --service DevSantiago" -ForegroundColor Red
+            $script:DeployErrors += "API"
         }
     } finally {
         Pop-Location
-        Remove-Item $tomlPath -ErrorAction SilentlyContinue
+        # Garante que railway.toml volta para API apos o deploy
+        Set-RailwayToml $TOML_API
     }
 }
 
-# ── Execução ─────────────────────────────────────────────────
+# ── Deploy WEB ───────────────────────────────────────────────
+function Deploy-Web {
+    Show-Header "Deployando WEB (nginx + React)"
+    Write-Host "  Contexto  : $Condo" -ForegroundColor Yellow
+    Write-Host "  Servico   : Web ($WEB_SERVICE)" -ForegroundColor Yellow
+    Write-Host "  Dockerfile: condosync/Dockerfile (vite build + nginx)" -ForegroundColor DarkGray
+    Write-Host ""
+
+    # Troca railway.toml para apontar para o Dockerfile do Web
+    Set-RailwayToml $TOML_WEB
+    Ensure-ServiceInConfig $Condo $WEB_SERVICE
+
+    Push-Location $Condo
+    try {
+        railway up --no-gitignore --service "Web"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "`n  OK Web deployada com sucesso!" -ForegroundColor Green
+            Write-Host "     URL: $WEB_URL" -ForegroundColor Green
+            Test-HealthEndpoint $WEB_URL "Web"
+        } else {
+            Write-Host "`n  ERRO Deploy Web falhou." -ForegroundColor Red
+            Write-Host "     -> railway logs --service Web" -ForegroundColor Red
+            $script:DeployErrors += "Web"
+        }
+    } finally {
+        Pop-Location
+        # Restaura railway.toml para API (estado padrao do repositorio)
+        Set-RailwayToml $TOML_API
+    }
+}
+
+# ── Execucao ─────────────────────────────────────────────────
+Show-CommitsSummary
+
 switch ($Service) {
     "web" { Deploy-Web }
     "api" { Deploy-Api }
@@ -109,5 +190,14 @@ switch ($Service) {
     }
 }
 
+# ── Sumario final ─────────────────────────────────────────────
 Write-Host ""
-Write-Host "Pronto!" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+if ($script:DeployErrors.Count -eq 0) {
+    Write-Host "  Deploy concluido com sucesso!" -ForegroundColor Green
+} else {
+    Write-Host "  AVISO Deploy concluido com erros: $($script:DeployErrors -join ', ')" -ForegroundColor Yellow
+}
+Write-Host "  API : $API_URL" -ForegroundColor DarkGray
+Write-Host "  Web : $WEB_URL" -ForegroundColor DarkGray
+Write-Host "========================================" -ForegroundColor Cyan

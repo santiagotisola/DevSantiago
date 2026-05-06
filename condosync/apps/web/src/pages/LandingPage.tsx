@@ -161,12 +161,6 @@ export default function LandingPage() {
             >
               Depoimentos
             </a>
-            <a
-              href="#pricing"
-              className="hover:text-blue-600 transition-colors"
-            >
-              Planos
-            </a>
           </nav>
 
           <button
@@ -329,93 +323,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PRICING ─────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">
-              Planos
-            </p>
-            <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
-              Preço justo para todo tamanho
-            </h2>
-            <p className="text-slate-500">
-              Comece grátis por 14 dias. Sem cartão de crédito.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans.map((p) => (
-              <div
-                key={p.name}
-                className={`rounded-2xl border p-8 flex flex-col relative ${
-                  p.highlight
-                    ? "bg-blue-600 border-blue-600 text-white shadow-2xl shadow-blue-200 scale-105"
-                    : "bg-white border-slate-100 text-slate-900"
-                }`}
-              >
-                {p.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-full">
-                    Mais popular
-                  </div>
-                )}
-                <div className="mb-6">
-                  <h3
-                    className={`font-bold text-lg mb-1 ${p.highlight ? "text-white" : "text-slate-800"}`}
-                  >
-                    {p.name}
-                  </h3>
-                  <p
-                    className={`text-xs mb-4 ${p.highlight ? "text-blue-200" : "text-slate-400"}`}
-                  >
-                    {p.desc}
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <span
-                      className={`text-4xl font-extrabold ${p.highlight ? "text-white" : "text-slate-900"}`}
-                    >
-                      {p.price}
-                    </span>
-                    <span
-                      className={`text-sm ${p.highlight ? "text-blue-200" : "text-slate-400"}`}
-                    >
-                      {p.period}
-                    </span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 flex-1 mb-8">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2
-                        className={`w-4 h-4 shrink-0 ${p.highlight ? "text-blue-200" : "text-emerald-500"}`}
-                      />
-                      <span
-                        className={
-                          p.highlight ? "text-blue-100" : "text-slate-600"
-                        }
-                      >
-                        {f}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => navigate("/login")}
-                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
-                    p.highlight
-                      ? "bg-white text-blue-600 hover:bg-blue-50"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {p.cta}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── CTA FINAL ───────────────────────────────────────── */}
       <section className="py-24 px-6 bg-gradient-to-br from-slate-900 to-blue-950 text-white text-center">
@@ -452,9 +360,6 @@ export default function LandingPage() {
           <div className="flex gap-6">
             <a href="#features" className="hover:text-white transition-colors">
               Funcionalidades
-            </a>
-            <a href="#pricing" className="hover:text-white transition-colors">
-              Planos
             </a>
             <button
               onClick={() => navigate("/login")}

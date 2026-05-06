@@ -114,14 +114,6 @@ export function LoginPage() {
         </button>
       </form>
 
-      {/* Credenciais demo */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-700 space-y-1">
-        <p className="font-semibold">Credenciais de demonstração:</p>
-        <p>Admin: admin@condosync.com.br / Admin@2026</p>
-        <p>Síndico: sindico@parqueverde.com.br / Sindico@2026</p>
-        <p>Porteiro: porteiro@parqueverde.com.br / Porteiro@2026</p>
-        <p>Morador: morador1@parqueverde.com.br / Morador@2026</p>
-      </div>
     </div>
   );
 }

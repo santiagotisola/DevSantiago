@@ -4,12 +4,12 @@ set -e
 echo "⏳ Aguardando PostgreSQL inicializar (10s)..."
 sleep 10
 
-echo "📦 Aplicando schema no banco de dados..."
+echo "📦 Aplicando migrações no banco de dados..."
 
-# Tenta aplicar com retry caso o postgres ainda não esteja pronto
+# Aplica migrações pendentes com retry caso o postgres ainda não esteja pronto
 MAX_RETRIES=10
 RETRIES=0
-until npx prisma db push --accept-data-loss 2>&1; do
+until npx prisma migrate deploy 2>&1; do
   RETRIES=$((RETRIES + 1))
   if [ "$RETRIES" -ge "$MAX_RETRIES" ]; then
     echo "❌ Não foi possível aplicar o schema após ${MAX_RETRIES} tentativas."

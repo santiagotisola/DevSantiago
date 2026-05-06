@@ -43,15 +43,27 @@ fi
 # ── 4. Criar .env de produção ────────────────────────────────
 echo ""
 echo ">> [4/6] Criando .env de produção..."
-cat > "$APP_DIR/condosync/.env" <<EOF
+
+ENV_FILE="$APP_DIR/condosync/.env"
+
+# Se o .env já existe, preservar as credenciais existentes e não sobrescrever
+if [ -f "$ENV_FILE" ]; then
+    echo "   .env já existe — mantendo credenciais atuais."
+else
+    # Gerar secrets aleatórios (nunca ficam expostos no repositório)
+    DB_PASSWORD=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 40)
+    JWT_SECRET=$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c 64)
+    JWT_REFRESH_SECRET=$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c 64)
+
+    cat > "$ENV_FILE" <<EOF
 # ── Banco de Dados ────────────────────────────────────────────
 POSTGRES_USER=condosync
-POSTGRES_PASSWORD=9QpFPm3LS7DncUVYyZk4IGea6uwrT1RN
+POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=condosync
 
 # ── JWT ───────────────────────────────────────────────────────
-JWT_SECRET=PD8gt7RwoIpnuZH0syNlfqU3jLrXGv1x5Td9zYiJb6W2cCKhSAF4BkOmQMVEae
-JWT_REFRESH_SECRET=HTiIRlOewjvD7zKAdn0MPcYmpQ2C9yxaq46FGgJh1B58r3fNokWLUVtSubZsXE
+JWT_SECRET=${JWT_SECRET}
+JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 
 # ── URLs ──────────────────────────────────────────────────────
 CORS_ORIGINS=http://${VPS_IP}
@@ -72,7 +84,9 @@ SMTP_FROM=CondoSync <noreply@condosync.com.br>
 # ── OpenAI (opcional) ─────────────────────────────────────────
 OPENAI_API_KEY=
 EOF
-echo "   .env criado em $APP_DIR/condosync/.env"
+    echo "   .env criado com secrets gerados aleatoriamente."
+    echo "   Guarde este arquivo em local seguro: $ENV_FILE"
+fi
 
 # ── 5. Subir containers ──────────────────────────────────────
 echo ""
