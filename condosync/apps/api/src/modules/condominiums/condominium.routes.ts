@@ -28,7 +28,8 @@ const createSchema = z.object({
   name: z.string().min(3),
   cnpj: z
     .string()
-    .regex(/^\d{14}$/, "CNPJ deve conter 14 dígitos numéricos")
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => v.length === 0 || v.length === 14, "CNPJ deve conter 14 dígitos")
     .optional(),
   address: z.string().optional(),
   city: z.string().optional(),

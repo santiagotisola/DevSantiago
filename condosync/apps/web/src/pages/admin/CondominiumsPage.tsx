@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
-import { Building2, Plus, Loader2, Users, Home, UserPlus, Trash2, UserCog, Pencil } from 'lucide-react';
+import { Building2, Plus, Loader2, Users, Home, UserPlus, Trash2, UserCog, Pencil, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail } from '../../lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -55,6 +55,16 @@ export function CondominiumsPage() {
   const [editForm, setEditForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
+  // ── Members / Password ─────────────────────────────────────────
+  const [membersTarget, setMembersTarget] = useState<any | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState<any | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+
   const { data: condominiums, isLoading } = useQuery({
     queryKey: ['condominiums'],
     queryFn: async () => {
@@ -80,6 +90,32 @@ export function CondominiumsPage() {
       setShowEditModal(false);
       setEditTarget(null);
       setEditErrors({});
+    },
+  });
+
+  const { data: members, isLoading: membersLoading } = useQuery({
+    queryKey: ['condominium-members', membersTarget?.id],
+    queryFn: async () => {
+      const res = await api.get(`/condominiums/${membersTarget!.id}/members`);
+      return res.data.data.members as any[];
+    },
+    enabled: !!membersTarget,
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      api.patch(`/users/${userId}/reset-password`, { newPassword: password }),
+    onSuccess: () => {
+      setResetSuccess('Senha redefinida com sucesso!');
+      setNewPassword('');
+      setTimeout(() => {
+        setShowResetModal(false);
+        setResetTarget(null);
+        setResetSuccess('');
+      }, 1500);
+    },
+    onError: (err: any) => {
+      setResetError(err.response?.data?.message || 'Erro ao redefinir senha.');
     },
   });
 
@@ -142,7 +178,7 @@ export function CondominiumsPage() {
                 <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {c._count?.condominiumUsers ?? 0} membros</span>
               </div>
               {c.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {c.cnpj}</p>}
-              <div className="border-t pt-2">
+              <div className="border-t pt-2 flex gap-3">
                 <button
                   onClick={() => {
                     setEditForm({
@@ -156,6 +192,15 @@ export function CondominiumsPage() {
                   className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700"
                 >
                   <Pencil className="w-3.5 h-3.5" /> Editar
+                </button>
+                <button
+                  onClick={() => {
+                    setMembersTarget(c);
+                    setShowMembersModal(true);
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800"
+                >
+                  <KeyRound className="w-3.5 h-3.5" /> Senhas
                 </button>
               </div>
             </div>
@@ -287,6 +332,115 @@ export function CondominiumsPage() {
             {updateMutation.isError && (
               <p className="text-sm text-red-600">Erro ao atualizar condomínio.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Members / Senhas Modal ── */}
+      {showMembersModal && membersTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+                Usuários — {membersTarget.name}
+              </h2>
+              <button
+                onClick={() => { setShowMembersModal(false); setMembersTarget(null); }}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {membersLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              </div>
+            ) : !members?.length ? (
+              <p className="text-sm text-gray-500 py-4 text-center">Nenhum membro cadastrado.</p>
+            ) : (
+              <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+                {members.map((m: any) => (
+                  <div key={m.id} className="flex items-center justify-between gap-3 bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{m.user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{m.user.email}</p>
+                      <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 font-medium">
+                        {ROLE_LABELS[m.role] ?? m.role}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setResetTarget(m);
+                        setNewPassword('');
+                        setShowPwd(false);
+                        setResetError('');
+                        setResetSuccess('');
+                        setShowResetModal(true);
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 whitespace-nowrap"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" /> Definir senha
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Reset Password Modal ── */}
+      {showResetModal && resetTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Definir Senha</h2>
+            <p className="text-sm text-gray-600">
+              Usuário: <span className="font-medium">{resetTarget.user.name}</span>
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nova Senha</label>
+              <div className="relative">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setResetError(''); }}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full px-3 py-2 pr-9 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {resetError && <p className="text-xs text-red-600 mt-0.5">{resetError}</p>}
+              {resetSuccess && <p className="text-xs text-green-600 mt-0.5">{resetSuccess}</p>}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowResetModal(false); setResetTarget(null); }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (newPassword.length < 6) {
+                    setResetError('A senha deve ter pelo menos 6 caracteres.');
+                    return;
+                  }
+                  resetPasswordMutation.mutate({ userId: resetTarget.user.id, password: newPassword });
+                }}
+                disabled={!newPassword || resetPasswordMutation.isPending}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {resetPasswordMutation.isPending ? 'Salvando...' : 'Salvar Senha'}
+              </button>
+            </div>
           </div>
         </div>
       )}

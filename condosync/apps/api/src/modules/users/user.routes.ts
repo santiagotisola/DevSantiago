@@ -5,6 +5,7 @@ import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 router.use(authenticate);
@@ -103,7 +104,53 @@ router.put("/:id", async (req: Request, res: Response) => {
   res.json({ success: true, data: { user } });
 });
 
-// M2 â€” toggle-active: CONDOMINIUM_ADMIN sÃ³ pode desativar membros do seu condomÃ­nio;
+// M3 — reset-password: SUPER_ADMIN pode redefinir senha de qualquer usuário;
+//       CONDOMINIUM_ADMIN pode redefinir senha de membros do seu condomínio
+router.patch(
+  "/:id/reset-password",
+  authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN"),
+  async (req: Request, res: Response) => {
+    const actor = req.user!;
+    const schema = z.object({ newPassword: z.string().min(6) });
+    const { newPassword } = validateRequest(schema, req.body);
+
+    const target = await prisma.user.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { role: true },
+    });
+
+    if (actor.role === UserRole.CONDOMINIUM_ADMIN) {
+      if (
+        target.role === UserRole.SUPER_ADMIN ||
+        target.role === UserRole.CONDOMINIUM_ADMIN
+      ) {
+        throw new ForbiddenError(
+          "Você não tem permissão para redefinir a senha deste usuário",
+        );
+      }
+      const shared = await prisma.condominiumUser.findFirst({
+        where: {
+          userId: actor.userId,
+          isActive: true,
+          condominium: {
+            condominiumUsers: { some: { userId: req.params.id, isActive: true } },
+          },
+        },
+        select: { id: true },
+      });
+      if (!shared)
+        throw new ForbiddenError("Usuário não pertence ao seu condomínio");
+    }
+
+    const rounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    const passwordHash = await bcrypt.hash(newPassword, rounds);
+    await prisma.user.update({ where: { id: req.params.id }, data: { passwordHash } });
+    res.json({ success: true, message: "Senha redefinida com sucesso" });
+  },
+);
+
+// M2 — toggle-active: CONDOMINIUM_ADMIN só pode desativar membros do seu condomínio;
+//       não pode desativar SUPER_ADMIN nem outros admins
 //       nÃ£o pode desativar SUPER_ADMIN nem outros admins
 router.patch(
   "/:id/toggle-active",
