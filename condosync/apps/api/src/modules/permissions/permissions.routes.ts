@@ -113,13 +113,27 @@ router.patch("/condominium/:condominiumId/members/:userId/update", async (req: R
     throw new ForbiddenError("Não é possível alterar um Super Admin");
   }
 
-  // Atualiza nome e e-mail do usuário
-  if (data.name !== undefined || data.email !== undefined) {
+  // Atualiza nome e e-mail do usuário (só atualiza e-mail se mudou)
+  const currentUser = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.userId },
+    select: { email: true },
+  });
+
+  const emailChanged = data.email !== undefined && data.email !== currentUser.email;
+
+  if (data.name !== undefined || emailChanged) {
+    if (emailChanged) {
+      const existing = await prisma.user.findUnique({ where: { email: data.email! } });
+      if (existing) {
+        res.status(409).json({ success: false, message: 'Este e-mail já está em uso por outro usuário' });
+        return;
+      }
+    }
     await prisma.user.update({
       where: { id: req.params.userId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.email !== undefined && { email: data.email }),
+        ...(emailChanged && { email: data.email }),
       },
     });
   }
