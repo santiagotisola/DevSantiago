@@ -54,7 +54,6 @@ export class UnitService {
         residents: {
           where: { isActive: true },
           include: { user: { select: { id: true, name: true } } },
-          take: 1,
         },
       },
       orderBy: [{ block: "asc" }, { identifier: "asc" }],

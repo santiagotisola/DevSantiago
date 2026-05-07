@@ -438,16 +438,16 @@ export function UnitsPage() {
                     {st.label}
                   </div>
 
-                  <div className="mt-4 min-h-[24px] flex items-center justify-center">
-                    {u.residents?.[0]?.user ? (
-                      <div className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center">
-                        <Users className="w-3 h-3" />
-                        <span className="text-[10px] font-bold truncate">
-                          {(u._count?.residents ?? 1) > 1
-                            ? `${u._count.residents} moradores`
-                            : u.residents[0].user.name.split(" ")[0]}
-                        </span>
-                      </div>
+                  <div className="mt-4 min-h-[24px] flex flex-col items-center gap-1 w-full">
+                    {u.residents?.length > 0 && u.residents[0]?.user ? (
+                      u.residents.map((r: any) => (
+                        <div key={r.id} className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center">
+                          <Users className="w-3 h-3 shrink-0" />
+                          <span className="text-[10px] font-bold truncate">
+                            {r.user.name.split(" ")[0]}
+                          </span>
+                        </div>
+                      ))
                     ) : (
                       <span className="text-[10px] text-gray-300 font-medium italic">
                         Sem morador
@@ -703,17 +703,19 @@ export function UnitsPage() {
                   </select>
                 </div>
 
-                {/* Morador atual */}
+                {/* Moradores atuais */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase">
-                    Morador Atual
+                    Moradores Atuais
                   </label>
-                  {currentUnit?.residents?.[0]?.user ? (
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                      <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-blue-800 truncate">{currentUnit.residents[0].user.name}</p>
-                      </div>
+                  {currentUnit?.residents?.filter((r: any) => r.user).length > 0 ? (
+                    <div className="space-y-1.5">
+                      {currentUnit.residents.filter((r: any) => r.user).map((r: any) => (
+                        <div key={r.id} className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                          <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                          <p className="text-sm font-semibold text-blue-800 truncate flex-1 min-w-0">{r.user.name}</p>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <p className="text-sm text-gray-400 italic">Nenhum morador vinculado</p>
