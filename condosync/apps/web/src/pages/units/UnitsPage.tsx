@@ -735,9 +735,9 @@ export function UnitsPage() {
                         className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       >
                         <option value="">Selecionar morador...</option>
-                        {(allResidents ?? []).map((r: any) => (
+                        {(allResidents ?? []).filter((r: any) => !r.unit).map((r: any) => (
                           <option key={r.id} value={r.id}>
-                            {r.user?.name}{r.unit ? ` (Unid. ${r.unit.identifier})` : " (sem unidade)"}
+                            {r.user?.name}
                           </option>
                         ))}
                       </select>
