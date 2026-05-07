@@ -232,6 +232,14 @@ router.patch(
       },
     });
 
+    // Quando vincular a uma unidade, marcar como OCCUPIED
+    if (data.unitId) {
+      await prisma.unit.update({
+        where: { id: data.unitId },
+        data: { status: "OCCUPIED" },
+      });
+    }
+
     res.json({ success: true, data: { resident: updated } });
   },
 );

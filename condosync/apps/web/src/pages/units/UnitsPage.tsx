@@ -135,18 +135,30 @@ export function UnitsPage() {
 
   const filtered = useMemo(() => {
     if (!units) return [];
-    return units.filter(
-      (u: any) =>
-        (!search ||
-          u.identifier?.toLowerCase().includes(search.toLowerCase()) ||
-          u.block?.toLowerCase().includes(search.toLowerCase()) ||
-          u.residents?.[0]?.user?.name
-            ?.toLowerCase()
-            .includes(search.toLowerCase())) &&
-        (statusFilter === "ALL" || u.status === statusFilter) &&
-        (!blockFilter || u.block === blockFilter),
-    );
+    return units
+      .filter(
+        (u: any) =>
+          (!search ||
+            u.identifier?.toLowerCase().includes(search.toLowerCase()) ||
+            u.block?.toLowerCase().includes(search.toLowerCase()) ||
+            u.residents?.[0]?.user?.name
+              ?.toLowerCase()
+              .includes(search.toLowerCase())) &&
+          (statusFilter === "ALL" || u.status === statusFilter) &&
+          (!blockFilter || u.block === blockFilter),
+      )
+      .sort((a: any, b: any) => {
+        const numA = parseInt(a.identifier.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.identifier.replace(/\D/g, "")) || 0;
+        return numA - numB;
+      });
   }, [units, search, statusFilter, blockFilter]);
+
+  // Unidade atual derivada do cache — atualiza automaticamente após vincular morador
+  const currentUnit = useMemo(
+    () => (editTarget ? (units?.find((u: any) => u.id === editTarget.id) ?? editTarget) : null),
+    [units, editTarget],
+  );
 
   // ─── Mutations ──────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -431,7 +443,9 @@ export function UnitsPage() {
                       <div className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center">
                         <Users className="w-3 h-3" />
                         <span className="text-[10px] font-bold truncate">
-                          {u.residents[0].user.name.split(" ")[0]}
+                          {(u._count?.residents ?? 1) > 1
+                            ? `${u._count.residents} moradores`
+                            : u.residents[0].user.name.split(" ")[0]}
                         </span>
                       </div>
                     ) : (
@@ -694,11 +708,11 @@ export function UnitsPage() {
                   <label className="text-xs font-bold text-gray-500 uppercase">
                     Morador Atual
                   </label>
-                  {editTarget?.residents?.[0]?.user ? (
+                  {currentUnit?.residents?.[0]?.user ? (
                     <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
                       <Users className="w-4 h-4 text-blue-600 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-blue-800 truncate">{editTarget.residents[0].user.name}</p>
+                        <p className="text-sm font-semibold text-blue-800 truncate">{currentUnit.residents[0].user.name}</p>
                       </div>
                     </div>
                   ) : (
