@@ -56,6 +56,10 @@ export function CondominiumsPage() {
   const [adminErrors, setAdminErrors] = useState<Record<string, string>>({});
   const [showAdminPwd, setShowAdminPwd] = useState(false);
 
+  // ── Setup Admin para condomínio existente ──────────────────────
+  const [showSetupAdminModal, setShowSetupAdminModal] = useState(false);
+  const [setupAdminTargetCondo, setSetupAdminTargetCondo] = useState<any | null>(null);
+
   // ── Edit ───────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
@@ -90,16 +94,21 @@ export function CondominiumsPage() {
   });
 
   const setupAdminMutation = useMutation({
-    mutationFn: (d: typeof adminForm) =>
-      api.post(`/condominiums/${createdCondoId}/setup-admin`, d),
+    mutationFn: ({ condominiumId, ...d }: typeof adminForm & { condominiumId: string }) =>
+      api.post(`/condominiums/${condominiumId}/setup-admin`, d),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      // Fecha modal de criação (step 2)
       setShowModal(false);
       setCreateStep(1);
       setCreatedCondoId(null);
       setFormErrors({});
-      setAdminErrors({});
       setForm({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
+      // Fecha modal de setup admin existente
+      setShowSetupAdminModal(false);
+      setSetupAdminTargetCondo(null);
+      // Limpa form admin
+      setAdminErrors({});
       setAdminForm({ name: '', email: '', password: '' });
     },
   });
@@ -293,7 +302,11 @@ export function CondominiumsPage() {
                       if (emailErr) errs.email = emailErr;
                       if (Object.keys(errs).length) { setFormErrors(errs); return; }
                       setFormErrors({});
-                      createMutation.mutate(form);
+                      // Strip empty strings para não falhar validação de email/phone na API
+                      const payload = Object.fromEntries(
+                        Object.entries(form).map(([k, v]) => [k, v === '' ? undefined : v])
+                      ) as typeof form;
+                      createMutation.mutate(payload);
                     }}
                     disabled={!form.name || createMutation.isPending || !isCnpjComplete(form.cnpj)}
                     className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
@@ -379,7 +392,9 @@ export function CondominiumsPage() {
                       if (!adminForm.password || adminForm.password.length < 6) errs.password = 'Senha deve ter pelo menos 6 caracteres';
                       if (Object.keys(errs).length) { setAdminErrors(errs); return; }
                       setAdminErrors({});
-                      setupAdminMutation.mutate(adminForm);
+                      const targetId = createdCondoId ?? setupAdminTargetCondo?.id;
+                      if (!targetId) return;
+                      setupAdminMutation.mutate({ ...adminForm, condominiumId: targetId });
                     }}
                     disabled={setupAdminMutation.isPending}
                     className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
@@ -473,6 +488,21 @@ export function CondominiumsPage() {
               </button>
             </div>
 
+            <div className="border-b pb-3 mb-1">
+              <button
+                onClick={() => {
+                  setSetupAdminTargetCondo(membersTarget);
+                  setAdminForm({ name: '', email: '', password: '' });
+                  setAdminErrors({});
+                  setShowAdminPwd(false);
+                  setShowSetupAdminModal(true);
+                }}
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                <UserCog className="w-4 h-4" /> Criar / Definir Administrador
+              </button>
+            </div>
+
             {membersLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -507,6 +537,91 @@ export function CondominiumsPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Setup Admin para condomínio existente ── */}
+      {showSetupAdminModal && setupAdminTargetCondo && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Criar / Definir Administrador</h2>
+            <p className="text-sm text-muted-foreground">
+              Condomínio: <span className="font-medium">{setupAdminTargetCondo.name}</span>
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Nome *</label>
+                <input
+                  type="text"
+                  value={adminForm.name}
+                  onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.name ? 'border-red-400' : ''}`}
+                  placeholder="Nome completo"
+                />
+                {adminErrors.name && <p className="text-xs text-red-500">{adminErrors.name}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">E-mail *</label>
+                <input
+                  type="email"
+                  value={adminForm.email}
+                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.email ? 'border-red-400' : ''}`}
+                  placeholder="admin@exemplo.com"
+                />
+                {adminErrors.email && <p className="text-xs text-red-500">{adminErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Senha *</label>
+                <div className="relative">
+                  <input
+                    type={showAdminPwd ? 'text' : 'password'}
+                    value={adminForm.password}
+                    onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${adminErrors.password ? 'border-red-400' : ''}`}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPwd((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showAdminPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {adminErrors.password && <p className="text-xs text-red-500">{adminErrors.password}</p>}
+              </div>
+            </div>
+            {setupAdminMutation.isError && (
+              <p className="text-sm text-red-600">Erro ao criar administrador. Verifique os dados.</p>
+            )}
+            {setupAdminMutation.isSuccess && (
+              <p className="text-sm text-green-600">Administrador criado com sucesso!</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowSetupAdminModal(false); setSetupAdminTargetCondo(null); setAdminForm({ name: '', email: '', password: '' }); setAdminErrors({}); }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const errs: Record<string, string> = {};
+                  if (!adminForm.name || adminForm.name.length < 2) errs.name = 'Nome obrigatório (mín. 2 caracteres)';
+                  if (!adminForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminForm.email)) errs.email = 'E-mail inválido';
+                  if (!adminForm.password || adminForm.password.length < 6) errs.password = 'Senha deve ter pelo menos 6 caracteres';
+                  if (Object.keys(errs).length) { setAdminErrors(errs); return; }
+                  setAdminErrors({});
+                  setupAdminMutation.mutate({ ...adminForm, condominiumId: setupAdminTargetCondo.id });
+                }}
+                disabled={setupAdminMutation.isPending}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {setupAdminMutation.isPending ? 'Criando...' : 'Criar Admin'}
+              </button>
+            </div>
           </div>
         </div>
       )}
