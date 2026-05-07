@@ -50,10 +50,14 @@ export class UnitService {
         ...(status && { status: status as any }),
       },
       include: {
-        _count: { select: { residents: true, vehicles: true } },
+        _count: { select: { residents: true, vehicles: true, dependents: true } },
         residents: {
           where: { isActive: true },
           include: { user: { select: { id: true, name: true } } },
+        },
+        dependents: {
+          where: { isActive: true },
+          orderBy: { name: "asc" },
         },
       },
       orderBy: [{ block: "asc" }, { identifier: "asc" }],

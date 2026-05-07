@@ -149,7 +149,8 @@ router.post(
     const existing = await prisma.condominiumUser.findFirst({
       where: { userId: user.id, condominiumId: data.condominiumId },
     });
-    if (existing) {
+
+    if (existing && existing.isActive) {
       res.status(409).json({
         success: false,
         message: "Morador já vinculado a este condomínio",
@@ -157,22 +158,38 @@ router.post(
       return;
     }
 
-    const resident = await prisma.condominiumUser.create({
-      data: {
-        userId: user.id,
-        condominiumId: data.condominiumId,
-        unitId: data.unitId,
-        role: "RESIDENT",
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, phone: true, cpf: true },
-        },
-        unit: { select: { id: true, identifier: true, block: true } },
-      },
-    });
+    // Reativa vínculo previamente desativado (soft-delete) ou cria novo
+    const resident = existing
+      ? await prisma.condominiumUser.update({
+          where: { id: existing.id },
+          data: {
+            isActive: true,
+            unitId: data.unitId,
+            role: "RESIDENT",
+          },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, phone: true, cpf: true },
+            },
+            unit: { select: { id: true, identifier: true, block: true } },
+          },
+        })
+      : await prisma.condominiumUser.create({
+          data: {
+            userId: user.id,
+            condominiumId: data.condominiumId,
+            unitId: data.unitId,
+            role: "RESIDENT",
+          },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, phone: true, cpf: true },
+            },
+            unit: { select: { id: true, identifier: true, block: true } },
+          },
+        });
 
-    res.status(201).json({ success: true, data: { resident } });
+    res.status(existing ? 200 : 201).json({ success: true, data: { resident } });
   },
 );
 

@@ -22,6 +22,8 @@ import {
   Activity,
   CheckCircle,
   Info,
+  Baby,
+  UserPlus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -70,6 +72,13 @@ export function UnitsPage() {
   const [editModal, setEditModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [selectedResidentId, setSelectedResidentId] = useState("");
+  const [showDependentForm, setShowDependentForm] = useState(false);
+  const [dependentForm, setDependentForm] = useState({
+    name: "",
+    relationship: "",
+    birthDate: "",
+    cpf: "",
+  });
 
   const [form, setForm] = useState({
     identifier: "",
@@ -143,6 +152,9 @@ export function UnitsPage() {
             u.block?.toLowerCase().includes(search.toLowerCase()) ||
             u.residents?.some((r: any) =>
               r.user?.name?.toLowerCase().includes(search.toLowerCase()),
+            ) ||
+            u.dependents?.some((d: any) =>
+              d.name?.toLowerCase().includes(search.toLowerCase()),
             )) &&
           (statusFilter === "ALL" || u.status === statusFilter) &&
           (!blockFilter || u.block === blockFilter),
@@ -218,6 +230,23 @@ export function UnitsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["units"] });
       queryClient.invalidateQueries({ queryKey: ["residents"] });
+    },
+  });
+
+  const addDependentMutation = useMutation({
+    mutationFn: (payload: any) => api.post("/residents/dependents", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+      setShowDependentForm(false);
+      setDependentForm({ name: "", relationship: "", birthDate: "", cpf: "" });
+    },
+  });
+
+  const removeDependentMutation = useMutation({
+    mutationFn: (dependentId: string) =>
+      api.delete(`/residents/dependents/${dependentId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["units"] });
     },
   });
 
@@ -455,12 +484,14 @@ export function UnitsPage() {
                   </div>
 
                   <div className="mt-4 min-h-[24px] flex flex-col items-center justify-center gap-1">
-                    {u.residents && u.residents.length > 0 ? (
+                    {(u.residents && u.residents.length > 0) ||
+                    (u.dependents && u.dependents.length > 0) ? (
                       <>
-                        {u.residents.slice(0, 3).map((r: any) => (
+                        {u.residents?.map((r: any) => (
                           <div
                             key={r.id}
-                            className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center"
+                            title={`Morador: ${r.user?.name}`}
+                            className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center"
                           >
                             <Users className="w-3 h-3" />
                             <span className="text-[10px] font-bold truncate">
@@ -468,11 +499,18 @@ export function UnitsPage() {
                             </span>
                           </div>
                         ))}
-                        {u.residents.length > 3 && (
-                          <span className="text-[9px] text-gray-400 font-bold">
-                            +{u.residents.length - 3}
-                          </span>
-                        )}
+                        {u.dependents?.map((d: any) => (
+                          <div
+                            key={d.id}
+                            title={`Dependente: ${d.name} (${d.relationship})`}
+                            className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg w-full justify-center"
+                          >
+                            <Baby className="w-3 h-3" />
+                            <span className="text-[10px] font-bold truncate">
+                              {d.name?.split(" ")[0]}
+                            </span>
+                          </div>
+                        ))}
                       </>
                     ) : (
                       <span className="text-[10px] text-gray-300 font-medium italic">
@@ -664,7 +702,11 @@ export function UnitsPage() {
                   </h2>
                 </div>
                 <button
-                  onClick={() => setEditModal(false)}
+                  onClick={() => {
+                    setEditModal(false);
+                    setShowDependentForm(false);
+                    setDependentForm({ name: "", relationship: "", birthDate: "", cpf: "" });
+                  }}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
@@ -840,11 +882,182 @@ export function UnitsPage() {
                     </div>
                   );
                 })()}
+
+                {/* Dependentes */}
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-gray-500 uppercase">
+                      Dependentes
+                    </label>
+                    {isAdmin && !showDependentForm && (
+                      <button
+                        onClick={() => setShowDependentForm(true)}
+                        className="flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Adicionar
+                      </button>
+                    )}
+                  </div>
+
+                  {currentUnit?.dependents && currentUnit.dependents.length > 0 ? (
+                    <div className="space-y-2">
+                      {currentUnit.dependents.map((d: any) => {
+                        const age = d.birthDate
+                          ? Math.floor(
+                              (Date.now() - new Date(d.birthDate).getTime()) /
+                                (365.25 * 24 * 60 * 60 * 1000),
+                            )
+                          : null;
+                        return (
+                          <div
+                            key={d.id}
+                            className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg"
+                          >
+                            <Baby className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-emerald-900 truncate">
+                                {d.name}
+                              </p>
+                              <p className="text-xs text-emerald-700/80 truncate">
+                                {d.relationship}
+                                {age !== null ? ` · ${age} ano${age === 1 ? "" : "s"}` : ""}
+                              </p>
+                            </div>
+                            {isAdmin && (
+                              <button
+                                onClick={() => removeDependentMutation.mutate(d.id)}
+                                disabled={removeDependentMutation.isPending}
+                                title="Remover dependente"
+                                className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                              >
+                                {removeDependentMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <X className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    !showDependentForm && (
+                      <p className="text-sm text-gray-400 italic">
+                        Nenhum dependente cadastrado
+                      </p>
+                    )
+                  )}
+
+                  {showDependentForm && isAdmin && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2">
+                      <input
+                        autoFocus
+                        value={dependentForm.name}
+                        onChange={(e) =>
+                          setDependentForm({ ...dependentForm, name: e.target.value })
+                        }
+                        placeholder="Nome completo *"
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      />
+                      <input
+                        value={dependentForm.relationship}
+                        onChange={(e) =>
+                          setDependentForm({
+                            ...dependentForm,
+                            relationship: e.target.value,
+                          })
+                        }
+                        placeholder="Parentesco (filho, cônjuge, pai...) *"
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          value={dependentForm.birthDate}
+                          onChange={(e) =>
+                            setDependentForm({
+                              ...dependentForm,
+                              birthDate: e.target.value,
+                            })
+                          }
+                          className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                        />
+                        <input
+                          value={dependentForm.cpf}
+                          onChange={(e) =>
+                            setDependentForm({ ...dependentForm, cpf: e.target.value })
+                          }
+                          placeholder="CPF (opcional)"
+                          className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => {
+                            setShowDependentForm(false);
+                            setDependentForm({
+                              name: "",
+                              relationship: "",
+                              birthDate: "",
+                              cpf: "",
+                            });
+                          }}
+                          className="flex-1 px-3 py-1.5 border bg-white text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (
+                              !editTarget ||
+                              dependentForm.name.trim().length < 2 ||
+                              dependentForm.relationship.trim().length < 2
+                            )
+                              return;
+                            addDependentMutation.mutate({
+                              unitId: editTarget.id,
+                              name: dependentForm.name.trim(),
+                              relationship: dependentForm.relationship.trim(),
+                              ...(dependentForm.birthDate
+                                ? {
+                                    birthDate: new Date(
+                                      dependentForm.birthDate,
+                                    ).toISOString(),
+                                  }
+                                : {}),
+                              ...(dependentForm.cpf
+                                ? { cpf: dependentForm.cpf }
+                                : {}),
+                            });
+                          }}
+                          disabled={
+                            addDependentMutation.isPending ||
+                            dependentForm.name.trim().length < 2 ||
+                            dependentForm.relationship.trim().length < 2
+                          }
+                          className="flex-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {addDependentMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                          ) : (
+                            "Salvar"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="p-4 border-t shrink-0 flex gap-3 bg-gray-50 rounded-b-xl">
                 <button
-                  onClick={() => setEditModal(false)}
+                  onClick={() => {
+                    setEditModal(false);
+                    setShowDependentForm(false);
+                    setDependentForm({ name: "", relationship: "", birthDate: "", cpf: "" });
+                  }}
                   className="flex-1 px-4 py-2 border bg-white rounded-lg text-sm font-medium hover:bg-gray-50 transition-all text-gray-600"
                 >
                   Cancelar
