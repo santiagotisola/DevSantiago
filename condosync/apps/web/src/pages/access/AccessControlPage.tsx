@@ -4,8 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import {
   Lock, UserCog, Users, CheckCircle2, XCircle, Loader2,
-  ChevronDown, ToggleLeft, ToggleRight, Info, ShieldCheck,
-  Plus, Save,
+  ToggleLeft, ToggleRight, Info,
+  Plus, Save, Edit2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { validateEmail } from '../../lib/utils';
@@ -113,7 +113,9 @@ export default function AccessControlPage() {
   const [tab, setTab] = useState<Tab>('permissions');
   const [selectedProfile, setSelectedProfile] = useState<Profile>(PROFILES[2]);
   const [roleFilter, setRoleFilter] = useState('all');
-  const [editingMember, setEditingMember] = useState<string | null>(null);
+  const [editModal, setEditModal] = useState<{ open: boolean; member: any | null }>({ open: false, member: null });
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: '', unitId: '' });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
     name: '', email: '', phone: '', password: '', systemRole: 'DOORMAN',
@@ -130,12 +132,25 @@ export default function AccessControlPage() {
     enabled: !!selectedCondominiumId && tab === 'users',
   });
 
-  const changeRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      api.patch(`/permissions/condominium/${selectedCondominiumId}/members/${userId}`, { role }),
+  const { data: unitsData } = useQuery({
+    queryKey: ['units-list', selectedCondominiumId],
+    queryFn: async () => {
+      const res = await api.get(`/units/condominium/${selectedCondominiumId}`);
+      return res.data.data.units as any[];
+    },
+    enabled: !!selectedCondominiumId && tab === 'users',
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: any }) =>
+      api.patch(`/permissions/condominium/${selectedCondominiumId}/members/${userId}/update`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['access-members'] });
-      setEditingMember(null);
+      setEditModal({ open: false, member: null });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message ?? 'Erro ao salvar';
+      setEditErrors({ general: msg });
     },
   });
 
@@ -528,6 +543,114 @@ export default function AccessControlPage() {
             </div>
           )}
 
+          {/* Modal: Editar Usuário */}
+          {editModal.open && editModal.member && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">Editar Usuário</h2>
+                  <button onClick={() => setEditModal({ open: false, member: null })} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                </div>
+
+                {editErrors.general && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">
+                    {editErrors.general}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Nome *</label>
+                    <input
+                      value={editForm.name}
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                      placeholder="Nome completo"
+                      className={cn('w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', editErrors.name ? 'border-red-400' : 'border-gray-300')}
+                    />
+                    {editErrors.name && <p className="text-xs text-red-500">{editErrors.name}</p>}
+                  </div>
+
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-sm font-medium text-gray-700">E-mail *</label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                      placeholder="email@exemplo.com"
+                      className={cn('w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', editErrors.email ? 'border-red-400' : 'border-gray-300')}
+                    />
+                    {editErrors.email && <p className="text-xs text-red-500">{editErrors.email}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Perfil de acesso</label>
+                    <select
+                      aria-label="Perfil de acesso"
+                      value={editForm.role}
+                      onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {PROFILES.map(p => (
+                        <option key={p.key} value={p.key}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Unidade</label>
+                    <select
+                      aria-label="Unidade"
+                      value={editForm.unitId}
+                      onChange={e => setEditForm({ ...editForm, unitId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">— Sem unidade —</option>
+                      {(unitsData ?? []).map((u: any) => (
+                        <option key={u.id} value={u.id}>
+                          {u.block ? `${u.block} — ${u.identifier}` : u.identifier}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => { setEditModal({ open: false, member: null }); setEditErrors({}); }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      const errs: Record<string, string> = {};
+                      if (!editForm.name.trim()) errs.name = 'Nome obrigatório';
+                      const emailErr = validateEmail(editForm.email);
+                      if (!editForm.email) errs.email = 'E-mail obrigatório';
+                      else if (emailErr) errs.email = emailErr;
+                      if (Object.keys(errs).length) { setEditErrors(errs); return; }
+                      setEditErrors({});
+                      updateMemberMutation.mutate({
+                        userId: editModal.member!.userId,
+                        data: {
+                          name: editForm.name,
+                          email: editForm.email,
+                          role: editForm.role,
+                          unitId: editForm.unitId || null,
+                        },
+                      });
+                    }}
+                    disabled={updateMemberMutation.isPending}
+                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    {updateMemberMutation.isPending ? 'Salvando...' : 'Salvar alterações'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabela de membros */}
           {loadingMembers ? (
             <div className="flex items-center justify-center h-48">
@@ -557,12 +680,11 @@ export default function AccessControlPage() {
                       <th className="text-left px-4 py-3">Unidade</th>
                       <th className="text-left px-4 py-3">Último acesso</th>
                       <th className="text-center px-4 py-3">Ativo</th>
-                      <th className="text-center px-4 py-3">Alterar Perfil</th>
+                      <th className="text-center px-4 py-3">Editar</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {members.map((m: any) => {
-                      const profile = PROFILES.find(p => p.key === m.role);
                       return (
                         <tr key={m.id} className={cn('hover:bg-gray-50 transition-colors', !m.isActive && 'opacity-50')}>
                           <td className="px-4 py-3">
@@ -577,36 +699,14 @@ export default function AccessControlPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            {editingMember === m.id ? (
-                              <div className="flex items-center gap-2">
-                                <select
-                                  aria-label="Alterar perfil"
-                                  defaultValue={m.role}
-                                  id={`role-sel-${m.id}`}
-                                  className="text-xs px-2 py-1.5 border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  disabled={m.user?.role === 'SUPER_ADMIN'}
-                                >
-                                  {PROFILES.map(p => (
-                                    <option key={p.key} value={p.key}>{p.label}</option>
-                                  ))}
-                                </select>
-                                <button
-                                  onClick={() => {
-                                    const sel = document.getElementById(`role-sel-${m.id}`) as HTMLSelectElement;
-                                    changeRoleMutation.mutate({ userId: m.userId, role: sel.value });
-                                  }}
-                                  disabled={changeRoleMutation.isPending}
-                                  className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg disabled:opacity-50 font-medium"
-                                >
-                                  {changeRoleMutation.isPending ? '...' : 'Salvar'}
-                                </button>
-                                <button onClick={() => setEditingMember(null)} className="text-xs border px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-50">✕</button>
-                              </div>
-                            ) : (
-                              <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', profile?.color ?? 'bg-gray-100 text-gray-600')}>
-                                {profile?.label ?? m.role}
-                              </span>
-                            )}
+                            {(() => {
+                              const p = PROFILES.find(x => x.key === m.role);
+                              return (
+                                <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', p?.color ?? 'bg-gray-100 text-gray-600')}>
+                                  {p?.label ?? m.role}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             {m.unit ? `${m.unit.block ? m.unit.block + ' — ' : ''}${m.unit.identifier}` : '—'}
@@ -631,17 +731,20 @@ export default function AccessControlPage() {
                           <td className="px-4 py-3 text-center">
                             {m.user?.role !== 'SUPER_ADMIN' && (
                               <button
-                                onClick={() => setEditingMember(editingMember === m.id ? null : m.id)}
-                                className={cn(
-                                  'text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors flex items-center gap-1 mx-auto',
-                                  editingMember === m.id
-                                    ? 'border-red-300 text-red-600 hover:bg-red-50'
-                                    : 'border-blue-300 text-blue-600 hover:bg-blue-50',
-                                )}
+                                onClick={() => {
+                                  setEditModal({ open: true, member: m });
+                                  setEditForm({
+                                    name: m.user?.name ?? '',
+                                    email: m.user?.email ?? '',
+                                    role: m.role,
+                                    unitId: m.unit?.id ?? '',
+                                  });
+                                  setEditErrors({});
+                                }}
+                                className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors flex items-center gap-1 mx-auto border-blue-300 text-blue-600 hover:bg-blue-50"
                               >
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                {editingMember === m.id ? 'Cancelar' : 'Alterar'}
-                                {editingMember !== m.id && <ChevronDown className="w-3 h-3" />}
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Editar
                               </button>
                             )}
                           </td>

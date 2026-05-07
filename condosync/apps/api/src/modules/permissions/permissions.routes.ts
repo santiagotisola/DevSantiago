@@ -91,4 +91,57 @@ router.patch("/condominium/:condominiumId/members/:userId/toggle", async (req: R
   res.json({ success: true, data: { isActive: updated.isActive } });
 });
 
+// PATCH /permissions/condominium/:condominiumId/members/:userId/update — edita dados completos do membro
+const updateMemberSchema = z.object({
+  name: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "RESIDENT", "SERVICE_PROVIDER", "COUNCIL_MEMBER"]).optional(),
+  unitId: z.string().nullable().optional(),
+});
+
+router.patch("/condominium/:condominiumId/members/:userId/update", async (req: Request, res: Response) => {
+  await ensureMembership(req.user!.userId, req.user!.role, req.params.condominiumId);
+
+  const data = validateRequest(updateMemberSchema, req.body);
+
+  const target = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.userId },
+    select: { role: true },
+  });
+
+  if (target.role === "SUPER_ADMIN") {
+    throw new ForbiddenError("Não é possível alterar um Super Admin");
+  }
+
+  // Atualiza nome e e-mail do usuário
+  if (data.name !== undefined || data.email !== undefined) {
+    await prisma.user.update({
+      where: { id: req.params.userId },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.email !== undefined && { email: data.email }),
+      },
+    });
+  }
+
+  // Atualiza role e unidade no CondominiumUser
+  const cuData: Record<string, unknown> = {};
+  if (data.role !== undefined) cuData.role = data.role;
+  if (data.unitId !== undefined) cuData.unitId = data.unitId ?? null;
+
+  if (Object.keys(cuData).length > 0) {
+    await prisma.condominiumUser.update({
+      where: { userId_condominiumId: { userId: req.params.userId, condominiumId: req.params.condominiumId } },
+      data: cuData,
+    });
+  }
+
+  // Sincroniza role global
+  if (data.role && (req.user!.role === "SUPER_ADMIN" || req.user!.role === "CONDOMINIUM_ADMIN")) {
+    await prisma.user.update({ where: { id: req.params.userId }, data: { role: data.role } });
+  }
+
+  res.json({ success: true });
+});
+
 export default router;
