@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
@@ -141,9 +141,9 @@ export function UnitsPage() {
           (!search ||
             u.identifier?.toLowerCase().includes(search.toLowerCase()) ||
             u.block?.toLowerCase().includes(search.toLowerCase()) ||
-            u.residents?.[0]?.user?.name
-              ?.toLowerCase()
-              .includes(search.toLowerCase())) &&
+            u.residents?.some((r: any) =>
+              r.user?.name?.toLowerCase().includes(search.toLowerCase()),
+            )) &&
           (statusFilter === "ALL" || u.status === statusFilter) &&
           (!blockFilter || u.block === blockFilter),
       )
@@ -211,6 +211,22 @@ export function UnitsPage() {
       setSelectedResidentId("");
     },
   });
+
+  const unassignResidentMutation = useMutation({
+    mutationFn: (residentId: string) =>
+      api.patch(`/residents/${residentId}`, { unitId: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+      queryClient.invalidateQueries({ queryKey: ["residents"] });
+    },
+  });
+
+  // Mantém o editTarget sincronizado com a query units enquanto o modal está aberto
+  useEffect(() => {
+    if (!editModal || !editTarget || !units) return;
+    const fresh = units.find((u: any) => u.id === editTarget.id);
+    if (fresh && fresh !== editTarget) setEditTarget(fresh);
+  }, [units, editModal, editTarget]);
 
   return (
     <div className="space-y-6">
@@ -438,16 +454,26 @@ export function UnitsPage() {
                     {st.label}
                   </div>
 
-                  <div className="mt-4 min-h-[24px] flex flex-col items-center gap-1 w-full">
-                    {u.residents?.length > 0 && u.residents[0]?.user ? (
-                      u.residents.map((r: any) => (
-                        <div key={r.id} className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center">
-                          <Users className="w-3 h-3 shrink-0" />
-                          <span className="text-[10px] font-bold truncate">
-                            {r.user.name.split(" ")[0]}
+                  <div className="mt-4 min-h-[24px] flex flex-col items-center justify-center gap-1">
+                    {u.residents && u.residents.length > 0 ? (
+                      <>
+                        {u.residents.slice(0, 3).map((r: any) => (
+                          <div
+                            key={r.id}
+                            className="flex items-center gap-1.5 text-blue-500 bg-blue-50 px-2 py-1 rounded-lg w-full justify-center"
+                          >
+                            <Users className="w-3 h-3" />
+                            <span className="text-[10px] font-bold truncate">
+                              {r.user?.name?.split(" ")[0]}
+                            </span>
+                          </div>
+                        ))}
+                        {u.residents.length > 3 && (
+                          <span className="text-[9px] text-gray-400 font-bold">
+                            +{u.residents.length - 3}
                           </span>
-                        </div>
-                      ))
+                        )}
+                      </>
                     ) : (
                       <span className="text-[10px] text-gray-300 font-medium italic">
                         Sem morador
@@ -706,14 +732,40 @@ export function UnitsPage() {
                 {/* Moradores atuais */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase">
-                    Moradores Atuais
+                    Moradores Vinculados
                   </label>
-                  {currentUnit?.residents?.filter((r: any) => r.user).length > 0 ? (
-                    <div className="space-y-1.5">
-                      {currentUnit.residents.filter((r: any) => r.user).map((r: any) => (
-                        <div key={r.id} className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  {currentUnit?.residents && currentUnit.residents.length > 0 ? (
+                    <div className="space-y-2">
+                      {currentUnit.residents.map((r: any) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg"
+                        >
                           <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                          <p className="text-sm font-semibold text-blue-800 truncate flex-1 min-w-0">{r.user.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-blue-800 truncate">
+                              {r.user?.name}
+                            </p>
+                            {r.user?.email && (
+                              <p className="text-xs text-blue-600/70 truncate">
+                                {r.user.email}
+                              </p>
+                            )}
+                          </div>
+                          {isAdmin && (
+                            <button
+                              onClick={() => unassignResidentMutation.mutate(r.id)}
+                              disabled={unassignResidentMutation.isPending}
+                              title="Desvincular morador"
+                              className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 shrink-0"
+                            >
+                              {unassignResidentMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <X className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -723,41 +775,71 @@ export function UnitsPage() {
                 </div>
 
                 {/* Vincular morador */}
-                {isAdmin && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase">
-                      Vincular Morador a Esta Unidade
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={selectedResidentId}
-                        onChange={(e) => setSelectedResidentId(e.target.value)}
-                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
-                        <option value="">Selecionar morador...</option>
-                        {(allResidents ?? []).filter((r: any) => !r.unit).map((r: any) => (
-                          <option key={r.id} value={r.id}>
-                            {r.user?.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => {
-                          if (selectedResidentId && editTarget) {
-                            assignResidentMutation.mutate({ residentId: selectedResidentId, unitId: editTarget.id });
+                {isAdmin && (() => {
+                  const availableResidents = (allResidents ?? []).filter(
+                    (r: any) => !r.unit,
+                  );
+                  return (
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase">
+                        Vincular Morador a Esta Unidade
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={selectedResidentId}
+                          onChange={(e) => setSelectedResidentId(e.target.value)}
+                          disabled={availableResidents.length === 0}
+                          className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                        >
+                          {availableResidents.length === 0 ? (
+                            <option value="">Nenhum morador disponível</option>
+                          ) : (
+                            <>
+                              <option value="">Selecionar morador...</option>
+                              {availableResidents.map((r: any) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.user?.name}
+                                </option>
+                              ))}
+                            </>
+                          )}
+                        </select>
+                        <button
+                          onClick={() => {
+                            if (selectedResidentId && editTarget) {
+                              assignResidentMutation.mutate({
+                                residentId: selectedResidentId,
+                                unitId: editTarget.id,
+                              });
+                            }
+                          }}
+                          disabled={
+                            !selectedResidentId ||
+                            assignResidentMutation.isPending ||
+                            availableResidents.length === 0
                           }
-                        }}
-                        disabled={!selectedResidentId || assignResidentMutation.isPending}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0 transition-colors"
-                      >
-                        {assignResidentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Vincular"}
-                      </button>
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 shrink-0 transition-colors"
+                        >
+                          {assignResidentMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Vincular"
+                          )}
+                        </button>
+                      </div>
+                      {availableResidents.length === 0 && (
+                        <p className="text-xs text-gray-500">
+                          Todos os moradores já estão vinculados a uma unidade. Desvincule-os primeiro para reatribuir.
+                        </p>
+                      )}
+                      {assignResidentMutation.isSuccess && (
+                        <p className="text-xs text-green-600">
+                          Morador vinculado com sucesso!
+                        </p>
+                      )}
                     </div>
-                    {assignResidentMutation.isSuccess && (
-                      <p className="text-xs text-green-600">Morador vinculado com sucesso!</p>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div className="p-4 border-t shrink-0 flex gap-3 bg-gray-50 rounded-b-xl">

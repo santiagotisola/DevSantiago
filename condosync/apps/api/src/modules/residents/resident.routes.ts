@@ -180,7 +180,7 @@ const updateResidentSchema = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().optional(),
   cpf: z.string().optional(),
-  unitId: z.string().uuid().optional(),
+  unitId: z.string().uuid().nullable().optional(),
 });
 
 // Atualiza dados do morador (user + unidade)
@@ -223,7 +223,7 @@ router.patch(
     // Atualiza unidade
     const updated = await prisma.condominiumUser.update({
       where: { id: req.params.id },
-      data: { ...(data.unitId ? { unitId: data.unitId } : {}) },
+      data: { ...(data.unitId !== undefined ? { unitId: data.unitId } : {}) },
       include: {
         user: {
           select: { id: true, name: true, email: true, phone: true, cpf: true },
