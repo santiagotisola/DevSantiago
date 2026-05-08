@@ -1,0 +1,136 @@
+# =============================================================================
+# CondoSync — stack GREEN (api_green, web_green, worker_green)
+# Idêntico ao blue, exceto nomes/cor/tag.
+# =============================================================================
+
+name: condosync-green
+
+networks:
+  proxy:
+    name: condosync_proxy
+    external: true
+  data:
+    name: condosync_data
+    external: true
+
+volumes:
+  uploads_data:
+    name: condosync_uploads_data
+    external: true
+  api_logs:
+    name: condosync_api_logs
+    external: true
+
+services:
+  api_green:
+    image: ${IMAGE_REGISTRY}/condosync-api:${IMAGE_TAG_GREEN}
+    container_name: condosync-api-green
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      COLOR: green
+      PORT: "3333"
+      RUN_WORKERS: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@condosync-postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@condosync-redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
+      JWT_REFRESH_SECRET_PREVIOUS: ${JWT_REFRESH_SECRET_PREVIOUS:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      APP_ENCRYPTION_KEY_PREVIOUS: ${APP_ENCRYPTION_KEY_PREVIOUS:-}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      BCRYPT_ROUNDS: "12"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - uploads_data:/app/uploads
+      - api_logs:/app/logs
+    networks:
+      - proxy
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  worker_green:
+    image: ${IMAGE_REGISTRY}/condosync-api:${IMAGE_TAG_GREEN}
+    container_name: condosync-worker-green
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: production
+      COLOR: green
+      RUN_WORKERS: "true"
+      WORKER_ROLE: worker
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@condosync-postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@condosync-redis:6379
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+      APP_ENCRYPTION_KEY_PREVIOUS: ${APP_ENCRYPTION_KEY_PREVIOUS:-}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - uploads_data:/app/uploads
+      - api_logs:/app/logs
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3334/worker/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  web_green:
+    image: ${IMAGE_REGISTRY}/condosync-web:${IMAGE_TAG_GREEN}
+    container_name: condosync-web-green
+    restart: unless-stopped
+    environment:
+      API_URL: http://condosync-api-green:3333
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"

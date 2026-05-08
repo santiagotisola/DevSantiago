@@ -1,0 +1,9 @@
+# Cor ativa do frontend. Sobrescrito pelo deploy-safe.sh.
+# Valor inicial: BLUE
+reverse_proxy condosync-web-blue:80 {
+    health_uri      /
+    health_interval 10s
+    health_timeout  3s
+    fail_duration   15s
+    max_fails       3
+}

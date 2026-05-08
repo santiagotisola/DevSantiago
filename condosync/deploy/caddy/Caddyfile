@@ -1,0 +1,58 @@
+# =============================================================================
+# CondoSync — Caddyfile
+# A cor ativa e controlada pelos arquivos:
+#   /etc/caddy/snippets/active-api.caddy   (upstream da API + Socket.IO)
+#   /etc/caddy/snippets/active-web.caddy   (upstream do frontend nginx)
+#
+# Reload atomico (zero downtime, mantem conexoes ativas):
+#   docker exec condosync-caddy caddy reload --config /etc/caddy/Caddyfile
+# =============================================================================
+
+{
+    email {$ACME_EMAIL}
+    admin 0.0.0.0:2019
+    servers {
+        protocols h1 h2 h3
+    }
+    log default {
+        output stdout
+        format json
+        level INFO
+    }
+}
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    # Healthcheck publico do Edge — usado pelo deploy script
+    handle /__edge_health {
+        respond "edge-ok" 200
+    }
+
+    # API REST + Socket.IO -> upstream da cor ativa
+    @api {
+        path /api/* /socket.io/*
+    }
+    handle @api {
+        import /etc/caddy/snippets/active-api.caddy
+    }
+
+    # Frontend SPA (tudo o resto) -> upstream da cor ativa
+    handle {
+        import /etc/caddy/snippets/active-web.caddy
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

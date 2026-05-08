@@ -1,0 +1,16 @@
+# Cor ativa da API. Sobrescrito pelo deploy-safe.sh.
+# Valor inicial: BLUE
+reverse_proxy condosync-api-blue:3333 {
+    health_uri      /health
+    health_interval 5s
+    health_timeout  3s
+    fail_duration   10s
+    max_fails       3
+    transport http {
+        keepalive 30s
+        keepalive_idle_conns 100
+    }
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+}
