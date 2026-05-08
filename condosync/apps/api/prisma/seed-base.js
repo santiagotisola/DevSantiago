@@ -1,7 +1,7 @@
 "use strict";
 // seed-base.js — versão JS do seed.ts para rodar no container de produção
 const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
 
 async function main() {

@@ -4,7 +4,7 @@ import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError, ConflictError } from "../../middleware/errorHandler";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const router = Router();
 router.use(

@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import jwt, { type SignOptions, type Secret } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../config/prisma";

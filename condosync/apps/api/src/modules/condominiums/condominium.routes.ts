@@ -6,7 +6,7 @@ import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { residentService } from "../residents/resident.service";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const router = Router();
 router.use(authenticate);

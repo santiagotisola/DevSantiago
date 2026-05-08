@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcrypt";
 import { AuthService } from './auth.service';
 import { prismaMock } from '../../test/setup';
 import { AppError, ConflictError, UnauthorizedError } from '../../middleware/errorHandler';

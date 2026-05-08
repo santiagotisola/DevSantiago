@@ -4,7 +4,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache openssl
+# bcrypt nativo precisa de python + build tools no estágio builder.
+# Apenas builder; runtime stage só copia o node_modules pronto.
+RUN apk add --no-cache openssl python3 make g++
 
 # Lockfile junto = build determinístico (npm ci).
 COPY package.json package-lock.json* ./

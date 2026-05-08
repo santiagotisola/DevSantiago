@@ -10,7 +10,7 @@ import { ForbiddenError, ValidationError } from "../../middleware/errorHandler";
 import { validateRequest } from "../../utils/validateRequest";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { residentService } from "./resident.service";
 
 const router = Router();

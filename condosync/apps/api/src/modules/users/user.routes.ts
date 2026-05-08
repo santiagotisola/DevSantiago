@@ -7,7 +7,7 @@ import { passwordSchema } from "../auth/auth.controller";
 import { env } from "../../config/env";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const router = Router();
 router.use(authenticate);

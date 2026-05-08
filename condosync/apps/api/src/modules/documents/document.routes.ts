@@ -151,7 +151,9 @@ router.post(
         title: meta.title,
         description: meta.description,
         category: meta.category,
-        fileName: req.file.originalname,
+        // multer 2.x retorna originalname em latin1 — re-decode para
+        // UTF-8 antes de persistir (acentos, ç, etc).
+        fileName: Buffer.from(req.file.originalname, "latin1").toString("utf8"),
         storedName: path.basename(req.file.filename),
         filePath: req.file.path,
         fileSize: req.file.size,
