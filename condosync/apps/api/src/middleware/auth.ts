@@ -9,6 +9,7 @@ import {
   NotFoundError,
 } from "./errorHandler";
 import { UserRole } from "@prisma/client";
+import { idorGuardDecisions } from "../config/metrics";
 
 export interface JwtPayload {
   userId: string;
@@ -240,6 +241,7 @@ export function requireResourceMembership(
     // SUPER_ADMIN bypass — segue passando recurso para o handler.
     if (req.user.role === UserRole.SUPER_ADMIN) {
       req.resource = record;
+      idorGuardDecisions.labels(label, "allow_superadmin").inc();
       return next();
     }
 
@@ -247,6 +249,7 @@ export function requireResourceMembership(
     if (!targetCondoId) {
       // Recurso sem condominiumId resolvível — não há como provar
       // pertença. Falha fechada por segurança.
+      idorGuardDecisions.labels(label, "deny_no_tenant").inc();
       throw new ForbiddenError(
         `Não foi possível resolver condominiumId para ${label}`,
       );
@@ -264,10 +267,12 @@ export function requireResourceMembership(
       // 404 em vez de 403 para não vazar a existência do recurso
       // de outro condomínio. Atacante recebe a mesma resposta de
       // "id não existe".
+      idorGuardDecisions.labels(label, "deny_cross_tenant").inc();
       throw new NotFoundError(label, id);
     }
 
     req.resource = record;
+    idorGuardDecisions.labels(label, "allow").inc();
     next();
   };
 }

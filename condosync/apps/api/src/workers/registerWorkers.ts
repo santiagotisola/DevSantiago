@@ -4,7 +4,7 @@ import {
   renewLeaderLock,
   tryAcquireLeaderLock,
 } from "../config/redis";
-import { bullLeaderRenewals } from "../config/metrics";
+import { bullJobsTotal, bullLeaderRenewals } from "../config/metrics";
 
 const log = logger.child({ module: "workers" });
 
@@ -56,6 +56,14 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     "../modules/finance/balancete.worker"
   );
 
+  type WorkerLike = {
+    close(): Promise<void>;
+    name?: string;
+    on?: (
+      event: "completed" | "failed",
+      cb: (...args: unknown[]) => void,
+    ) => void;
+  };
   const workers = [
     notificationWorker,
     maintenanceAlertsWorker,
@@ -63,7 +71,18 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     contractAlertsWorker,
     collectionWorker,
     balanceteWorker,
-  ].filter(Boolean) as Array<{ close(): Promise<void> }>;
+  ].filter(Boolean) as WorkerLike[];
+
+  // Pluga métricas Prometheus em cada worker.
+  for (const w of workers) {
+    const queueName = w.name ?? "unknown";
+    w.on?.("completed", () => {
+      bullJobsTotal.labels(queueName, "completed").inc();
+    });
+    w.on?.("failed", () => {
+      bullJobsTotal.labels(queueName, "failed").inc();
+    });
+  }
 
   // Leader election: só uma réplica registra os repeatables.
   // Demais réplicas ainda processam jobs (são consumers), mas não
