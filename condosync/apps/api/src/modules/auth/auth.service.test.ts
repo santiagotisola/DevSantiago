@@ -109,31 +109,107 @@ describe('AuthService.login', () => {
 
 // ─── refreshTokens ────────────────────────────────────────────────────────────
 describe('AuthService.refreshTokens', () => {
-  it('lança UnauthorizedError para refresh token não encontrado', async () => {
-    prismaMock.refreshToken.findUnique.mockResolvedValue(null);
+  // Helper: gera um JWT real assinado com a mesma chave de teste,
+  // já que após o hardening o service verifica a assinatura ANTES
+  // de tocar no DB.
+  const signRefresh = (payload: object) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const jwt = require('jsonwebtoken');
+    return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  };
 
-    await expect(authService.refreshTokens('token-invalido')).rejects.toThrow(UnauthorizedError);
+  it('lança UnauthorizedError para refresh token com assinatura inválida', async () => {
+    await expect(authService.refreshTokens('lixo')).rejects.toThrow(
+      UnauthorizedError,
+    );
   });
 
-  it('lança UnauthorizedError para refresh token expirado', async () => {
+  it('detecta reuso e revoga toda a família quando token JWT-válido não está no DB', async () => {
+    const token = signRefresh({ userId: 'user-1', role: 'RESIDENT' });
+    prismaMock.refreshToken.findUnique.mockResolvedValue(null);
+    prismaMock.refreshToken.deleteMany.mockResolvedValue({ count: 3 });
+
+    await expect(authService.refreshTokens(token)).rejects.toThrow(
+      UnauthorizedError,
+    );
+    expect(prismaMock.refreshToken.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+    });
+  });
+
+  it('lança UnauthorizedError para refresh token expirado no DB', async () => {
+    const token = signRefresh({ userId: 'user-1', role: 'RESIDENT' });
     prismaMock.refreshToken.findUnique.mockResolvedValue({
       id: 'rt-1',
-      token: 'tok',
+      token,
       userId: 'user-1',
-      expiresAt: new Date('2020-01-01'), // passado
+      expiresAt: new Date('2020-01-01'),
     } as any);
 
-    await expect(authService.refreshTokens('tok')).rejects.toThrow(UnauthorizedError);
+    await expect(authService.refreshTokens(token)).rejects.toThrow(
+      UnauthorizedError,
+    );
+  });
+
+  it('emite tokens com role atual do DB, não do JWT', async () => {
+    // JWT antigo dizendo SUPER_ADMIN; DB diz RESIDENT (rebaixado).
+    const token = signRefresh({ userId: 'user-1', role: 'SUPER_ADMIN' });
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt-1',
+      token,
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 86_400_000),
+    } as any);
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      role: 'RESIDENT',
+      name: 'João',
+      isActive: true,
+    } as any);
+    prismaMock.refreshToken.delete.mockResolvedValue({} as any);
+    prismaMock.refreshToken.create.mockResolvedValue({} as any);
+
+    const result = await authService.refreshTokens(token);
+    // Decodifica o novo access token e confirma role rebaixada.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(result.accessToken, process.env.JWT_SECRET);
+    expect(decoded.role).toBe('RESIDENT');
   });
 });
 
 // ─── logout ───────────────────────────────────────────────────────────────────
 describe('AuthService.logout', () => {
-  it('deleta o refresh token sem erros', async () => {
-    prismaMock.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
+  const signRefresh = (payload: object) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const jwt = require('jsonwebtoken');
+    return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  };
 
-    await expect(authService.logout('some-token')).resolves.toBeUndefined();
-    expect(prismaMock.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { token: 'some-token' } });
+  it('é noop silencioso para refresh token inválido (não vaza existência)', async () => {
+    await expect(authService.logout('lixo')).resolves.toBeUndefined();
+    expect(prismaMock.refreshToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('deleta com filtro de userId derivado do JWT (impede DoS de sessão alheia)', async () => {
+    prismaMock.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
+    const token = signRefresh({ userId: 'user-1', role: 'RESIDENT' });
+
+    await authService.logout(token);
+    expect(prismaMock.refreshToken.deleteMany).toHaveBeenCalledWith({
+      where: { token, userId: 'user-1' },
+    });
+  });
+});
+
+// ─── register: anti-enumeração ────────────────────────────────────────────────
+describe('AuthService.register (anti-enumeration)', () => {
+  it('mensagem genérica em colisão de e-mail (sem distinguir e-mail vs cpf)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(mockUser as any);
+
+    await expect(
+      authService.register({ name: 'X', email: mockUser.email, password: 'Senha@123' }),
+    ).rejects.toThrowError(/não foi possível concluir o cadastro/i);
   });
 });
 
