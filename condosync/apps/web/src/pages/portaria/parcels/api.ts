@@ -3,7 +3,7 @@
  * temos URLs do backend hardcoded — facilita refactor futuro
  * (ex: migração para tRPC/orval/codegen).
  */
-import { api } from "../../../../services/api";
+import { api } from "../../../services/api";
 
 export interface ParcelFilters {
   condominiumId: string;
