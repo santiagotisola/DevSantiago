@@ -17,4 +17,4 @@ ALTER TABLE "reservations"
         "commonAreaId" WITH =,
         tstzrange("startDate", "endDate", '[)') WITH &&
     )
-    WHERE ("status" IN ('PENDING', 'APPROVED'));
+    WHERE ("status" IN ('PENDING', 'CONFIRMED'));
