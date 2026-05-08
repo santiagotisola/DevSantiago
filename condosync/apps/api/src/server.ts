@@ -272,4 +272,47 @@ httpServer.listen(PORT, async () => {
   await registerBalanceteSchedule();
 });
 
+// ─── Graceful shutdown ────────────────────────────────────────
+// Sem isso, SIGTERM (Railway/k8s rolling deploy, docker stop) corta
+// requests in-flight, perde jobs BullMQ, e vaza conexões PG/Redis
+// até o servidor expirá-las. Em fluxos financeiros o resultado é
+// estado inconsistente.
+let shuttingDown = false;
+const shutdown = async (signal: string) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`Iniciando graceful shutdown (signal=${signal})`);
+
+  const forceTimeout = setTimeout(() => {
+    logger.error("Graceful shutdown excedeu 25s — forçando exit");
+    process.exit(1);
+  }, 25_000);
+  forceTimeout.unref();
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((err) => (err ? reject(err) : resolve()));
+    });
+    logger.info("HTTP server fechado");
+
+    await new Promise<void>((resolve) => {
+      io.close(() => resolve());
+    });
+    logger.info("Socket.IO fechado");
+
+    await prisma.$disconnect();
+    logger.info("Prisma desconectado");
+
+    clearTimeout(forceTimeout);
+    process.exit(0);
+  } catch (err) {
+    logger.error("Erro durante shutdown", err);
+    clearTimeout(forceTimeout);
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+
 export default app;
