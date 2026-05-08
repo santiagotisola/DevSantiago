@@ -2,19 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { 
-  DollarSign, 
+  Banknote, 
   TrendingUp, 
   TrendingDown, 
-  AlertTriangle, 
+  AlertOctagon, 
   Loader2, 
   ArrowUpRight, 
   ArrowDownRight,
-  Shield,
-  Calendar,
+  ShieldCheck,
+  CalendarRange,
   ChevronRight,
   PieChart as PieIcon,
   Filter,
-  Plus
+  PlusCircle
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '../../lib/utils';
@@ -131,7 +131,7 @@ export function FinancePage() {
             to="/finance/cobrancas"
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
           >
-            <Plus className="w-4 h-4" /> Nova Cobrança
+            <PlusCircle className="w-4 h-4" /> Nova Cobrança
           </Link>
           <button className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">
             <Filter className="w-5 h-5" />
@@ -161,14 +161,14 @@ export function FinancePage() {
           title="Saldo do Mês"
           value={formatCurrency((currentMonth?.receitas ?? 0) - (currentMonth?.despesas ?? 0))}
           subtitle="Disponível em caixa"
-          icon={DollarSign}
+          icon={Banknote}
           color="bg-blue-500"
         />
         <StatCard
           title="Inadimplência"
           value={((defaulters || []) as any[]).length}
           subtitle="Unidades com débitos"
-          icon={AlertTriangle}
+          icon={AlertOctagon}
           color="bg-amber-500"
         />
       </div>
@@ -251,7 +251,7 @@ export function FinancePage() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800">Lista de Débitos</h3>
               <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                <AlertTriangle className="w-5 h-5" />
+                <AlertOctagon className="w-5 h-5" />
               </div>
             </div>
             <p className="text-xs text-gray-400 font-medium mt-1">Unidades com maior saldo devedor</p>
@@ -293,7 +293,7 @@ export function FinancePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-12 text-center h-full opacity-40">
-                <Shield className="w-12 h-12 mb-4 text-emerald-500" />
+                <ShieldCheck className="w-12 h-12 mb-4 text-emerald-500" />
                 <p className="text-sm font-bold uppercase tracking-widest text-emerald-600">Condomínio em dia!</p>
               </div>
             )}

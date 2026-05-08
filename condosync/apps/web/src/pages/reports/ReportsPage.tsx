@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { BarChart3, Loader2, Users, DollarSign, Wrench, Building2, FileDown } from 'lucide-react';
+import { BarChart3, Loader2, UsersRound, Banknote, Settings2, Building2, FileDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatCurrency } from '../../lib/utils';
 
 const TABS = [
-  { id: 'visitors', label: 'Visitantes', icon: Users },
-  { id: 'financial', label: 'Financeiro', icon: DollarSign },
-  { id: 'maintenance', label: 'Manutenção', icon: Wrench },
+  { id: 'visitors', label: 'Visitantes', icon: UsersRound },
+  { id: 'financial', label: 'Financeiro', icon: Banknote },
+  { id: 'maintenance', label: 'Manutenção', icon: Settings2 },
   { id: 'occupancy', label: 'Ocupação', icon: Building2 },
 ];
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { formatDateTime } from '../../lib/utils';
-import { Package, Plus, Search, CheckCircle, Loader2, Pencil, X, AlertTriangle, Truck, User, FileText, Trash2, ClipboardList, Clock, Bell } from 'lucide-react';
+import { PackageOpen, PlusCircle, Search, CheckCircle2, Loader2, Pencil, X, AlertOctagon, Truck, UserRound, ScrollText, Trash2, ClipboardList, Timer, BellRing } from 'lucide-react';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 type PreCarrier = { id: string; name: string };
@@ -349,7 +349,7 @@ export function ParcelsPage() {
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" />
             Registrar Encomenda
           </button>
         )}
@@ -362,7 +362,7 @@ export function ParcelsPage() {
             onClick={() => setActiveTab('parcels')}
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'parcels' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Package className="w-4 h-4" /> Encomendas
+            <PackageOpen className="w-4 h-4" /> Encomendas
           </button>
           {canAdmin && (
             <button
@@ -391,7 +391,7 @@ export function ParcelsPage() {
           <>
             <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center gap-4">
               <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600">
-                <Package className="w-6 h-6" />
+                <PackageOpen className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Pendentes</p>
@@ -400,7 +400,7 @@ export function ParcelsPage() {
             </div>
             <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center gap-4">
               <div className="bg-green-100 p-2.5 rounded-lg text-green-600">
-                <Plus className="w-6 h-6" />
+                <PlusCircle className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Recebidas Hoje</p>
@@ -409,7 +409,7 @@ export function ParcelsPage() {
             </div>
             <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex items-center gap-4">
               <div className="bg-orange-100 p-2.5 rounded-lg text-orange-600">
-                <AlertTriangle className="w-6 h-6" />
+                <AlertOctagon className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Avariadas</p>
@@ -418,7 +418,7 @@ export function ParcelsPage() {
             </div>
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
               <div className="bg-gray-100 p-2.5 rounded-lg text-gray-600">
-                <CheckCircle className="w-6 h-6" />
+                <CheckCircle2 className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Retiradas</p>
@@ -447,12 +447,12 @@ export function ParcelsPage() {
             <div className="flex flex-wrap items-center gap-2 pb-2">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">Filtrar por:</span>
               {[
-                { id: 'ALL', label: 'Tudo', icon: Package },
+                { id: 'ALL', label: 'Tudo', icon: PackageOpen },
                 { id: 'PENDING', label: 'Pendentes', icon: Loader2 },
                 { id: 'RECEIVED', label: 'Recebidas', icon: Truck },
-                { id: 'NOTIFIED', label: 'Notificadas', icon: AlertTriangle },
-                { id: 'PICKED_UP', label: 'Retiradas', icon: CheckCircle },
-                { id: 'DAMAGED', label: 'Com Avaria', icon: AlertTriangle, color: 'text-orange-600' },
+                { id: 'NOTIFIED', label: 'Notificadas', icon: AlertOctagon },
+                { id: 'PICKED_UP', label: 'Retiradas', icon: CheckCircle2 },
+                { id: 'DAMAGED', label: 'Com Avaria', icon: AlertOctagon, color: 'text-orange-600' },
               ].map((chip) => {
                 const Icon = chip.icon;
                 const active = statusFilter === chip.id;
@@ -480,7 +480,7 @@ export function ParcelsPage() {
             ) : parcels.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4 text-muted-foreground bg-gray-50/30">
                 <div className="bg-white p-6 rounded-full shadow-sm border border-gray-100">
-                  <Package className="w-12 h-12 text-gray-300" />
+                  <PackageOpen className="w-12 h-12 text-gray-300" />
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-gray-600">Nenhuma encomenda encontrada</p>
@@ -515,7 +515,7 @@ export function ParcelsPage() {
                               <span className="font-bold text-gray-800">{p.unit?.block ? `${p.unit.block} - ` : ''}{p.unit?.identifier}</span>
                               {isOld && (
                                 <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 uppercase mt-0.5">
-                                  <Clock className="w-3 h-3" /> Pendente há +48h
+                                  <Timer className="w-3 h-3" /> Pendente há +48h
                                 </span>
                               )}
                             </div>
@@ -536,7 +536,7 @@ export function ParcelsPage() {
                               </span>
                               {p.hasPackageDamage && (
                                 <span title="Avaria registrada" className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">
-                                  <AlertTriangle className="w-3 h-3" /> Avaria
+                                  <AlertOctagon className="w-3 h-3" /> Avaria
                                 </span>
                               )}
                             </div>
@@ -551,7 +551,7 @@ export function ParcelsPage() {
                                       title="Confirmar Retirada"
                                       className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                     >
-                                      <CheckCircle className="w-4 h-4" />
+                                      <CheckCircle2 className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => {
@@ -564,7 +564,7 @@ export function ParcelsPage() {
                                     >
                                       {notifyMutation.isPending && notifyMutation.variables === p.id ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                      ) : <Bell className="w-4 h-4" />}
+                                      ) : <BellRing className="w-4 h-4" />}
                                     </button>
                                   </>
                                 )}
@@ -622,7 +622,7 @@ export function ParcelsPage() {
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button onClick={addCarrier} disabled={!newCarrierName.trim()} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-                <Plus className="w-4 h-4" />
+                <PlusCircle className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-2">
@@ -672,7 +672,7 @@ export function ParcelsPage() {
           {/* Locais de Armazenamento */}
           <div className="bg-white rounded-xl border p-5 space-y-4">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600" />
+              <ScrollText className="w-4 h-4 text-blue-600" />
               <h3 className="font-semibold">Locais de Armazenamento</h3>
             </div>
             <p className="text-xs text-gray-500">
@@ -687,7 +687,7 @@ export function ParcelsPage() {
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button onClick={addLocation} disabled={!newLocationName.trim()} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-                <Plus className="w-4 h-4" />
+                <PlusCircle className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-2">
@@ -731,7 +731,7 @@ export function ParcelsPage() {
           {/* Entregadores */}
           <div className="bg-white rounded-xl border p-5 space-y-4">
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-blue-600" />
+              <UserRound className="w-4 h-4 text-blue-600" />
               <h3 className="font-semibold">Entregadores</h3>
             </div>
             <p className="text-xs text-gray-500">
@@ -804,7 +804,7 @@ export function ParcelsPage() {
             {/* Cabeçalho Fixo */}
             <div className="p-4 border-b shrink-0 flex items-center justify-between bg-white">
               <div className="flex items-center gap-2 text-blue-600">
-                <Package className="w-5 h-5" />
+                <PackageOpen className="w-5 h-5" />
                 <h2 className="text-lg font-semibold text-gray-800">Registrar Encomenda</h2>
               </div>
               <button 
@@ -886,7 +886,7 @@ export function ParcelsPage() {
               {/* Entregador */}
               <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
                 <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                  <User className="w-3.5 h-3.5" /> Identificação do Entregador
+                  <UserRound className="w-3.5 h-3.5" /> Identificação do Entregador
                 </p>
                 
                 {preDeliverers.length > 0 && (
@@ -953,7 +953,7 @@ export function ParcelsPage() {
                     />
                     <label htmlFor="hasPackageDamage" className="text-sm cursor-pointer flex flex-col">
                       <span className="font-bold text-orange-700 flex items-center gap-1 text-xs uppercase">
-                        <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com Avaria
+                        <AlertOctagon className="w-3.5 h-3.5" /> Embalagem com Avaria
                       </span>
                       <span className="text-[10px] text-orange-600 leading-tight">Danos visíveis (Art. 754 CC)</span>
                     </label>
@@ -1105,7 +1105,7 @@ export function ParcelsPage() {
             <div className="p-5 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center gap-3">
                 <div className="bg-blue-600 text-white p-2 rounded-lg">
-                  <Package className="w-4 h-4" />
+                  <PackageOpen className="w-4 h-4" />
                 </div>
                 <div>
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Unidade</p>
@@ -1160,7 +1160,7 @@ export function ParcelsPage() {
 
               <div className="border rounded-xl p-4 space-y-4 bg-gray-50/50 border-gray-100">
                 <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                  <User className="w-3.5 h-3.5" /> Identificação do Entregador
+                  <UserRound className="w-3.5 h-3.5" /> Identificação do Entregador
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -1202,7 +1202,7 @@ export function ParcelsPage() {
                   />
                   <label htmlFor="editHasDamage" className="text-sm cursor-pointer flex flex-col">
                     <span className="font-bold text-orange-700 flex items-center gap-1 text-xs uppercase">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Embalagem com Avaria
+                      <AlertOctagon className="w-3.5 h-3.5" /> Embalagem com Avaria
                     </span>
                     <span className="text-[10px] text-orange-600 leading-tight">Marque se houver danos visíveis</span>
                   </label>

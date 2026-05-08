@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Settings, Save, Loader2, Building2 } from 'lucide-react';
+import { Settings2, Save, Loader2, Building2 } from 'lucide-react';
 
 export function SettingsPage() {
   const { selectedCondominiumId } = useAuthStore();

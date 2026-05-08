@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { AlertCircle, Plus, Loader2, Search } from 'lucide-react';
+import { AlertOctagon, PlusCircle, Loader2, Search } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
 
 const occurrenceStatusLabels: Record<string, { label: string; className: string }> = {
@@ -50,7 +50,7 @@ export function OccurrencesPage() {
           <p className="text-muted-foreground">Registro e acompanhamento de ocorrências</p>
         </div>
         <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-          <Plus className="w-4 h-4" /> Registrar Ocorrência
+          <PlusCircle className="w-4 h-4" /> Registrar Ocorrência
         </button>
       </div>
 
@@ -62,7 +62,7 @@ export function OccurrencesPage() {
       {isLoading ? (
         <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><AlertCircle className="w-10 h-10" /><p>Nenhuma ocorrência encontrada</p></div>
+        <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><AlertOctagon className="w-10 h-10" /><p>Nenhuma ocorrência encontrada</p></div>
       ) : (
         <div className="grid gap-3">
           {filtered.map((o: any) => {

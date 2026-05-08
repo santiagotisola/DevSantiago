@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Megaphone, Plus, Loader2, Pin } from 'lucide-react';
+import { Megaphone, PlusCircle, Loader2, Pin } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
 
 export function AnnouncementsPage() {
@@ -37,7 +37,7 @@ export function AnnouncementsPage() {
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-            <Plus className="w-4 h-4" /> Novo Aviso
+            <PlusCircle className="w-4 h-4" /> Novo Aviso
           </button>
         )}
       </div>

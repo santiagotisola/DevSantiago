@@ -2,26 +2,25 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useAuthStore } from "../../store/authStore";
 import {
-  LayoutDashboard,
-  Users,
+  LayoutGrid,
+  UsersRound,
   Home,
-  DollarSign,
-  Wrench,
-  CalendarDays,
+  Banknote,
+  Settings2,
+  CalendarRange,
   Megaphone,
-  AlertTriangle,
+  AlertOctagon,
   BarChart3,
-  UserCog,
-  Building,
-  Shield,
-  Package,
+  UserRoundCog,
+  Building2,
+  ShieldCheck,
+  PackageOpen,
   Car,
   LogOut,
   ChevronDown,
-  Building2,
   X,
   PawPrint,
-  FileText,
+  ScrollText,
   Ticket,
   Image,
   Vote,
@@ -31,8 +30,8 @@ import {
   CreditCard,
   KeyRound,
   Settings,
-  User,
-  Tv,
+  UserRound,
+  MonitorPlay,
   FileSignature,
   Gavel,
 } from "lucide-react";
@@ -52,10 +51,10 @@ const RESIDENT_MANAGEMENT = ["RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_A
 const COUNCIL_COMMUNITY = ["RESIDENT", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard },
+  { label: "Dashboard", to: "/", icon: LayoutGrid },
   {
     label: "Portaria",
-    icon: Shield,
+    icon: ShieldCheck,
     roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
     children: [
       { label: "Visitantes", to: "/portaria/visitantes" },
@@ -73,7 +72,7 @@ const navItems: NavItem[] = [
   {
     label: "Moradores",
     to: "/moradores",
-    icon: Users,
+    icon: UsersRound,
     roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
   },
   {
@@ -84,7 +83,7 @@ const navItems: NavItem[] = [
   },
   {
     label: "Financeiro",
-    icon: DollarSign,
+    icon: Banknote,
     roles: MANAGEMENT,
     children: [
       { label: "Visão Geral", to: "/financeiro" },
@@ -92,11 +91,11 @@ const navItems: NavItem[] = [
       { label: "Categorias", to: "/financeiro/categorias" },
     ],
   },
-  { label: "Manutenção", to: "/manutencao", icon: Wrench, roles: MANAGEMENT },
+  { label: "Manutenção", to: "/manutencao", icon: Settings2, roles: MANAGEMENT },
   {
     label: "Áreas Comuns",
     to: "/areas-comuns",
-    icon: CalendarDays,
+    icon: CalendarRange,
     roles: COUNCIL_COMMUNITY,
   },
   {
@@ -113,7 +112,7 @@ const navItems: NavItem[] = [
   {
     label: "Documentos",
     to: "/documentos",
-    icon: FileText,
+    icon: ScrollText,
     roles: COUNCIL_COMMUNITY,
   },
   {
@@ -131,7 +130,7 @@ const navItems: NavItem[] = [
   {
     label: "Estoque",
     to: "/estoque",
-    icon: Package,
+    icon: PackageOpen,
     roles: MANAGEMENT,
   },
   {
@@ -161,13 +160,13 @@ const navItems: NavItem[] = [
   {
     label: "TV Elevador",
     to: "/digital-signage",
-    icon: Tv,
+    icon: MonitorPlay,
     roles: MANAGEMENT,
   },
   {
     label: "Funcionários",
     to: "/funcionarios",
-    icon: UserCog,
+    icon: UserRoundCog,
     roles: MANAGEMENT,
   },
   {
@@ -188,7 +187,7 @@ const navItems: NavItem[] = [
   {
     label: "Marketplace",
     to: "/marketplace",
-    icon: Building,
+    icon: Building2,
     roles: ["SUPER_ADMIN"],
   },
   {
@@ -415,7 +414,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               )
             }
           >
-            <User className="w-4 h-4" />
+            <UserRound className="w-4 h-4" />
             <span>Meu Perfil</span>
           </NavLink>
           <button

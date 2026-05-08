@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { User, Save, Loader2, Lock } from 'lucide-react';
+import { UserRound, Save, Loader2, Lock } from 'lucide-react';
 import { maskPhone, validatePhone, validateName } from '../../lib/utils';
 
 export function ProfilePage() {
