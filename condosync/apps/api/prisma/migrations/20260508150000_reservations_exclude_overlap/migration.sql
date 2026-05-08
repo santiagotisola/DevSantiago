@@ -10,11 +10,13 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 -- Postgres não permite EXCLUDE em range derivado de duas colunas
 -- via expressão diretamente — solução é uma generated column ou
--- expression index. Usamos tstzrange(startDate, endDate, '[)').
+-- expression index. As colunas startDate/endDate sao TIMESTAMP
+-- (sem timezone), entao usamos tsrange (e nao tstzrange — que
+-- exigiria timestamptz e seria nao-imutavel sem cast explicito).
 ALTER TABLE "reservations"
     ADD CONSTRAINT "reservations_no_overlap"
     EXCLUDE USING GIST (
         "commonAreaId" WITH =,
-        tstzrange("startDate", "endDate", '[)') WITH &&
+        tsrange("startDate", "endDate", '[)') WITH &&
     )
     WHERE ("status" IN ('PENDING', 'CONFIRMED'));
