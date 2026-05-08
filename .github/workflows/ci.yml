@@ -267,6 +267,55 @@ jobs:
                 --exclude=prefer-text-field \
                 --exclude=ban-drop-database
 
+  # ─── Testes de integração (testcontainers) ──────────────────────────────────
+  # Sobe Postgres ephemeral via @testcontainers/postgresql, aplica
+  # migrations Prisma, roda specs *.it.test.ts. Lento (~2-3min) mas
+  # cobre cenários multi-tenant que mocks não pegam.
+  test-it-api:
+    name: Testes Integração API (testcontainers)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: condosync/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Rodar suite IT
+        env:
+          # Mocks env vars que o testcontainers globalSetup vai
+          # complementar com a DATABASE_URL do container ephemeral.
+          NODE_ENV: test
+          REDIS_URL: redis://localhost:6379/15
+          JWT_SECRET: ittest-jwt-secret-minimum-32-chars-aaa
+          JWT_REFRESH_SECRET: ittest-refresh-secret-minimum-32-chars
+          ASAAS_WEBHOOK_TOKEN: ittest-asaas-token-minimum-32-chars-bbb
+          APP_ENCRYPTION_KEY: aXR0ZXN0LWVuY3J5cHRpb24ta2V5LTMyLWJ5dGVzLXp6
+          BCRYPT_ROUNDS: "4"
+          CORS_ORIGINS: http://localhost:5173
+          FRONTEND_URL: http://localhost:5173
+        run: npm run test:it
+
+  # ─── Dependency review (PR only — bloqueia deps com CVE high) ────────────────
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
   # ─── Auditoria de dependências (warn-only por enquanto) ──────────────────────
   audit-deps:
     name: npm audit (advisory)
@@ -291,7 +340,14 @@ jobs:
   #              deploy pelo verde do CI via Railway CLI.
   deploy:
     name: Deploy → Railway
-    needs: [test-api, build-web, build-mobile, typecheck-api, docker-build]
+    needs:
+      - test-api
+      - test-it-api
+      - typecheck-api
+      - lint-api
+      - build-web
+      - build-mobile
+      - docker-build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
