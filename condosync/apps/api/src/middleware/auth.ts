@@ -20,6 +20,39 @@ declare global {
   }
 }
 
+// ─── Conjuntos de roles compartilhados ────────────────────────
+// Antes copiados em ~30 arquivos de rotas. Centralizar aqui evita
+// que um módulo esqueça uma role nova ou inclua uma indevida.
+export const STAFF_ROLES = [
+  UserRole.DOORMAN,
+  UserRole.CONDOMINIUM_ADMIN,
+  UserRole.SYNDIC,
+  UserRole.SUPER_ADMIN,
+] as const;
+
+export const MANAGEMENT_ROLES = [
+  UserRole.CONDOMINIUM_ADMIN,
+  UserRole.SYNDIC,
+  UserRole.SUPER_ADMIN,
+] as const;
+
+export const COUNCIL_ROLES = [
+  UserRole.CONDOMINIUM_ADMIN,
+  UserRole.SYNDIC,
+  UserRole.COUNCIL_MEMBER,
+  UserRole.SUPER_ADMIN,
+] as const;
+
+export const ALL_AUTHENTICATED_ROLES = [
+  UserRole.DOORMAN,
+  UserRole.CONDOMINIUM_ADMIN,
+  UserRole.SYNDIC,
+  UserRole.SUPER_ADMIN,
+  UserRole.RESIDENT,
+  UserRole.SERVICE_PROVIDER,
+  UserRole.COUNCIL_MEMBER,
+] as const;
+
 export const authenticate = async (
   req: Request,
   _res: Response,
