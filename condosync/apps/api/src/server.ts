@@ -78,13 +78,12 @@ import { notFoundHandler } from "./middleware/notFoundHandler";
 import { prisma } from "./config/prisma";
 import type { JwtPayload } from "./middleware/auth";
 
-// Inicializar workers em background
-import "./notifications/notification.worker";
-import { registerMaintenanceAlertsSchedule } from "./modules/maintenance/maintenance.alerts.worker";
-import { registerFinanceSchedule } from "./modules/finance/finance.scheduler";
-import { registerContractAlertsSchedule } from "./modules/condominium-contracts/contract.alerts.worker";
-import { registerCollectionSchedule } from "./modules/collection-rules/collection.worker";
-import { registerBalanceteSchedule } from "./modules/finance/balancete.worker";
+// Workers em background são opcionais. Quando RUN_WORKERS=true (ou
+// padrão por compat com setup atual), o processo da API também
+// hospeda os workers BullMQ. Em produção, o ideal é rodar um
+// processo separado (apps/api/src/worker.ts) e setar
+// RUN_WORKERS=false aqui para isolar event loop.
+import { registerWorkers, type WorkerHandles } from "./workers/registerWorkers";
 
 // Rotas
 import authRoutes from "./modules/auth/auth.routes";
@@ -347,15 +346,22 @@ app.use(errorHandler);
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Start Server ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const PORT = env.PORT || 3333;
 
+// Hoisted (referenciado dentro do listen e do shutdown).
+let workerHandles: WorkerHandles | null = null;
+
 httpServer.listen(PORT, async () => {
   logger.info(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ CondoSync API rodando na porta ${PORT}`);
   logger.info(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Ambiente: ${env.NODE_ENV}`);
   logger.info(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â URL: http://localhost:${PORT}`);
-  await registerMaintenanceAlertsSchedule();
-  await registerFinanceSchedule();
-  await registerContractAlertsSchedule();
-  await registerCollectionSchedule();
-  await registerBalanceteSchedule();
+  // Default: roda workers no processo da API. Para isolar event
+  // loop, setar RUN_WORKERS=false e rodar `node dist/worker.js`
+  // como serviço sibling.
+  const shouldRunWorkers = (process.env.RUN_WORKERS ?? "true") !== "false";
+  if (shouldRunWorkers) {
+    workerHandles = await registerWorkers();
+  } else {
+    logger.info("RUN_WORKERS=false — workers não registrados no processo da API");
+  }
 });
 
 // ─── Graceful shutdown ────────────────────────────────────────
@@ -385,6 +391,11 @@ const shutdown = async (signal: string) => {
       io.close(() => resolve());
     });
     logger.info("Socket.IO fechado");
+
+    if (workerHandles) {
+      await workerHandles.close();
+      logger.info("Workers BullMQ fechados");
+    }
 
     await prisma.$disconnect();
     logger.info("Prisma desconectado");

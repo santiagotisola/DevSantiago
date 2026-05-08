@@ -15,10 +15,10 @@ const log = logger.child({ module: "finance.scheduler" });
 const QUEUE_NAME = "finance-scheduler";
 
 // ─── Queue ────────────────────────────────────────────────────
-const financeQueue = new Queue(QUEUE_NAME, { connection: redis as any });
+export const financeQueue = new Queue(QUEUE_NAME, { connection: redis as any });
 
 // ─── Worker ───────────────────────────────────────────────────
-const financeWorker = new Worker(
+export const financeWorker = new Worker(
   QUEUE_NAME,
   async (job) => {
     if (job.name === "mark-overdue") {
