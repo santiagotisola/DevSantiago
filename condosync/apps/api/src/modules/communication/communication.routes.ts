@@ -6,6 +6,11 @@ import {
   authorizeCondominium,
 } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
+import {
+  buildCursorArgs,
+  parseCursor,
+  sliceCursorPage,
+} from "../../utils/pagination";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { io } from "../../server";
@@ -107,17 +112,25 @@ router.delete(
 
 // â”€â”€â”€ NotificaÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.get("/notifications", async (req: Request, res: Response) => {
-  const [notifications, unreadCount] = await prisma.$transaction([
+  // Cursor pagination: ?cursor=<id>&limit=N. Default limit 50,
+  // max 100 (clamp em parseCursor). Caixa de inbox cresce sem
+  // limite — offset pagination ficaria O(N) deep.
+  const { cursor, limit } = parseCursor(req, 50);
+  const [items, unreadCount] = await prisma.$transaction([
     prisma.notification.findMany({
       where: { userId: req.user!.userId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...buildCursorArgs({ cursor, limit }),
     }),
     prisma.notification.count({
       where: { userId: req.user!.userId, isRead: false },
     }),
   ]);
-  res.json({ success: true, data: { notifications, unreadCount } });
+  const { page, nextCursor } = sliceCursorPage(items, limit);
+  res.json({
+    success: true,
+    data: { notifications: page, unreadCount, nextCursor },
+  });
 });
 
 router.patch("/notifications/:id/read", async (req: Request, res: Response) => {
