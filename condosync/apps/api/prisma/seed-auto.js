@@ -4,6 +4,7 @@
 
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
+const crypto = require("node:crypto");
 
 const prisma = new PrismaClient();
 
@@ -11,18 +12,52 @@ async function main() {
   console.log("🌱 Aplicando seed base (idempotente)...");
 
   // ── Super Admin ──────────────────────────────────────────────────────────
-  const password = await bcrypt.hash("Admin@2026", 12);
+  // Só cria/atualiza senha se SEED_SUPER_ADMIN_PASSWORD vier definida.
+  // Em produção sem env, fazemos upsert SEM passwordHash (admin já
+  // existe na maioria dos casos). Se não existir, gera senha
+  // aleatória e LOGA UMA VEZ para o operador transcrever.
+  const existing = await prisma.user.findUnique({
+    where: { email: "admin@condosync.com.br" },
+    select: { id: true },
+  });
+
+  let passwordToUse = process.env.SEED_SUPER_ADMIN_PASSWORD;
+  if (passwordToUse) {
+    if (passwordToUse.length < 16 || /admin@2026|admin123|condosync/i.test(passwordToUse)) {
+      console.error("❌ SEED_SUPER_ADMIN_PASSWORD inválida (curta ou padrão conhecido)");
+      process.exit(1);
+    }
+  } else if (!existing) {
+    // Não existe ainda E não veio env → gera senha forte e mostra.
+    passwordToUse = crypto.randomBytes(24).toString("base64url");
+    console.log(
+      "🔑 Senha SUPER_ADMIN gerada (UNICA EXIBIÇÃO — guarde em vault):\n   " +
+        passwordToUse +
+        "\n",
+    );
+  }
+
+  const createData = {
+    name: "Super Admin",
+    email: "admin@condosync.com.br",
+    role: "SUPER_ADMIN",
+    isActive: true,
+    emailVerified: true,
+  };
+  if (passwordToUse) {
+    createData.passwordHash = await bcrypt.hash(passwordToUse, 12);
+  }
+
+  // Se admin já existe e env não veio, upsert.update fica vazio (sem
+  // alterar senha). Idempotente.
+  const updateData = process.env.SEED_SUPER_ADMIN_PASSWORD
+    ? { passwordHash: createData.passwordHash }
+    : {};
+
   const superAdmin = await prisma.user.upsert({
     where: { email: "admin@condosync.com.br" },
-    update: {},
-    create: {
-      name: "Super Admin",
-      email: "admin@condosync.com.br",
-      passwordHash: password,
-      role: "SUPER_ADMIN",
-      isActive: true,
-      emailVerified: true,
-    },
+    update: updateData,
+    create: createData,
   });
   console.log("✅ Super admin:", superAdmin.email);
 

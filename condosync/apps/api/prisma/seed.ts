@@ -1,13 +1,27 @@
 import { PrismaClient, UserRole, UnitStatus, ShiftType } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 
 const prisma = new PrismaClient();
+
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'yes') {
+  console.error('❌ seed.ts é DEMO; bloqueado em production sem ALLOW_DEMO_SEED=yes');
+  process.exit(1);
+}
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
 
   // ─── Super Admin ────────────────────────────────────────────
-  const superAdminPassword = await bcrypt.hash('Admin@2026', 12);
+  const seedPassword =
+    process.env.SEED_SUPER_ADMIN_PASSWORD ||
+    crypto.randomBytes(24).toString('base64url');
+  if (!process.env.SEED_SUPER_ADMIN_PASSWORD) {
+    console.log(
+      `🔑 Senha SUPER_ADMIN gerada (UNICA EXIBIÇÃO):\n   ${seedPassword}\n`,
+    );
+  }
+  const superAdminPassword = await bcrypt.hash(seedPassword, 12);
   const superAdmin = await prisma.user.upsert({
     where: { email: 'admin@condosync.com.br' },
     update: {},
@@ -223,10 +237,8 @@ async function main() {
 
   console.log('✅ Seed concluído com sucesso!');
   console.log('\n📋 Credenciais de acesso:');
-  console.log('  Super Admin:  admin@condosync.com.br  / Admin@2026');
-  console.log('  Síndico:      sindico@parqueverde.com.br / Sindico@2026');
-  console.log('  Porteiro:     porteiro@parqueverde.com.br / Porteiro@2026');
-  console.log('  Morador:      morador1@parqueverde.com.br / Morador@2026');
+  console.log(`  Super Admin:  admin@condosync.com.br  / ${seedPassword}`);
+  console.log('  Síndico/Porteiro/Morador: senhas geradas no seed (verifique stdout acima)');
 }
 
 main()

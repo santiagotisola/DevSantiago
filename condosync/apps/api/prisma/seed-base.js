@@ -1,14 +1,58 @@
 "use strict";
-// seed-base.js — versão JS do seed.ts para rodar no container de produção
+// seed-base.js — versão JS do seed.ts para rodar no container de produção.
+//
+// Segurança:
+// 1. Senha do SUPER_ADMIN vem de SEED_SUPER_ADMIN_PASSWORD (env).
+// 2. Em produção, senha hardcoded antiga ("Admin@2026") é REJEITADA.
+// 3. Se SEED_SUPER_ADMIN_PASSWORD ausente, gera senha aleatória
+//    forte e imprime UMA VEZ no stdout — operador deve guardar
+//    em vault e nunca commitar.
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
+const crypto = require("node:crypto");
 const prisma = new PrismaClient();
+
+function resolveSuperAdminPassword() {
+  const fromEnv = process.env.SEED_SUPER_ADMIN_PASSWORD;
+  if (fromEnv) {
+    if (fromEnv.length < 16) {
+      console.error(
+        "❌ SEED_SUPER_ADMIN_PASSWORD muito curta (<16 chars). Abortando.",
+      );
+      process.exit(1);
+    }
+    if (/admin@2026|admin123|condosync/i.test(fromEnv)) {
+      console.error(
+        "❌ SEED_SUPER_ADMIN_PASSWORD parece um valor padrão conhecido. Abortando.",
+      );
+      process.exit(1);
+    }
+    return { password: fromEnv, generated: false };
+  }
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "❌ SEED_SUPER_ADMIN_PASSWORD obrigatório em NODE_ENV=production",
+    );
+    process.exit(1);
+  }
+  // Dev/test: gera senha aleatória forte (24 bytes b64 = 32 chars).
+  const generated = crypto.randomBytes(24).toString("base64url");
+  return { password: generated, generated: true };
+}
 
 async function main() {
   console.log("🌱 Iniciando seed base...\n");
 
-  // Super Admin
-  const superAdminPassword = await bcrypt.hash("Admin@2026", 12);
+  const { password, generated } = resolveSuperAdminPassword();
+  if (generated) {
+    console.log(
+      "🔑 Senha SUPER_ADMIN gerada (guarde em vault — não será mostrada novamente):\n   " +
+        password +
+        "\n",
+    );
+  }
+
+  const superAdminPassword = await bcrypt.hash(password, 12);
   const superAdmin = await prisma.user.upsert({
     where: { email: "admin@condosync.com.br" },
     update: {},
