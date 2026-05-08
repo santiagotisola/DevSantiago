@@ -263,8 +263,21 @@ router.post("/polls/:id/vote", async (req: Request, res: Response) => {
 
   const poll = await prisma.poll.findUniqueOrThrow({
     where: { id: req.params.id },
-    select: { options: true, isActive: true, endsAt: true },
+    select: {
+      options: true,
+      isActive: true,
+      endsAt: true,
+      condominiumId: true,
+    },
   });
+
+  // Tenant scope: só vota quem é membership do condomínio da enquete.
+  // Antes, qualquer logado podia votar em polls de qualquer condomínio.
+  await ensureCondominiumMembership(
+    req.user!.userId,
+    req.user!.role,
+    poll.condominiumId,
+  );
 
   if (!poll.isActive || (poll.endsAt && poll.endsAt < new Date())) {
     throw new ForbiddenError("Esta enquete nÃ£o estÃ¡ ativa");

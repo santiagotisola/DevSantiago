@@ -116,12 +116,17 @@ router.post("/:id/appeal", authorize("RESIDENT", ...MGMT), async (req: Request, 
   if (fine.status !== "PENDING") throw new AppError("Esta multa não está em status de recurso", 400);
   if (new Date() > fine.appealDeadline) throw new AppError("Prazo de recurso encerrado", 400);
 
-  // Morador só pode recorrer da sua unidade
+  // Tenant scope: RESIDENT precisa ser da unidade da multa; MGMT
+  // precisa ser membership do condomínio. Antes a validação de
+  // condomínio só rodava para RESIDENT — SYNDIC do condo A poderia
+  // enviar appeal em multa do condo B.
   if (req.user!.role === "RESIDENT") {
     const membership = await prisma.condominiumUser.findFirst({
       where: { userId: req.user!.userId, unitId: fine.unitId, isActive: true },
     });
     if (!membership) throw new ForbiddenError("Acesso negado");
+  } else {
+    await ensureMembership(req.user!.userId, req.user!.role, fine.condominiumId);
   }
 
   const { appealText } = validateRequest(appealSchema, req.body);
