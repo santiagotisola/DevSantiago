@@ -1,11 +1,62 @@
 import * as Sentry from '@sentry/node';
 
-// Sentry deve ser inicializado antes de qualquer outro import
-if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+// Sentry deve ser inicializado antes de qualquer outro import.
+// Driver por SENTRY_DSN (não NODE_ENV) — staging/preview também
+// devem reportar. beforeSend remove PII conhecida.
+if (process.env.SENTRY_DSN) {
+  const SENSITIVE_KEYS = new Set([
+    'password',
+    'passwordHash',
+    'currentPassword',
+    'newPassword',
+    'token',
+    'refreshToken',
+    'accessToken',
+    'authorization',
+    'cookie',
+    'cpf',
+    'asaas-access-token',
+  ]);
+  const scrubObject = (obj: unknown): unknown => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(scrubObject);
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (SENSITIVE_KEYS.has(k.toLowerCase())) {
+        result[k] = '[REDACTED]';
+      } else if (v && typeof v === 'object') {
+        result[k] = scrubObject(v);
+      } else {
+        result[k] = v;
+      }
+    }
+    return result;
+  };
+
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV ?? 'development',
     tracesSampleRate: 0.1,
+    sendDefaultPii: false,
+    beforeSend(event) {
+      if (event.request) {
+        if (event.request.headers) {
+          event.request.headers = scrubObject(
+            event.request.headers,
+          ) as Record<string, string>;
+        }
+        if (event.request.data) {
+          event.request.data = scrubObject(event.request.data);
+        }
+        if (event.request.cookies) {
+          event.request.cookies = '[REDACTED]' as unknown as never;
+        }
+      }
+      if (event.extra) {
+        event.extra = scrubObject(event.extra) as Record<string, unknown>;
+      }
+      return event;
+    },
   });
 }
 

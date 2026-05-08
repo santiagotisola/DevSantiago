@@ -7,6 +7,23 @@ server {
 
     client_max_body_size 15m;
 
+    # ── Headers de segurança ──────────────────────────────────
+    # add_header em nginx só herda para subcontextos se for repetido
+    # OU se vier antes; garantimos com `always` para que apareça
+    # em respostas de erro também.
+    add_header X-Frame-Options              "DENY"        always;
+    add_header X-Content-Type-Options       "nosniff"     always;
+    add_header Referrer-Policy              "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy           "geolocation=(), microphone=(), camera=()" always;
+    # HSTS: ativar 1 ano + subdomínios — o terminator TLS (Railway/
+    # Cloudflare/proxy) precisa estar em HTTPS. Em dev local sem
+    # TLS o navegador ignora silenciosamente.
+    add_header Strict-Transport-Security    "max-age=31536000; includeSubDomains" always;
+    # CSP minimamente restritiva para SPA Vite + assets do próprio
+    # domínio + API/WS no mesmo host. Ajustar se forem adicionadas
+    # CDNs externas (fontes Google, imagens S3, etc).
+    add_header Content-Security-Policy      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
     # Compressão gzip
     gzip on;
     gzip_vary on;
@@ -29,6 +46,7 @@ server {
         proxy_set_header   Host $proxy_host;
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_read_timeout 60s;
     }
 
@@ -38,6 +56,9 @@ server {
         proxy_ssl_server_name on;
         proxy_http_version 1.1;
         proxy_set_header   Host $proxy_host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
         proxy_set_header   Upgrade $http_upgrade;
         proxy_set_header   Connection "upgrade";
         proxy_cache_bypass $http_upgrade;
