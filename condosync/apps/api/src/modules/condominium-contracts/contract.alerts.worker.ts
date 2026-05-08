@@ -8,6 +8,7 @@ import { redis } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
+import { registerRepeatable } from "../../workers/schedulerHelpers";
 
 const log = logger.child({ module: "contract.alerts.worker" });
 const QUEUE_NAME = "contract-alerts";
@@ -18,13 +19,11 @@ export const contractAlertsQueue = new Queue(QUEUE_NAME, {
 });
 
 export async function registerContractAlertsSchedule() {
-  await contractAlertsQueue.add(
+  await registerRepeatable(
+    contractAlertsQueue,
     "check-expiring-contracts",
-    {},
-    {
-      repeat: { pattern: "30 8 * * *" }, // todo dia às 08:30
-      jobId: "contract-alerts-daily",
-    },
+    "30 8 * * *",
+    { jobId: "contract-alerts-daily" },
   );
   log.info("Contract alerts daily job registered (cron: 30 8 * * *)");
 }

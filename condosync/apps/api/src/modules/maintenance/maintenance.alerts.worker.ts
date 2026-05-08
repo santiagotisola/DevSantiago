@@ -9,6 +9,7 @@ import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { maintenanceService } from "./maintenance.service";
 import { NotificationService } from "../../notifications/notification.service";
+import { registerRepeatable } from "../../workers/schedulerHelpers";
 
 const log = logger.child({ module: "maintenance.alerts.worker" });
 
@@ -25,13 +26,11 @@ export const maintenanceAlertsQueue = new Queue(QUEUE_NAME, {
 
 // ── Register daily repeatable job on startup ───────────────────────
 export async function registerMaintenanceAlertsSchedule() {
-  await maintenanceAlertsQueue.add(
+  await registerRepeatable(
+    maintenanceAlertsQueue,
     "check-due-schedules",
-    {},
-    {
-      repeat: { pattern: "0 7 * * *" }, // every day at 07:00
-      jobId: "maintenance-alerts-daily",
-    },
+    "0 7 * * *",
+    { jobId: "maintenance-alerts-daily" },
   );
   log.info("Maintenance alerts daily job registered (cron: 0 7 * * *)");
 }

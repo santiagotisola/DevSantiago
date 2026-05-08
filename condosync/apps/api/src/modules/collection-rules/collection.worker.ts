@@ -8,6 +8,7 @@ import { redis } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
+import { registerRepeatable } from "../../workers/schedulerHelpers";
 
 const log = logger.child({ module: "collection.worker" });
 const QUEUE_NAME = "collection-rule";
@@ -18,13 +19,11 @@ export const collectionQueue = new Queue(QUEUE_NAME, {
 });
 
 export async function registerCollectionSchedule() {
-  await collectionQueue.add(
+  await registerRepeatable(
+    collectionQueue,
     "run-collection-rules",
-    {},
-    {
-      repeat: { pattern: "0 9 * * *" }, // todo dia às 09:00
-      jobId: "collection-rules-daily",
-    },
+    "0 9 * * *",
+    { jobId: "collection-rules-daily" },
   );
   log.info("Collection rules daily job registered (cron: 0 9 * * *)");
 }

@@ -9,6 +9,7 @@ import { redis } from "../../config/redis";
 import { prisma } from "../../config/prisma";
 import { logger } from "../../config/logger";
 import { io } from "../../server";
+import { registerRepeatable } from "../../workers/schedulerHelpers";
 
 const log = logger.child({ module: "finance.scheduler" });
 
@@ -101,36 +102,20 @@ async function sendPaymentReminders() {
 
 // ─── Schedule daily jobs ──────────────────────────────────────
 //
-// jobId é fundamental: sem ele, cada réplica que sobe registra novos
-// repeatables, o que faz cada cron tick disparar N execuções (uma por
-// réplica). Com jobId fixo, BullMQ deduplica e produz exatamente 1
-// execução por tick — workers concorrentes ainda competem como
-// consumers, garantindo idempotência sem multiplicação.
+// registerRepeatable centraliza:
+//  - Teardown de repeatables com mesmo `name` (mata órfãos antigos
+//    se o pattern mudar em deploys futuros).
+//  - jobId fixo para dedupe entre réplicas.
+//  - attempts/backoff defaults.
 export async function registerFinanceSchedule() {
-  await financeQueue.add(
-    "mark-overdue",
-    {},
-    {
-      jobId: "finance-mark-overdue",
-      repeat: { pattern: "0 1 * * *" },
-      attempts: 5,
-      backoff: { type: "exponential", delay: 30_000 },
-      removeOnComplete: 100,
-      removeOnFail: 1000,
-    },
-  );
-
-  await financeQueue.add(
+  await registerRepeatable(financeQueue, "mark-overdue", "0 1 * * *", {
+    jobId: "finance-mark-overdue",
+  });
+  await registerRepeatable(
+    financeQueue,
     "payment-reminders",
-    {},
-    {
-      jobId: "finance-payment-reminders",
-      repeat: { pattern: "0 9 * * *" },
-      attempts: 5,
-      backoff: { type: "exponential", delay: 30_000 },
-      removeOnComplete: 100,
-      removeOnFail: 1000,
-    },
+    "0 9 * * *",
+    { jobId: "finance-payment-reminders" },
   );
 
   log.info("Finance scheduler registered (daily at 01:00 and 09:00 UTC)");

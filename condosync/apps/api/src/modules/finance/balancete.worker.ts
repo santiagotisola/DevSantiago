@@ -10,6 +10,7 @@ import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { registerRepeatable } from "../../workers/schedulerHelpers";
 
 const log = logger.child({ module: "balancete.worker" });
 const QUEUE_NAME = "balancete";
@@ -20,13 +21,11 @@ export const balanceteQueue = new Queue(QUEUE_NAME, {
 });
 
 export async function registerBalanceteSchedule() {
-  await balanceteQueue.add(
+  await registerRepeatable(
+    balanceteQueue,
     "generate-monthly-balancete",
-    {},
-    {
-      repeat: { pattern: "0 7 5 * *" }, // todo dia 5 de cada mês às 07:00
-      jobId: "balancete-monthly",
-    },
+    "0 7 5 * *",
+    { jobId: "balancete-monthly" },
   );
   log.info("Balancete monthly job registered (cron: 0 7 5 * *)");
 }
