@@ -82,7 +82,7 @@ async function sendPaymentReminders() {
             userId: resident.id,
             type: "FINANCIAL",
             title: "Cobrança vencendo em breve",
-            message: `Sua cobrança "${charge.description}" vence em 3 dias. Valor: R$ ${(Number(charge.amount) / 100).toFixed(2).replace(".", ",")}`,
+            message: `Sua cobrança "${charge.description}" vence em 3 dias. Valor: R$ ${Number(charge.amount).toFixed(2).replace(".", ",")}`,
           },
         });
         // Notify via WebSocket if resident is online
@@ -100,32 +100,36 @@ async function sendPaymentReminders() {
 }
 
 // ─── Schedule daily jobs ──────────────────────────────────────
+//
+// jobId é fundamental: sem ele, cada réplica que sobe registra novos
+// repeatables, o que faz cada cron tick disparar N execuções (uma por
+// réplica). Com jobId fixo, BullMQ deduplica e produz exatamente 1
+// execução por tick — workers concorrentes ainda competem como
+// consumers, garantindo idempotência sem multiplicação.
 export async function registerFinanceSchedule() {
-  // Remove existing repeatable jobs to avoid duplicates
-  const repeatables = await financeQueue.getRepeatableJobs();
-  for (const job of repeatables) {
-    await financeQueue.removeRepeatableByKey(job.key);
-  }
-
-  // Run daily at 01:00 AM UTC
   await financeQueue.add(
     "mark-overdue",
     {},
     {
+      jobId: "finance-mark-overdue",
       repeat: { pattern: "0 1 * * *" },
-      removeOnComplete: 10,
-      removeOnFail: 5,
+      attempts: 5,
+      backoff: { type: "exponential", delay: 30_000 },
+      removeOnComplete: 100,
+      removeOnFail: 1000,
     },
   );
 
-  // Run daily at 09:00 AM UTC
   await financeQueue.add(
     "payment-reminders",
     {},
     {
+      jobId: "finance-payment-reminders",
       repeat: { pattern: "0 9 * * *" },
-      removeOnComplete: 10,
-      removeOnFail: 5,
+      attempts: 5,
+      backoff: { type: "exponential", delay: 30_000 },
+      removeOnComplete: 100,
+      removeOnFail: 1000,
     },
   );
 
