@@ -42,6 +42,9 @@ RUN if [ -f package-lock.json ]; then \
     else \
       npm install --omit=dev --ignore-scripts; \
     fi
+# REGERAR Prisma Client apos o npm ci de prod (que apagou node_modules).
+# Sem isso: Cannot find module '.prisma/client/default' em runtime.
+RUN ./node_modules/.bin/prisma generate
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:22-alpine AS production
