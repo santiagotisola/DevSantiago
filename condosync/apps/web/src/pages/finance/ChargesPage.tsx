@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import {
-  Receipt, Plus, Search, Loader2, CheckCircle, Shuffle, X,
-  CalendarDays, Layers, ChevronDown, ChevronUp, Pencil, Eye,
-  Filter, TrendingUp, AlertTriangle, MoreHorizontal, Trash2,
-  DollarSign, FileText, Download, Building2
+  Receipt, PlusCircle, Search, Loader2, CheckCircle2, Shuffle, X,
+  CalendarRange, Layers, ChevronDown, ChevronUp, Pencil, Eye,
+  Filter, TrendingUp, AlertOctagon, MoreHorizontal, Trash2,
+  Banknote, ScrollText, Download, Building2
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -184,7 +184,7 @@ export function ChargesPage() {
               <Shuffle className="w-4 h-4" /> Rateio Rápido
             </button>
             <button onClick={() => setShowCreate(true)} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-2 active:scale-95">
-              <Plus className="w-5 h-5" /> Nova Cobrança
+              <PlusCircle className="w-5 h-5" /> Nova Cobrança
             </button>
           </div>
         )}
@@ -193,9 +193,9 @@ export function ChargesPage() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Previsto" value={formatCurrency(metrics.total)} color="bg-blue-500" icon={Receipt} subtitle="Valor bruto em aberto/pago" />
-        <StatCard title="Total Pago" value={formatCurrency(metrics.paid)} color="bg-emerald-500" icon={CheckCircle} subtitle={`${((metrics.paid/metrics.total || 0)*100).toFixed(0)}% da meta atingida`} />
-        <StatCard title="Em Aberto" value={formatCurrency(metrics.pending)} color="bg-amber-500" icon={CalendarDays} subtitle="Aguardando vencimento" />
-        <StatCard title="Em Atraso" value={formatCurrency(metrics.overdue)} color="bg-rose-500" icon={AlertTriangle} subtitle="Ações de cobrança necessárias" />
+        <StatCard title="Total Pago" value={formatCurrency(metrics.paid)} color="bg-emerald-500" icon={CheckCircle2} subtitle={`${((metrics.paid/metrics.total || 0)*100).toFixed(0)}% da meta atingida`} />
+        <StatCard title="Em Aberto" value={formatCurrency(metrics.pending)} color="bg-amber-500" icon={CalendarRange} subtitle="Aguardando vencimento" />
+        <StatCard title="Em Atraso" value={formatCurrency(metrics.overdue)} color="bg-rose-500" icon={AlertOctagon} subtitle="Ações de cobrança necessárias" />
       </div>
 
       {/* Main Content Area */}
@@ -299,7 +299,7 @@ export function ChargesPage() {
                                 className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
                                 title="Pagar"
                               >
-                                <CheckCircle className="w-4 h-4" />
+                                <CheckCircle2 className="w-4 h-4" />
                               </button>
                             )}
                             {c.status === 'PENDING' && (

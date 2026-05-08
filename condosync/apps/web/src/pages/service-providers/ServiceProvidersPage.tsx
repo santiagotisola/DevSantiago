@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Briefcase, Plus, Search, Loader2, CheckCircle, Mail, Phone } from 'lucide-react';
+import { Briefcase, PlusCircle, Search, Loader2, CheckCircle2, Mail, Phone } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail, validateName, maskCPF, maskCNPJ } from '../../lib/utils';
 
 export function ServiceProvidersPage() {
@@ -76,7 +76,7 @@ export function ServiceProvidersPage() {
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-            <Plus className="w-4 h-4" /> Novo Prestador
+            <PlusCircle className="w-4 h-4" /> Novo Prestador
           </button>
         )}
       </div>
@@ -137,7 +137,7 @@ export function ServiceProvidersPage() {
                       onClick={() => approveMutation.mutate(p.id)}
                       className="w-full flex items-center justify-center gap-1.5 text-xs text-green-700 border border-green-200 hover:bg-green-50 py-1.5 rounded-lg font-medium"
                     >
-                      <CheckCircle className="w-3 h-3" /> Aprovar
+                      <CheckCircle2 className="w-3 h-3" /> Aprovar
                     </button>
                   )}
                 </div>

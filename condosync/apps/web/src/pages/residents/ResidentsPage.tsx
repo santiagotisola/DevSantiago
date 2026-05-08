@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Users, Plus, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserPlus, X } from 'lucide-react';
+import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X } from 'lucide-react';
 import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
@@ -90,7 +90,7 @@ export function ResidentsPage() {
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <Plus className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" />
             Novo Morador
           </button>
         )}
@@ -106,7 +106,7 @@ export function ResidentsPage() {
           <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
-            <Users className="w-10 h-10" />
+            <UsersRound className="w-10 h-10" />
             <p>Nenhum morador encontrado</p>
           </div>
         ) : (
@@ -145,7 +145,7 @@ export function ResidentsPage() {
                       <p className="text-sm font-medium">Dependentes</p>
                       {isAdmin && r.unitId && (
                         <button onClick={() => setDepTarget(r)} className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                          <UserPlus className="w-3 h-3" /> Adicionar
+                          <UserRoundPlus className="w-3 h-3" /> Adicionar
                         </button>
                       )}
                     </div>

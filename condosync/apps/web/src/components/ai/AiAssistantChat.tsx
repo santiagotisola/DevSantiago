@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Bot, X, Send, Loader2, Trash2, ChevronDown } from 'lucide-react';
+import { BotMessageSquare, X, Send, Loader2, Trash2, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface Message {
@@ -104,7 +104,7 @@ export function AiAssistantChat() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl">
             <div className="flex items-center gap-2 text-white">
-              <Bot className="w-5 h-5" />
+              <BotMessageSquare className="w-5 h-5" />
               <div>
                 <p className="font-semibold text-sm">Assistente IA</p>
                 <p className="text-xs text-blue-200">
@@ -137,7 +137,7 @@ export function AiAssistantChat() {
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
+                    <BotMessageSquare className="w-4 h-4 text-white" />
                   </div>
                   <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-700 max-w-[85%]">
                     {aiEnabled
@@ -171,7 +171,7 @@ export function AiAssistantChat() {
               <div key={i} className={cn('flex items-start gap-3', msg.role === 'user' ? 'flex-row-reverse' : '')}>
                 {msg.role === 'assistant' && (
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
+                    <BotMessageSquare className="w-4 h-4 text-white" />
                   </div>
                 )}
                 <div
@@ -190,7 +190,7 @@ export function AiAssistantChat() {
             {chatMutation.isPending && (
               <div className="flex items-start gap-3">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                  <Bot className="w-4 h-4 text-white" />
+                  <BotMessageSquare className="w-4 h-4 text-white" />
                 </div>
                 <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3">
                   <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
@@ -245,7 +245,7 @@ export function AiAssistantChat() {
         )}
         title="Assistente IA"
       >
-        {open ? <X className="w-6 h-6 text-white" /> : <Bot className="w-6 h-6 text-white" />}
+        {open ? <X className="w-6 h-6 text-white" /> : <BotMessageSquare className="w-6 h-6 text-white" />}
       </button>
     </>
   );
