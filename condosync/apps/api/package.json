@@ -15,6 +15,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "encrypt:gateway-keys": "ts-node prisma/encrypt-gateway-keys.ts",
     "cleanup:orphans": "ts-node prisma/cleanup-condominium-orphans.ts",
+    "redrive:webhooks": "ts-node scripts/redrive-webhooks.ts",
     "db:studio": "prisma studio",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
