@@ -82,6 +82,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { prisma } from "./config/prisma";
 import { httpMetricsMiddleware, registry as metricsRegistry } from "./config/metrics";
+import { requestContextMiddleware } from "./middleware/requestContext";
 import type { JwtPayload } from "./middleware/auth";
 
 // Workers em background são opcionais. Quando RUN_WORKERS=true (ou
@@ -312,6 +313,11 @@ app.use(
     stream: { write: (message) => logger.info(message.trim()) },
   }),
 );
+// requestContextMiddleware ANTES de tudo: gera/herda X-Request-Id,
+// abre AsyncLocalStorage que propaga para handlers + logger +
+// Sentry. Subsequente middleware/handlers se beneficiam
+// automaticamente.
+app.use(requestContextMiddleware);
 app.use(httpMetricsMiddleware);
 app.use(rateLimiter);
 

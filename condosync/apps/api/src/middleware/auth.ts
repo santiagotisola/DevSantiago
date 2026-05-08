@@ -10,6 +10,7 @@ import {
 } from "./errorHandler";
 import { UserRole } from "@prisma/client";
 import { idorGuardDecisions } from "../config/metrics";
+import { setRequestUser } from "./requestContext";
 
 export interface JwtPayload {
   userId: string;
@@ -86,6 +87,10 @@ export const authenticate = async (
   }
 
   req.user = { ...decoded, role: user.role };
+  // Propaga userId no request context — todos os logs subsequentes
+  // (services, repos, jobs disparados pelo request) carregam
+  // userId automaticamente.
+  setRequestUser(decoded.userId);
   next();
 };
 
@@ -138,6 +143,7 @@ export const authorizeCondominium = async (
 
   req.user.condominiumId = condominiumId;
   req.user.role = membership.role;
+  setRequestUser(req.user.userId, condominiumId);
 
   next();
 };
