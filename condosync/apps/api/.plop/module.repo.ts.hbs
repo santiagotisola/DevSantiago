@@ -1,0 +1,33 @@
+import { prisma } from "../../config/prisma";
+
+export interface {{pascalCase name}}Repository {
+  findById(id: string): Promise<unknown | null>;
+  listByCondominium(condominiumId: string): Promise<unknown[]>;
+  create(data: any): Promise<unknown>;
+  update(id: string, data: any): Promise<unknown>;
+  delete(id: string): Promise<void>;
+}
+
+export class Prisma{{pascalCase name}}Repository implements {{pascalCase name}}Repository {
+  async findById(id: string) {
+    return prisma.{{camelCase ModelName}}.findUnique({ where: { id } });
+  }
+  async listByCondominium(condominiumId: string) {
+    return prisma.{{camelCase ModelName}}.findMany({
+      where: { condominiumId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+  async create(data: any) {
+    return prisma.{{camelCase ModelName}}.create({ data });
+  }
+  async update(id: string, data: any) {
+    return prisma.{{camelCase ModelName}}.update({ where: { id }, data });
+  }
+  async delete(id: string) {
+    await prisma.{{camelCase ModelName}}.delete({ where: { id } });
+  }
+}
+
+export const {{camelCase name}}Repository: {{pascalCase name}}Repository =
+  new Prisma{{pascalCase name}}Repository();

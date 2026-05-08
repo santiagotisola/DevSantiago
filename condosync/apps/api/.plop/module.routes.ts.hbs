@@ -1,0 +1,14 @@
+import { Router } from "express";
+import { authenticate, authorize, MANAGEMENT_ROLES } from "../../middleware/auth";
+import { {{camelCase name}}Controller } from "./{{name}}.controller";
+
+const router = Router();
+router.use(authenticate);
+
+router.get("/condominium/:condominiumId", {{camelCase name}}Controller.list);
+router.post("/", authorize(...MANAGEMENT_ROLES), {{camelCase name}}Controller.create);
+router.get("/:id", {{camelCase name}}Controller.getById);
+router.patch("/:id", authorize(...MANAGEMENT_ROLES), {{camelCase name}}Controller.update);
+router.delete("/:id", authorize(...MANAGEMENT_ROLES), {{camelCase name}}Controller.delete);
+
+export default router;

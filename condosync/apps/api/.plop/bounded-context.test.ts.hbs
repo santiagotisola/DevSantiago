@@ -1,0 +1,30 @@
+/**
+ * Testes do {{pascalCase name}}Service — mock do repo via interface
+ * (sem mockar Prisma).
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { {{pascalCase name}}Service } from "./{{name}}.service";
+import type { {{pascalCase name}}Repository } from "./{{name}}.repo";
+
+describe("{{pascalCase name}}Service", () => {
+  let repo: {{pascalCase name}}Repository;
+  let service: {{pascalCase name}}Service;
+
+  beforeEach(() => {
+    repo = {
+      findById: vi.fn(),
+      // TODO: outros métodos do contrato
+    } as unknown as {{pascalCase name}}Repository;
+    service = new {{pascalCase name}}Service(repo);
+  });
+
+  it("getById delega ao repo", async () => {
+    (repo.findById as any).mockResolvedValue({ id: "1" });
+    const result = await service.getById("1", {
+      userId: "u",
+      role: "SUPER_ADMIN",
+    });
+    expect(result).toEqual({ id: "1" });
+    expect(repo.findById).toHaveBeenCalledWith("1");
+  });
+});

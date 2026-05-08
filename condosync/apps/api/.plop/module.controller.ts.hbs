@@ -1,0 +1,34 @@
+import { Request, Response } from "express";
+import { {{camelCase name}}Service } from "./{{name}}.service";
+import { create{{pascalCase ModelName}}Schema, update{{pascalCase ModelName}}Schema } from "./{{name}}.schemas";
+import { validateRequest } from "../../utils/validateRequest";
+
+export const {{camelCase name}}Controller = {
+  async list(req: Request, res: Response) {
+    const { condominiumId } = req.params;
+    const items = await {{camelCase name}}Service.list(condominiumId);
+    res.json({ success: true, data: items });
+  },
+
+  async getById(req: Request, res: Response) {
+    const item = await {{camelCase name}}Service.getById(req.params.id);
+    res.json({ success: true, data: item });
+  },
+
+  async create(req: Request, res: Response) {
+    const data = validateRequest(create{{pascalCase ModelName}}Schema, req.body);
+    const item = await {{camelCase name}}Service.create(data, req.user!);
+    res.status(201).json({ success: true, data: item });
+  },
+
+  async update(req: Request, res: Response) {
+    const data = validateRequest(update{{pascalCase ModelName}}Schema, req.body);
+    const item = await {{camelCase name}}Service.update(req.params.id, data, req.user!);
+    res.json({ success: true, data: item });
+  },
+
+  async delete(req: Request, res: Response) {
+    await {{camelCase name}}Service.delete(req.params.id, req.user!);
+    res.json({ success: true });
+  },
+};

@@ -1,0 +1,8 @@
+import { z } from "zod";
+
+export const create{{pascalCase ModelName}}Schema = z.object({
+  condominiumId: z.string().uuid(),
+  // TODO: campos do model
+});
+
+export const update{{pascalCase ModelName}}Schema = create{{pascalCase ModelName}}Schema.partial();

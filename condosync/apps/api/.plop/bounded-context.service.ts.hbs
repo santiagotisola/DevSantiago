@@ -1,0 +1,44 @@
+/**
+ * {{pascalCase name}}Service — sub-context do domínio financeiro.
+ *
+ * Gerado por `npx plop bounded-context {{name}}`.
+ *
+ * Convenções:
+ *  - Service NÃO importa Prisma direto — apenas via repo.
+ *  - Tenant scope check em métodos públicos (assertTenantAccess).
+ *  - Cache invalidation em writes que afetam aggregates.
+ *  - Aceita `tx?: PrismaTx` opcional para composição em
+ *    orchestrator (billing.service futuro).
+ *
+ * Ver src/modules/finance/domain/README.md para princípios.
+ */
+import { ForbiddenError } from "../../../../middleware/errorHandler";
+import { UserRole } from "@prisma/client";
+import { prisma } from "../../../../config/prisma";
+import {
+  {{camelCase name}}Repository,
+  type {{pascalCase name}}Repository,
+} from "./{{name}}.repo";
+import type { FinanceActor } from "../types";
+
+export class {{pascalCase name}}Service {
+  constructor(private repo: {{pascalCase name}}Repository = {{camelCase name}}Repository) {}
+
+  async getById(id: string, _actor: FinanceActor) {
+    return this.repo.findById(id);
+  }
+
+  // TODO: implementar métodos de negócio.
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async assertTenantAccess(actor: FinanceActor, condominiumId: string) {
+    if (actor.role === UserRole.SUPER_ADMIN) return;
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: actor.userId, condominiumId, isActive: true },
+      select: { id: true },
+    });
+    if (!membership) throw new ForbiddenError("Acesso negado");
+  }
+}
+
+export const {{camelCase name}}Service = new {{pascalCase name}}Service();

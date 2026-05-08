@@ -1,0 +1,47 @@
+import { ForbiddenError } from "../../middleware/errorHandler";
+import { UserRole } from "@prisma/client";
+import { prisma } from "../../config/prisma";
+import { {{camelCase name}}Repository, type {{pascalCase name}}Repository } from "./{{name}}.repo";
+import type { JwtPayload } from "../../middleware/auth";
+
+export class {{pascalCase name}}Service {
+  constructor(private repo: {{pascalCase name}}Repository = {{camelCase name}}Repository) {}
+
+  async list(condominiumId: string) {
+    return this.repo.listByCondominium(condominiumId);
+  }
+
+  async getById(id: string) {
+    return this.repo.findById(id);
+  }
+
+  async create(data: any, actor: JwtPayload) {
+    await this.assertTenant(actor, data.condominiumId);
+    return this.repo.create(data);
+  }
+
+  async update(id: string, data: any, actor: JwtPayload) {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new Error("not found");
+    // TODO: assertTenant(actor, existing.condominiumId)
+    return this.repo.update(id, data);
+  }
+
+  async delete(id: string, actor: JwtPayload) {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new Error("not found");
+    // TODO: assertTenant(actor, existing.condominiumId)
+    await this.repo.delete(id);
+  }
+
+  private async assertTenant(actor: JwtPayload, condominiumId: string) {
+    if (actor.role === UserRole.SUPER_ADMIN) return;
+    const m = await prisma.condominiumUser.findFirst({
+      where: { userId: actor.userId, condominiumId, isActive: true },
+      select: { id: true },
+    });
+    if (!m) throw new ForbiddenError("Acesso negado");
+  }
+}
+
+export const {{camelCase name}}Service = new {{pascalCase name}}Service();
