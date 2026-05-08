@@ -242,6 +242,31 @@ jobs:
           push: false
           tags: condosync-web:ci
 
+  # ─── Lint de migrations (squawk) ─────────────────────────────────────────────
+  # Pega ALTERs perigosos (NOT NULL sem CHECK precedente, DROP COLUMN
+  # sem expand prévio, RENAME, etc) antes de virar incidente em prod.
+  migrations-lint:
+    name: Migrations lint (squawk)
+    runs-on: ubuntu-latest
+    if: ${{ false }}  # ativar quando squawk binary estiver disponível na imagem
+    defaults:
+      run:
+        working-directory: condosync/apps/api/prisma/migrations
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install squawk
+        run: |
+          curl -sSL -o /usr/local/bin/squawk \
+            https://github.com/sbdchd/squawk/releases/latest/download/squawk-linux-x86_64
+          chmod +x /usr/local/bin/squawk
+      - name: Lint migrations alteradas
+        run: |
+          # Lista arquivos novos/alterados em migrations
+          git diff --name-only --diff-filter=ACM origin/main HEAD -- '**/migration.sql' \
+            | xargs -r squawk \
+                --exclude=prefer-text-field \
+                --exclude=ban-drop-database
+
   # ─── Auditoria de dependências (warn-only por enquanto) ──────────────────────
   audit-deps:
     name: npm audit (advisory)
