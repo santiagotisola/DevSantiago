@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { prisma } from "../config/prisma";
-import { UnauthorizedError, ForbiddenError } from "./errorHandler";
+import { UnauthorizedError, ForbiddenError, BadRequestError } from "./errorHandler";
 import { UserRole } from "@prisma/client";
 
 export interface JwtPayload {
@@ -73,10 +73,17 @@ export const authorizeCondominium = async (
 
   const condominiumId =
     req.params.condominiumId ||
-    req.body.condominiumId ||
-    (req.query.condominiumId as string);
+    req.body?.condominiumId ||
+    (req.query.condominiumId as string | undefined);
 
-  if (!condominiumId) return next();
+  // Fail-closed: sem condominiumId não há como verificar membership.
+  // Antes esse caminho retornava next() silenciosamente, abrindo IDOR
+  // em qualquer rota futura que esquecesse o parâmetro.
+  if (!condominiumId) {
+    throw new BadRequestError(
+      "condominiumId é obrigatório (params, body ou query) para esta rota.",
+    );
+  }
 
   // Super admin tem acesso total
   if (req.user.role === UserRole.SUPER_ADMIN) return next();
