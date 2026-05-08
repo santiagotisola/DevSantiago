@@ -1,5 +1,9 @@
 import { logger } from "../config/logger";
-import { tryAcquireLeaderLock } from "../config/redis";
+import {
+  releaseLeaderLock,
+  renewLeaderLock,
+  tryAcquireLeaderLock,
+} from "../config/redis";
 
 const log = logger.child({ module: "workers" });
 
@@ -63,9 +67,15 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   // Leader election: só uma réplica registra os repeatables.
   // Demais réplicas ainda processam jobs (são consumers), mas não
   // duplicam triggers de cron.
-  const isLeader = await tryAcquireLeaderLock("schedulers", 4 * 60);
-  if (isLeader) {
-    log.info("Eleito líder — registrando schedulers (cron)");
+  const LEADER_KEY = "schedulers";
+  const TTL_SECONDS = 4 * 60;
+  const RENEW_INTERVAL_MS = 60 * 1000;
+
+  const fingerprint = await tryAcquireLeaderLock(LEADER_KEY, TTL_SECONDS);
+  let renewTimer: NodeJS.Timeout | null = null;
+
+  if (fingerprint) {
+    log.info({ fingerprint }, "Eleito líder — registrando schedulers (cron)");
     await Promise.all([
       registerMaintenanceAlertsSchedule(),
       registerFinanceSchedule(),
@@ -74,23 +84,48 @@ export async function registerWorkers(): Promise<WorkerHandles> {
       registerBalanceteSchedule(),
     ]);
 
-    // Renovar a lock periodicamente para que outra réplica não
-    // assuma erradamente.
-    const renew = setInterval(
-      () => {
-        tryAcquireLeaderLock("schedulers", 4 * 60).catch((err) =>
-          log.error({ err }, "Falha ao renovar leader lock"),
+    // Renovação a cada 1min, TTL 4min — 3 tentativas antes do TTL
+    // expirar, dando margem para falhas transientes do Redis.
+    // Se a renovação falha (lock não é mais nossa), abortamos o
+    // processo para que o orquestrador suba uma nova réplica que
+    // dispute a eleição limpa. Continuar rodando os repeatables
+    // sem leadership confirmada causaria cron 2x.
+    renewTimer = setInterval(async () => {
+      try {
+        const renewed = await renewLeaderLock(
+          LEADER_KEY,
+          fingerprint,
+          TTL_SECONDS,
         );
-      },
-      3 * 60 * 1000,
-    );
-    renew.unref();
+        if (!renewed) {
+          log.error(
+            { fingerprint },
+            "Leader lock perdida — encerrando para re-eleição",
+          );
+          process.exit(1);
+        }
+      } catch (err) {
+        log.error({ err }, "Erro renovando leader lock — encerrando");
+        process.exit(1);
+      }
+    }, RENEW_INTERVAL_MS);
+    renewTimer.unref();
   } else {
     log.info("Outra réplica é líder — apenas processando jobs como consumer");
   }
 
   return {
     async close() {
+      if (renewTimer) clearInterval(renewTimer);
+      // Liberar a lock no shutdown gracioso para acelerar re-eleição
+      // (sem isso, outra réplica precisa esperar o TTL expirar).
+      if (fingerprint) {
+        try {
+          await releaseLeaderLock(LEADER_KEY, fingerprint);
+        } catch (err) {
+          log.warn({ err }, "Falha liberando leader lock no shutdown");
+        }
+      }
       await Promise.allSettled(
         workers.map(async (w) => {
           try {

@@ -49,17 +49,85 @@ export function bullConnection() {
 
 /**
  * Tenta adquirir uma lock distribuída via Redis SET NX EX.
- * Retorna `true` se o caller é o líder (deve registrar repeatables /
- * rodar a tarefa única); `false` caso outra réplica já segura o lock.
  *
- * TTL longo (default 5min) cobre boots simultâneos de réplicas;
- * caller deve renovar a lock periodicamente se a tarefa exceder o TTL.
+ * Retorna o "fingerprint" (string única) se o caller venceu a eleição;
+ * `null` caso outra réplica já detenha a lock. O fingerprint deve ser
+ * passado para `renewLeaderLock` periodicamente — sem ele a renovação
+ * não consegue distinguir o dono atual de um terceiro tentando
+ * tomá-la, e perderia leadership silenciosamente.
+ *
+ * TTL longo (default 5min) cobre boots simultâneos de réplicas.
  */
 export async function tryAcquireLeaderLock(
   key: string,
   ttlSeconds = 300,
+): Promise<string | null> {
+  const fingerprint = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  const result = await redis.set(
+    `leader:${key}`,
+    fingerprint,
+    'EX',
+    ttlSeconds,
+    'NX',
+  );
+  return result === 'OK' ? fingerprint : null;
+}
+
+/**
+ * Renova a lock se — e somente se — o caller ainda é o dono atual.
+ *
+ * Implementação Lua atômica: GET → comparar com fingerprint → EXPIRE.
+ * Sem isso, usar `SET NX EX` para renovar falha (NX só seta se a chave
+ * NÃO existe), e a chave acaba expirando em background.
+ *
+ * Retorna `true` se renovou com sucesso, `false` se a lock foi
+ * tomada por outro processo (caller deveria reagir — geralmente
+ * reiniciar para re-eleger).
+ */
+const RENEW_LUA = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("EXPIRE", KEYS[1], ARGV[2])
+else
+  return 0
+end
+`;
+
+export async function renewLeaderLock(
+  key: string,
+  fingerprint: string,
+  ttlSeconds = 300,
 ): Promise<boolean> {
-  const value = `${process.pid}:${Date.now()}`;
-  const result = await redis.set(`leader:${key}`, value, 'EX', ttlSeconds, 'NX');
-  return result === 'OK';
+  const result = (await redis.eval(
+    RENEW_LUA,
+    1,
+    `leader:${key}`,
+    fingerprint,
+    String(ttlSeconds),
+  )) as number;
+  return result === 1;
+}
+
+/**
+ * Libera a lock APENAS se ainda for nossa. Usar em shutdown gracioso
+ * para acelerar a re-eleição em outra réplica.
+ */
+const RELEASE_LUA = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+`;
+
+export async function releaseLeaderLock(
+  key: string,
+  fingerprint: string,
+): Promise<boolean> {
+  const result = (await redis.eval(
+    RELEASE_LUA,
+    1,
+    `leader:${key}`,
+    fingerprint,
+  )) as number;
+  return result === 1;
 }
