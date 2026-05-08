@@ -298,16 +298,43 @@ app.use(
 app.use(httpMetricsMiddleware);
 app.use(rateLimiter);
 
-// /metrics — endpoint de scrape Prometheus. Em produção restringir
-// via header X-Metrics-Token ou whitelist no proxy.
-app.get("/metrics", async (_req, res) => {
+// /metrics — endpoint de scrape Prometheus.
+//
+// Política fail-closed em produção:
+//  - NODE_ENV=production + METRICS_TOKEN ausente → 503 (endpoint
+//    ofline; não vaza inventário de routes/queues por descuido).
+//  - METRICS_TOKEN definido → exige header X-Metrics-Token com
+//    comparação constant-time.
+//  - Em dev/test sem token → liberado (DX).
+//
+// Comparação por timingSafeEqual evita timing attack — mesmo um
+// token de 16 chars dá poucas dezenas de microssegundos de
+// diferença, mas vale o pattern correto.
+import crypto from "node:crypto";
+
+app.get("/metrics", async (req, res) => {
   const expectedToken = process.env.METRICS_TOKEN;
+  const isProd = env.NODE_ENV === "production";
+
+  if (isProd && !expectedToken) {
+    logger.error(
+      "/metrics chamado em produção sem METRICS_TOKEN configurado — fail-closed",
+    );
+    return res.status(503).json({ error: "metrics endpoint offline" });
+  }
+
   if (expectedToken) {
-    const got = String(_req.headers["x-metrics-token"] ?? "");
-    if (got !== expectedToken) {
+    const got = String(req.headers["x-metrics-token"] ?? "");
+    if (got.length !== expectedToken.length) {
       return res.status(401).end();
     }
+    const ok = crypto.timingSafeEqual(
+      Buffer.from(got),
+      Buffer.from(expectedToken),
+    );
+    if (!ok) return res.status(401).end();
   }
+
   res.set("Content-Type", metricsRegistry.contentType);
   res.send(await metricsRegistry.metrics());
 });
