@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as Sentry from '@sentry/node';
+import { Prisma } from '@prisma/client';
 import { logger } from '../config/logger';
 
 export class AppError extends Error {
@@ -76,30 +77,41 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     });
   }
 
-  // Erros do Prisma
-  if (err.name === 'PrismaClientKnownRequestError' || err.name === 'NotFoundError') {
-    const prismaErr = err as { code?: string; meta?: { field_name?: string; target?: string[] } };
-    if (prismaErr.code === 'P2002') {
+  // Erros do Prisma — usar instanceof com a classe oficial em vez de
+  // checar err.name por string. Isso evita falso positivo se outro
+  // pacote tiver classe com mesmo name.
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      const target = err.meta?.target;
+      const targetStr = Array.isArray(target) ? target.join(', ') : 'valor';
       return res.status(409).json({
         success: false,
         error: {
           code: 'UNIQUE_CONSTRAINT',
-          message: `Já existe um registro com este ${prismaErr.meta?.target?.join(', ') || 'valor'}`,
+          message: `Já existe um registro com este ${targetStr}`,
         },
       });
     }
-    if (prismaErr.code === 'P2025' || err.name === 'NotFoundError') {
+    if (err.code === 'P2025') {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Registro não encontrado' },
       });
     }
-    if (prismaErr.code === 'P2003' || prismaErr.code === 'P2014' || prismaErr.code === 'P2023') {
+    if (err.code === 'P2003' || err.code === 'P2014' || err.code === 'P2023') {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Referência não encontrada' },
       });
     }
+  }
+  // findUniqueOrThrow lança PrismaClientKnownRequestError em
+  // versões recentes; fallback para NotFoundError (legacy).
+  if (err.name === 'NotFoundError') {
+    return res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Registro não encontrado' },
+    });
   }
 
   // Erros JWT

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions, type Secret } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
@@ -28,15 +28,24 @@ export interface LoginDTO {
 
 export class AuthService {
   private generateTokens(payload: JwtPayload) {
-    const accessToken = (jwt.sign as any)({ ...payload }, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
-    });
-    const refreshToken = (jwt.sign as any)(
+    // jwt.sign é um overload tricky no TS — o payload precisa ser
+    // tratado como object plain. Cast em SignOptions evita o `as any`
+    // sem perder type-safety na chamada.
+    const accessOpts: SignOptions = {
+      expiresIn: env.JWT_EXPIRES_IN as SignOptions["expiresIn"],
+    };
+    const refreshOpts: SignOptions = {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+    };
+    const accessToken = jwt.sign(
       { ...payload },
-      env.JWT_REFRESH_SECRET,
-      {
-        expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-      },
+      env.JWT_SECRET as Secret,
+      accessOpts,
+    );
+    const refreshToken = jwt.sign(
+      { ...payload },
+      env.JWT_REFRESH_SECRET as Secret,
+      refreshOpts,
     );
     return { accessToken, refreshToken };
   }
