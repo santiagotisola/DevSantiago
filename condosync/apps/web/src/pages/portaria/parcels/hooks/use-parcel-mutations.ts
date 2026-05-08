@@ -6,7 +6,7 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createParcel, pickupParcel, type Parcel } from "../api";
-import { useParcels } from "./use-parcels";
+import { parcelsQueryKey } from "./use-parcels";
 
 export function useParcelMutations() {
   const qc = useQueryClient();
@@ -14,7 +14,7 @@ export function useParcelMutations() {
   const create = useMutation({
     mutationFn: createParcel,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: useParcels.queryKey() });
+      qc.invalidateQueries({ queryKey: parcelsQueryKey() });
     },
   });
 
@@ -22,7 +22,7 @@ export function useParcelMutations() {
     mutationFn: ({ id, pickedUpBy }: { id: string; pickedUpBy: string }) =>
       pickupParcel(id, pickedUpBy),
     onSuccess: (parcel: Parcel) => {
-      qc.invalidateQueries({ queryKey: useParcels.queryKey() });
+      qc.invalidateQueries({ queryKey: parcelsQueryKey() });
       // Otimistic update: já marcar como DELIVERED em qualquer
       // detalhe cacheado.
       qc.setQueryData(["parcel", parcel.id], parcel);

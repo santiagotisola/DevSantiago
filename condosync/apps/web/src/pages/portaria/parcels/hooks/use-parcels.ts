@@ -12,11 +12,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchParcels, type ParcelFilters } from "../api";
 
-const PARCELS_KEY = "parcels" as const;
+export const PARCELS_QUERY_KEY = "parcels" as const;
+
+export const parcelsQueryKey = (filters?: ParcelFilters) =>
+  filters ? ([PARCELS_QUERY_KEY, filters] as const) : ([PARCELS_QUERY_KEY] as const);
 
 export function useParcels(filters: ParcelFilters) {
   return useQuery({
-    queryKey: [PARCELS_KEY, filters],
+    queryKey: parcelsQueryKey(filters),
     queryFn: () => fetchParcels(filters),
     // Stale-while-revalidate: 30s.
     staleTime: 30_000,
@@ -26,7 +29,3 @@ export function useParcels(filters: ParcelFilters) {
     refetchOnWindowFocus: false,
   });
 }
-
-// Helpers exportados para invalidate manual (em mutations).
-useParcels.queryKey = (filters?: ParcelFilters) =>
-  filters ? [PARCELS_KEY, filters] : [PARCELS_KEY];
