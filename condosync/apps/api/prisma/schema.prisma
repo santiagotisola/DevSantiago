@@ -688,19 +688,35 @@ model FinancialTransaction {
   @@map("financial_transactions")
 }
 
-// Idempotência de webhooks externos. Cada (provider, externalId)
-// é processado uma única vez. Garante que retry/duplicação do
-// gateway não cause dupla cobrança ou dupla transação financeira.
+// Outbox de webhooks externos.
+// Webhook handler grava o evento atomicamente (UNIQUE em
+// provider+externalId garante idempotência da entrega). O
+// PROCESSAMENTO real (charge.update, fin_tx.create) é feito por
+// um BullMQ worker separado (webhookProcessor) que lê rows com
+// processedAt IS NULL, processa em $transaction e seta
+// processedAt. Resiliente a falha do DB durante processamento:
+// row fica pendente, próximo pickup faz retry.
+//
+// processingError captura a última mensagem de erro para
+// triagem (não é histórico — sobrescrita a cada attempt).
+//
+// attempts limita reprocessamento; ao atingir o teto, row é
+// movida para processedAt manualmente após investigação ou
+// permanece pendente para alerta operacional.
 model WebhookEvent {
-  id          String   @id @default(uuid())
-  provider    String   // "asaas", "pjbank", etc.
-  externalId  String   // event id do provider, ou paymentId+eventType
-  eventType   String
-  payload     Json
-  receivedAt  DateTime @default(now())
+  id              String   @id @default(uuid())
+  provider        String   // "asaas", "pjbank", etc.
+  externalId      String   // event id do provider, ou paymentId+eventType
+  eventType       String
+  payload         Json
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+  processingError String?
+  attempts        Int      @default(0)
 
   @@unique([provider, externalId])
   @@index([provider, receivedAt])
+  @@index([provider, processedAt])
   @@map("webhook_events")
 }
 

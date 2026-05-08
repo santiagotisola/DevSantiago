@@ -4,10 +4,8 @@ import request from "supertest";
 import { Prisma } from "@prisma/client";
 import { prismaMock } from "../../test/setup";
 
-// Setar token antes de importar a rota — env é validado no boot.
 process.env.ASAAS_WEBHOOK_TOKEN = "test-token-with-at-least-32-chars-aaaa";
 
-// Mock do logger para não poluir output do teste.
 vi.mock("../../config/logger", () => ({
   logger: {
     info: vi.fn(),
@@ -21,7 +19,6 @@ vi.mock("../../config/logger", () => ({
   },
 }));
 
-// Stub de env para garantir que ASAAS_WEBHOOK_TOKEN seja o esperado.
 vi.mock("../../config/env", () => ({
   env: {
     ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
@@ -29,7 +26,12 @@ vi.mock("../../config/env", () => ({
   },
 }));
 
-// Importa após os mocks
+// Mock do enqueue para não tentar tocar Redis nos testes do route.
+const enqueueMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("./webhook.processor", () => ({
+  enqueueWebhookProcessing: enqueueMock,
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const router = require("./asaas.routes").default;
 
@@ -37,7 +39,6 @@ function buildApp() {
   const app = express();
   app.use(express.json());
   app.use("/webhooks", router);
-  // Default error handler para garantir status correto.
   app.use(
     (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       res.status(500).json({ error: err.message });
@@ -48,24 +49,23 @@ function buildApp() {
 
 const VALID_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN!;
 
-describe("POST /webhooks/asaas — segurança e idempotência", () => {
+describe("POST /webhooks/asaas — outbox front door", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("401 quando o header asaas-access-token está ausente", async () => {
-    const app = buildApp();
-    const res = await request(app).post("/webhooks/asaas").send({
+  it("401 sem header asaas-access-token", async () => {
+    const res = await request(buildApp()).post("/webhooks/asaas").send({
       id: "evt-1",
       event: "PAYMENT_RECEIVED",
       payment: { id: "pay-1", value: 100 },
     });
     expect(res.status).toBe(401);
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("401 quando o token está incorreto", async () => {
-    const app = buildApp();
-    const res = await request(app)
+  it("401 com token incorreto", async () => {
+    const res = await request(buildApp())
       .post("/webhooks/asaas")
       .set("asaas-access-token", "valor-errado")
       .send({
@@ -76,26 +76,24 @@ describe("POST /webhooks/asaas — segurança e idempotência", () => {
     expect(res.status).toBe(401);
   });
 
-  it("400 com payload malformado (sem field event/payment)", async () => {
-    const app = buildApp();
-    const res = await request(app)
+  it("400 com payload malformado", async () => {
+    const res = await request(buildApp())
       .post("/webhooks/asaas")
       .set("asaas-access-token", VALID_TOKEN)
       .send({ foo: "bar" });
     expect(res.status).toBe(400);
+    expect(prismaMock.webhookEvent.create).not.toHaveBeenCalled();
   });
 
-  it("200 idempotente quando o mesmo externalId já foi processado", async () => {
-    // 1ª gravação retorna OK; 2ª simula colisão de unique index P2002.
+  it("200 idempotente quando o mesmo externalId já foi gravado (P2002)", async () => {
     prismaMock.webhookEvent.create.mockRejectedValueOnce(
       new Prisma.PrismaClientKnownRequestError("dup", {
         code: "P2002",
         clientVersion: "x",
-      } as any),
+      } as never),
     );
 
-    const app = buildApp();
-    const res = await request(app)
+    const res = await request(buildApp())
       .post("/webhooks/asaas")
       .set("asaas-access-token", VALID_TOKEN)
       .send({
@@ -104,25 +102,16 @@ describe("POST /webhooks/asaas — segurança e idempotência", () => {
         payment: { id: "pay-1", value: 100 },
       });
     expect(res.status).toBe(200);
-    expect(prismaMock.charge.findFirst).not.toHaveBeenCalled();
+    // Não deve enfileirar duplicata.
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("200 e cria FinancialTransaction quando o evento é novo e a charge existe", async () => {
-    prismaMock.webhookEvent.create.mockResolvedValue({} as any);
-    prismaMock.charge.findFirst.mockResolvedValue({
-      id: "charge-1",
-      status: "PENDING",
-      accountId: "acc-1",
-      categoryId: "cat-1",
-      description: "Taxa",
-      unitId: "u-1",
-      dueDate: new Date(),
-      referenceMonth: "2026-05",
-    } as any);
-    prismaMock.$transaction.mockResolvedValue([{}, {}] as any);
+  it("200 + enqueue quando evento novo (route NÃO toca em charge/fin_tx)", async () => {
+    prismaMock.webhookEvent.create.mockResolvedValue({
+      id: "wh-1",
+    } as never);
 
-    const app = buildApp();
-    const res = await request(app)
+    const res = await request(buildApp())
       .post("/webhooks/asaas")
       .set("asaas-access-token", VALID_TOKEN)
       .send({
@@ -131,22 +120,28 @@ describe("POST /webhooks/asaas — segurança e idempotência", () => {
         payment: { id: "pay-1", value: 100 },
       });
     expect(res.status).toBe(200);
-    expect(prismaMock.$transaction).toHaveBeenCalledOnce();
+    expect(prismaMock.webhookEvent.create).toHaveBeenCalledOnce();
+    expect(enqueueMock).toHaveBeenCalledWith("wh-1");
+    // Outbox: route NÃO chama charge.findFirst nem $transaction.
+    expect(prismaMock.charge.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("200 silencioso quando charge não existe (evita reentrega infinita do gateway)", async () => {
-    prismaMock.webhookEvent.create.mockResolvedValue({} as any);
-    prismaMock.charge.findFirst.mockResolvedValue(null);
+  it("200 mesmo se enqueue falhar (row já gravada)", async () => {
+    prismaMock.webhookEvent.create.mockResolvedValue({
+      id: "wh-2",
+    } as never);
+    enqueueMock.mockRejectedValueOnce(new Error("redis down"));
 
-    const app = buildApp();
-    const res = await request(app)
+    const res = await request(buildApp())
       .post("/webhooks/asaas")
       .set("asaas-access-token", VALID_TOKEN)
       .send({
-        id: "evt-orphan",
+        id: "evt-3",
         event: "PAYMENT_RECEIVED",
-        payment: { id: "pay-orphan", value: 50 },
+        payment: { id: "pay-1", value: 100 },
       });
     expect(res.status).toBe(200);
+    // Operador re-drena pendentes via runbook.
   });
 });

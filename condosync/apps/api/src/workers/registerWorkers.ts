@@ -55,6 +55,9 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   const { registerBalanceteSchedule, balanceteWorker } = await import(
     "../modules/finance/balancete.worker"
   );
+  const { webhookWorker } = await import(
+    "../modules/webhooks/webhook.processor"
+  );
 
   type WorkerLike = {
     close(): Promise<void>;
@@ -71,6 +74,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     contractAlertsWorker,
     collectionWorker,
     balanceteWorker,
+    webhookWorker,
   ].filter(Boolean) as WorkerLike[];
 
   // Pluga métricas Prometheus em cada worker.

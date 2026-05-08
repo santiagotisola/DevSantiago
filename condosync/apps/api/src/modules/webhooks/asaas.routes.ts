@@ -6,15 +6,9 @@ import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
 import { webhookAsaasEvents } from '../../config/metrics';
+import { enqueueWebhookProcessing } from './webhook.processor';
 
 const router = Router();
-
-// Eventos que processamos. Outros eventos são apenas registrados
-// como WebhookEvent para auditoria e respondidos com 200.
-const PAYMENT_RECEIVED_EVENTS = new Set([
-  'PAYMENT_RECEIVED',
-  'PAYMENT_CONFIRMED',
-]);
 
 const AsaasWebhookSchema = z.object({
   // Asaas envia "id" no nível raiz a partir da v3 do webhook
@@ -36,11 +30,28 @@ const AsaasWebhookSchema = z.object({
 type AsaasWebhookPayload = z.infer<typeof AsaasWebhookSchema>;
 
 const compareTokens = (a: string, b: string): boolean => {
-  // timingSafeEqual exige buffers de mesmo tamanho.
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 };
 
+/**
+ * POST /webhooks/asaas
+ *
+ * Outbox pattern: handler é apenas o "front door" — autentica,
+ * valida, persiste atomicamente e enfileira processamento.
+ * Worker (webhook.processor.ts) faz o trabalho real com retry
+ * automático em falhas transitórias.
+ *
+ * Garantias:
+ *  - Token obrigatório, comparação constant-time.
+ *  - Body parseado com zod.
+ *  - WebhookEvent.create com UNIQUE (provider, externalId) →
+ *    duplicatas idempotentes (200 silencioso).
+ *  - Processamento NUNCA bloqueia o response do Asaas → 200 rápido,
+ *    sem timeout do gateway nem retry desnecessário.
+ *  - Se o processamento falhar, BullMQ retry exponencial. Row
+ *    permanece pendente até sucesso ou alerta operacional.
+ */
 router.post('/asaas', async (req: Request, res: Response) => {
   // 1. Auth: token obrigatório, sempre. Sem token configurado = 503.
   const expected = env.ASAAS_WEBHOOK_TOKEN;
@@ -67,13 +78,12 @@ router.post('/asaas', async (req: Request, res: Response) => {
   }
 
   const { event, payment } = body;
-  // Chave de idempotência: usa o id do evento se houver,
-  // senão compõe (event + paymentId).
   const externalId = body.id ?? `${event}:${payment.id}`;
 
-  // 3. Idempotência: tentamos gravar o evento. Se duplicado, 200 sem efeito.
+  // 3. Persiste o evento (atômico, idempotente).
+  let webhookEventId: string;
   try {
-    await prisma.webhookEvent.create({
+    const wh = await prisma.webhookEvent.create({
       data: {
         provider: 'asaas',
         externalId,
@@ -81,11 +91,16 @@ router.post('/asaas', async (req: Request, res: Response) => {
         payload: req.body as Prisma.InputJsonValue,
       },
     });
+    webhookEventId = wh.id;
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === 'P2002'
     ) {
+      // Duplicata: outra entrega anterior já gravou esse evento.
+      // Pode ter sido processada ou estar pendente; em qualquer
+      // caso, NÃO precisamos enfileirar de novo (jobId garantiria
+      // dedupe, mas mais barato evitar). 200 sem efeito.
       logger.info(
         { externalId, event },
         'Webhook Asaas duplicado — ignorado idempotentemente',
@@ -96,85 +111,27 @@ router.post('/asaas', async (req: Request, res: Response) => {
     webhookAsaasEvents.labels(event, 'error').inc();
     throw err;
   }
-  webhookAsaasEvents.labels(event, 'ok').inc();
 
-  logger.info(
-    { event, paymentId: payment.id, externalId },
-    'Webhook Asaas recebido',
-  );
-
-  // 4. Processamento por tipo de evento.
-  if (PAYMENT_RECEIVED_EVENTS.has(event)) {
-    const charge = await prisma.charge.findFirst({
-      where: { gatewayId: payment.id },
-      include: { account: true },
-    });
-
-    if (!charge) {
-      logger.warn(
-        { gatewayId: payment.id },
-        'Cobrança não encontrada para gatewayId',
-      );
-      return res.status(200).send();
-    }
-
-    if (charge.status === 'PAID') {
-      return res.status(200).send();
-    }
-
-    try {
-      await prisma.$transaction([
-        prisma.charge.update({
-          where: { id: charge.id },
-          data: {
-            status: 'PAID',
-            paidAt: new Date(
-              payment.confirmedDate ||
-                payment.clientPaymentDate ||
-                new Date(),
-            ),
-            paidAmount: payment.value,
-            gatewayStatus: payment.status ?? null,
-          },
-        }),
-        prisma.financialTransaction.create({
-          data: {
-            accountId: charge.accountId,
-            categoryId: charge.categoryId,
-            type: 'INCOME',
-            amount: payment.value,
-            description: `Recebimento: ${charge.description} (Unidade ${charge.unitId})`,
-            dueDate: charge.dueDate,
-            paidAt: new Date(),
-            referenceMonth: charge.referenceMonth,
-            chargeId: charge.id,
-            createdBy: 'SYSTEM_WEBHOOK',
-          },
-        }),
-      ]);
-      logger.info({ chargeId: charge.id }, 'Pagamento processado');
-    } catch (err) {
-      // P2002 no índice único parcial fin_tx_charge_income_unique
-      // significa que outra réplica já processou o mesmo charge —
-      // aceitamos como sucesso silencioso.
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ) {
-        logger.info(
-          { chargeId: charge.id },
-          'Transação INCOME já existe para este charge — duplicado',
-        );
-        return res.status(200).send();
-      }
-      throw err;
-    }
-  } else if (event === 'PAYMENT_OVERDUE') {
-    await prisma.charge.updateMany({
-      where: { gatewayId: payment.id },
-      data: { status: 'OVERDUE', gatewayStatus: 'OVERDUE' },
-    });
+  // 4. Enfileira processamento. Falha aqui é não-fatal: row já está
+  //    persistida com processedAt=null; um job de "drenar pendentes"
+  //    pode reprocessá-la (ver runbook). Mas em prática Redis é
+  //    confiável; se enqueue falhar, o request já gravou — Asaas
+  //    recebe 200, e operador resolve.
+  try {
+    await enqueueWebhookProcessing(webhookEventId);
+  } catch (err) {
+    logger.error(
+      { err, webhookEventId },
+      'Falha ao enfileirar processamento — row pendente',
+    );
+    // Não retornar erro para Asaas: o evento está gravado.
   }
+
+  webhookAsaasEvents.labels(event, 'received').inc();
+  logger.info(
+    { event, paymentId: payment.id, externalId, webhookEventId },
+    'Webhook Asaas recebido — enfileirado para processamento',
+  );
 
   return res.status(200).send();
 });
