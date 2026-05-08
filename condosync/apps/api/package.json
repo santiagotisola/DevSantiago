@@ -47,6 +47,7 @@
     "rate-limit-redis": "^4.3.1",
     "resend": "^6.10.0",
     "socket.io": "^4.7.4",
+    "@socket.io/redis-adapter": "^8.3.0",
     "uuid": "^9.0.1",
     "winston": "^3.13.0",
     "xss": "^1.0.15",

@@ -71,6 +71,8 @@ import compression from "compression";
 import morgan from "morgan";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { bullConnection } from "./config/redis";
 import jwt from "jsonwebtoken";
 
 import { env } from "./config/env";
@@ -141,6 +143,21 @@ export const io = new SocketIOServer(httpServer, {
     credentials: true,
   },
 });
+
+// Redis adapter — sem isso, broadcasts (`io.to('condominium:X').emit`)
+// só atingem sockets conectados na MESMA réplica que originou o
+// emit. Em produção multi-réplica (Railway autoscale, k8s),
+// notificações real-time (panic, parcels arrived, fines) ficam
+// sticky/aleatórias.
+//
+// pubClient e subClient são conexões dedicadas (recomendado pela
+// doc oficial — pub/sub em ioredis exige conexões separadas e
+// nunca compartilhar com a app). Usamos bullConnection() factory
+// que já tem retry/reconnect tratado.
+const pubClient = bullConnection();
+const subClient = pubClient.duplicate();
+io.adapter(createAdapter(pubClient, subClient));
+logger.info("Socket.IO Redis adapter inicializado");
 
 io.use(async (socket, next) => {
   try {
@@ -438,6 +455,10 @@ const shutdown = async (signal: string) => {
     });
     logger.info("HTTP server fechado");
 
+    // disconnectSockets força clientes a reconectar imediatamente em
+    // outra réplica em vez de aguardar timeout. Sem isso, httpServer
+    // .close pode segurar 25s se houver Socket.IO transport long-poll.
+    io.disconnectSockets(true);
     await new Promise<void>((resolve) => {
       io.close(() => resolve());
     });
