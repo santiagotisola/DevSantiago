@@ -1,10 +1,17 @@
+import * as Sentry from "@sentry/node";
+import type { Queue } from "bullmq";
 import { logger } from "../config/logger";
 import {
   releaseLeaderLock,
   renewLeaderLock,
   tryAcquireLeaderLock,
 } from "../config/redis";
-import { bullJobsTotal, bullLeaderRenewals } from "../config/metrics";
+import {
+  bullJobDuration,
+  bullJobsTotal,
+  bullLeaderRenewals,
+  bullQueueDepth,
+} from "../config/metrics";
 
 const log = logger.child({ module: "workers" });
 
@@ -77,16 +84,96 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     webhookWorker,
   ].filter(Boolean) as WorkerLike[];
 
-  // Pluga métricas Prometheus em cada worker.
+  // Pluga métricas Prometheus + Sentry em cada worker.
   for (const w of workers) {
     const queueName = w.name ?? "unknown";
-    w.on?.("completed", () => {
+    // BullMQ job tem processedOn / finishedOn (epoch ms); usamos
+    // para histograma de duração — antes a métrica existia mas
+    // nunca era observada.
+    w.on?.("completed", (job: unknown) => {
       bullJobsTotal.labels(queueName, "completed").inc();
+      const j = job as { processedOn?: number; finishedOn?: number } | undefined;
+      if (j?.processedOn && j?.finishedOn) {
+        bullJobDuration
+          .labels(queueName)
+          .observe((j.finishedOn - j.processedOn) / 1000);
+      }
     });
-    w.on?.("failed", () => {
+    w.on?.("failed", (job: unknown, err: unknown) => {
       bullJobsTotal.labels(queueName, "failed").inc();
+      // Sentry — antes só logger.error; falha permanente passava
+      // invisível depois de removeOnFail apagar.
+      Sentry.captureException(err, {
+        extra: {
+          queue: queueName,
+          jobId: (job as { id?: string } | undefined)?.id,
+          attemptsMade: (job as { attemptsMade?: number } | undefined)
+            ?.attemptsMade,
+        },
+        tags: { component: "bullmq", queue: queueName },
+      });
+    });
+    w.on?.("stalled", () => {
+      bullJobsTotal.labels(queueName, "stalled").inc();
     });
   }
+
+  // Coletor periódico de queue depth — preenche o Gauge
+  // bullmq_queue_depth declarado em metrics.ts mas que estava
+  // sempre em 0 (ninguém chamava .set()).
+  const queues: Queue[] = [];
+  // Importa Queues dos mesmos módulos onde os workers vivem.
+  try {
+    const fin = await import("../modules/finance/finance.scheduler");
+    queues.push(fin.financeQueue);
+  } catch {}
+  try {
+    const m = await import("../modules/maintenance/maintenance.alerts.worker");
+    queues.push(m.maintenanceAlertsQueue);
+  } catch {}
+  try {
+    const c = await import(
+      "../modules/condominium-contracts/contract.alerts.worker"
+    );
+    queues.push(c.contractAlertsQueue);
+  } catch {}
+  try {
+    const cr = await import("../modules/collection-rules/collection.worker");
+    queues.push(cr.collectionQueue);
+  } catch {}
+  try {
+    const b = await import("../modules/finance/balancete.worker");
+    queues.push(b.balanceteQueue);
+  } catch {}
+  try {
+    const n = await import("../notifications/notification.queue");
+    queues.push(n.notificationQueue as unknown as Queue);
+  } catch {}
+  try {
+    const wh = await import("../modules/webhooks/webhook.processor");
+    queues.push(wh.webhookQueue as unknown as Queue);
+  } catch {}
+
+  const depthCollector = setInterval(async () => {
+    for (const q of queues) {
+      try {
+        const counts = await q.getJobCounts(
+          "waiting",
+          "active",
+          "delayed",
+          "failed",
+          "completed",
+        );
+        bullQueueDepth.labels(q.name, "waiting").set(counts.waiting ?? 0);
+        bullQueueDepth.labels(q.name, "active").set(counts.active ?? 0);
+        bullQueueDepth.labels(q.name, "delayed").set(counts.delayed ?? 0);
+        bullQueueDepth.labels(q.name, "failed").set(counts.failed ?? 0);
+      } catch (err) {
+        log.warn({ err, queue: q.name }, "Falha coletando queue depth");
+      }
+    }
+  }, 15_000);
+  depthCollector.unref();
 
   // Leader election: só uma réplica registra os repeatables.
   // Demais réplicas ainda processam jobs (são consumers), mas não
