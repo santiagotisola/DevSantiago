@@ -1,57 +1,162 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense, type ComponentType } from "react";
 import { Toaster } from "./components/ui/toaster";
 import { useAuthStore } from "./store/authStore";
 import { connectRealtime } from "./services/socket";
 
-// Layouts
+// Layouts (carregamento síncrono — fazem parte da casca da app)
 import { AuthLayout } from "./components/layouts/AuthLayout";
 import { AppLayout } from "./components/layouts/AppLayout";
 
-// Páginas de Autenticação
-import { LoginPage } from "./pages/auth/LoginPage";
-import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
+// Helper para lazy-load de export nomeado.
+// React.lazy só aceita módulo com `default`; este wrapper permite
+// usar páginas que exportam por nome sem precisar refatorá-las todas.
+const lazyNamed = <T extends string>(
+  importer: () => Promise<Record<T, ComponentType<unknown>>>,
+  exportName: T,
+) =>
+  lazy(() =>
+    importer().then((mod) => ({ default: mod[exportName] })),
+  );
 
-// Páginas do Sistema
-import { DashboardPage } from "./pages/dashboard/DashboardPage";
-import { VisitorsPage } from "./pages/portaria/VisitorsPage";
-import { ParcelsPage } from "./pages/portaria/ParcelsPage";
-import { VehiclesPage } from "./pages/portaria/VehiclesPage";
-import { ResidentsPage } from "./pages/residents/ResidentsPage";
-import { UnitsPage } from "./pages/units/UnitsPage";
-import { FinancePage } from "./pages/finance/FinancePage";
-import { ChargesPage } from "./pages/finance/ChargesPage";
-import { MaintenancePage } from "./pages/maintenance/MaintenancePage";
-import { CommonAreasPage } from "./pages/common-areas/CommonAreasPage";
-import { AnnouncementsPage } from "./pages/communication/AnnouncementsPage";
-import { OccurrencesPage } from "./pages/communication/OccurrencesPage";
-import LostAndFoundPage from "./pages/communication/LostAndFoundPage";
-import AssemblyList from "./pages/assemblies/AssemblyList";
-import AssemblyDetail from "./pages/assemblies/AssemblyDetail";
-import PetPage from "./pages/pets/PetPage";
-import { ReportsPage } from "./pages/reports/ReportsPage";
-import { EmployeesPage } from "./pages/employees/EmployeesPage";
-import { ServiceProvidersPage } from "./pages/service-providers/ServiceProvidersPage";
-import { ProfilePage } from "./pages/profile/ProfilePage";
-import { SettingsPage } from "./pages/settings/SettingsPage";
-import { CondominiumsPage } from "./pages/admin/CondominiumsPage";
-import { MyVisitorsPage } from "./pages/minha-portaria/MyVisitorsPage";
-import MinhasObrasPage from "./pages/minha-portaria/MinhasObrasPage";
-import ObrasAdminPage from "./pages/obras/ObrasAdminPage";
-import { DocumentsPage } from "./pages/documents/DocumentsPage";
-import StockPage from "./pages/stock/StockPage";
-import TicketsPage from "./pages/tickets/TicketsPage";
-import GalleryPage from "./pages/gallery/GalleryPage";
-import MyChargesPage from "./pages/finance/MyChargesPage";
-import { FinanceCategoriesPage } from "./pages/finance/FinanceCategoriesPage";
-import { VisitorRecurrencesPage } from "./pages/minha-portaria/VisitorRecurrencesPage";
-import MarketplaceAdminPage from "./pages/marketplace/MarketplaceAdminPage";
-import LandingPage from "./pages/landing/LandingPage";
-import AccessControlPage from "./pages/access/AccessControlPage";
-import DigitalSignagePage from "./pages/digital-signage/DigitalSignagePage";
-import DisplayPage from "./pages/digital-signage/DisplayPage";
-import FinesPage from "./pages/fines/FinesPage";
-import ContractsPage from "./pages/contracts/ContractsPage";
+// ─── Auth ──────────────────────────────────────────────────────
+const LoginPage = lazyNamed(
+  () => import("./pages/auth/LoginPage") as any,
+  "LoginPage",
+);
+const ForgotPasswordPage = lazyNamed(
+  () => import("./pages/auth/ForgotPasswordPage") as any,
+  "ForgotPasswordPage",
+);
+
+// ─── Sistema (named exports) ───────────────────────────────────
+const DashboardPage = lazyNamed(
+  () => import("./pages/dashboard/DashboardPage") as any,
+  "DashboardPage",
+);
+const VisitorsPage = lazyNamed(
+  () => import("./pages/portaria/VisitorsPage") as any,
+  "VisitorsPage",
+);
+const ParcelsPage = lazyNamed(
+  () => import("./pages/portaria/ParcelsPage") as any,
+  "ParcelsPage",
+);
+const VehiclesPage = lazyNamed(
+  () => import("./pages/portaria/VehiclesPage") as any,
+  "VehiclesPage",
+);
+const ResidentsPage = lazyNamed(
+  () => import("./pages/residents/ResidentsPage") as any,
+  "ResidentsPage",
+);
+const UnitsPage = lazyNamed(
+  () => import("./pages/units/UnitsPage") as any,
+  "UnitsPage",
+);
+const FinancePage = lazyNamed(
+  () => import("./pages/finance/FinancePage") as any,
+  "FinancePage",
+);
+const ChargesPage = lazyNamed(
+  () => import("./pages/finance/ChargesPage") as any,
+  "ChargesPage",
+);
+const FinanceCategoriesPage = lazyNamed(
+  () => import("./pages/finance/FinanceCategoriesPage") as any,
+  "FinanceCategoriesPage",
+);
+const MaintenancePage = lazyNamed(
+  () => import("./pages/maintenance/MaintenancePage") as any,
+  "MaintenancePage",
+);
+const CommonAreasPage = lazyNamed(
+  () => import("./pages/common-areas/CommonAreasPage") as any,
+  "CommonAreasPage",
+);
+const AnnouncementsPage = lazyNamed(
+  () => import("./pages/communication/AnnouncementsPage") as any,
+  "AnnouncementsPage",
+);
+const OccurrencesPage = lazyNamed(
+  () => import("./pages/communication/OccurrencesPage") as any,
+  "OccurrencesPage",
+);
+const ReportsPage = lazyNamed(
+  () => import("./pages/reports/ReportsPage") as any,
+  "ReportsPage",
+);
+const EmployeesPage = lazyNamed(
+  () => import("./pages/employees/EmployeesPage") as any,
+  "EmployeesPage",
+);
+const ServiceProvidersPage = lazyNamed(
+  () => import("./pages/service-providers/ServiceProvidersPage") as any,
+  "ServiceProvidersPage",
+);
+const ProfilePage = lazyNamed(
+  () => import("./pages/profile/ProfilePage") as any,
+  "ProfilePage",
+);
+const SettingsPage = lazyNamed(
+  () => import("./pages/settings/SettingsPage") as any,
+  "SettingsPage",
+);
+const CondominiumsPage = lazyNamed(
+  () => import("./pages/admin/CondominiumsPage") as any,
+  "CondominiumsPage",
+);
+const MyVisitorsPage = lazyNamed(
+  () => import("./pages/minha-portaria/MyVisitorsPage") as any,
+  "MyVisitorsPage",
+);
+const VisitorRecurrencesPage = lazyNamed(
+  () => import("./pages/minha-portaria/VisitorRecurrencesPage") as any,
+  "VisitorRecurrencesPage",
+);
+const DocumentsPage = lazyNamed(
+  () => import("./pages/documents/DocumentsPage") as any,
+  "DocumentsPage",
+);
+
+// ─── Default exports (usam React.lazy direto) ──────────────────
+const LostAndFoundPage = lazy(
+  () => import("./pages/communication/LostAndFoundPage"),
+);
+const AssemblyList = lazy(() => import("./pages/assemblies/AssemblyList"));
+const AssemblyDetail = lazy(() => import("./pages/assemblies/AssemblyDetail"));
+const PetPage = lazy(() => import("./pages/pets/PetPage"));
+const MinhasObrasPage = lazy(
+  () => import("./pages/minha-portaria/MinhasObrasPage"),
+);
+const ObrasAdminPage = lazy(() => import("./pages/obras/ObrasAdminPage"));
+const StockPage = lazy(() => import("./pages/stock/StockPage"));
+const TicketsPage = lazy(() => import("./pages/tickets/TicketsPage"));
+const GalleryPage = lazy(() => import("./pages/gallery/GalleryPage"));
+const MyChargesPage = lazy(() => import("./pages/finance/MyChargesPage"));
+const MarketplaceAdminPage = lazy(
+  () => import("./pages/marketplace/MarketplaceAdminPage"),
+);
+const LandingPage = lazy(() => import("./pages/landing/LandingPage"));
+const AccessControlPage = lazy(
+  () => import("./pages/access/AccessControlPage"),
+);
+const DigitalSignagePage = lazy(
+  () => import("./pages/digital-signage/DigitalSignagePage"),
+);
+const DisplayPage = lazy(() => import("./pages/digital-signage/DisplayPage"));
+const FinesPage = lazy(() => import("./pages/fines/FinesPage"));
+const ContractsPage = lazy(() => import("./pages/contracts/ContractsPage"));
+
+// Fallback simples de carregamento — a casca (AppLayout) já está
+// renderizada, então não precisa ser elaborado.
+function RouteFallback() {
+  return (
+    <div className="flex h-full w-full items-center justify-center p-8">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -108,382 +213,384 @@ export default function App() {
     <BrowserRouter
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
-      <Routes>
-        {/* Landing page */}
-        <Route
-          path="/home"
-          element={
-            <PublicRoute>
-              <LandingPage />
-            </PublicRoute>
-          }
-        />
-
-        {/* Display TV — rota pública, sem layout */}
-        <Route path="/display/:token" element={<DisplayPage />} />
-
-        {/* Rotas públicas */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <AuthLayout>
-                <LoginPage />
-              </AuthLayout>
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <PublicRoute>
-              <AuthLayout>
-                <ForgotPasswordPage />
-              </AuthLayout>
-            </PublicRoute>
-          }
-        />
-
-        {/* Rotas privadas */}
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <AppLayout />
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<DashboardPage />} />
-
-          {/* Portaria */}
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          {/* Landing page */}
           <Route
-            path="portaria/visitantes"
+            path="/home"
             element={
-              <RoleGuard roles={STAFF}>
-                <VisitorsPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="portaria/encomendas"
-            element={
-              <RoleGuard roles={STAFF}>
-                <ParcelsPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="portaria/veiculos"
-            element={
-              <RoleGuard roles={STAFF}>
-                <VehiclesPage />
-              </RoleGuard>
+              <PublicRoute>
+                <LandingPage />
+              </PublicRoute>
             }
           />
 
-          {/* Moradores */}
+          {/* Display TV — rota pública, sem layout */}
+          <Route path="/display/:token" element={<DisplayPage />} />
+
+          {/* Rotas públicas */}
           <Route
-            path="moradores"
+            path="/login"
             element={
-              <RoleGuard roles={STAFF}>
-                <ResidentsPage />
-              </RoleGuard>
+              <PublicRoute>
+                <AuthLayout>
+                  <LoginPage />
+                </AuthLayout>
+              </PublicRoute>
             }
           />
           <Route
-            path="unidades"
+            path="/forgot-password"
             element={
-              <RoleGuard roles={MANAGEMENT}>
-                <UnitsPage />
-              </RoleGuard>
+              <PublicRoute>
+                <AuthLayout>
+                  <ForgotPasswordPage />
+                </AuthLayout>
+              </PublicRoute>
             }
           />
 
-          {/* Financeiro */}
+          {/* Rotas privadas */}
           <Route
-            path="financeiro"
+            path="/"
             element={
-              <RoleGuard roles={MANAGEMENT}>
-                <FinancePage />
-              </RoleGuard>
+              <PrivateRoute>
+                <AppLayout />
+              </PrivateRoute>
             }
-          />
-          <Route
-            path="financeiro/cobrancas"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <ChargesPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="financeiro/categorias"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <FinanceCategoriesPage />
-              </RoleGuard>
-            }
-          />
+          >
+            <Route index element={<DashboardPage />} />
 
-          {/* Manutenção */}
-          <Route
-            path="manutencao"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <MaintenancePage />
-              </RoleGuard>
-            }
-          />
+            {/* Portaria */}
+            <Route
+              path="portaria/visitantes"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <VisitorsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="portaria/encomendas"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <ParcelsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="portaria/veiculos"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <VehiclesPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Áreas Comuns */}
-          <Route
-            path="areas-comuns"
-            element={
-              <RoleGuard roles={RESIDENT_MANAGEMENT}>
-                <CommonAreasPage />
-              </RoleGuard>
-            }
-          />
+            {/* Moradores */}
+            <Route
+              path="moradores"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <ResidentsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="unidades"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <UnitsPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Comunicação */}
-          <Route
-            path="comunicacao/avisos"
-            element={
-              <RoleGuard roles={COMMUNITY}>
-                <AnnouncementsPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="comunicacao/ocorrencias"
-            element={
-              <RoleGuard roles={COMMUNITY}>
-                <OccurrencesPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="comunicacao/achados-e-perdidos"
-            element={
-              <RoleGuard roles={RESIDENT_MANAGEMENT}>
-                <LostAndFoundPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="assembleias"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <AssemblyList />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="assembleias/:id"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <AssemblyDetail />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="pets"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <PetPage />
-              </RoleGuard>
-            }
-          />
+            {/* Financeiro */}
+            <Route
+              path="financeiro"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <FinancePage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="financeiro/cobrancas"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <ChargesPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="financeiro/categorias"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <FinanceCategoriesPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Relatórios */}
-          <Route
-            path="relatorios"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <ReportsPage />
-              </RoleGuard>
-            }
-          />
+            {/* Manutenção */}
+            <Route
+              path="manutencao"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <MaintenancePage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Funcionários e Prestadores */}
-          <Route
-            path="funcionarios"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <EmployeesPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="prestadores"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <ServiceProvidersPage />
-              </RoleGuard>
-            }
-          />
+            {/* Áreas Comuns */}
+            <Route
+              path="areas-comuns"
+              element={
+                <RoleGuard roles={RESIDENT_MANAGEMENT}>
+                  <CommonAreasPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Admin */}
-          <Route
-            path="admin/condominios"
-            element={
-              <RoleGuard roles={["SUPER_ADMIN"]}>
-                <CondominiumsPage />
-              </RoleGuard>
-            }
-          />
+            {/* Comunicação */}
+            <Route
+              path="comunicacao/avisos"
+              element={
+                <RoleGuard roles={COMMUNITY}>
+                  <AnnouncementsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="comunicacao/ocorrencias"
+              element={
+                <RoleGuard roles={COMMUNITY}>
+                  <OccurrencesPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="comunicacao/achados-e-perdidos"
+              element={
+                <RoleGuard roles={RESIDENT_MANAGEMENT}>
+                  <LostAndFoundPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="assembleias"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <AssemblyList />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="assembleias/:id"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <AssemblyDetail />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="pets"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <PetPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Portal do Morador */}
-          <Route
-            path="minha-portaria/visitantes"
-            element={
-              <RoleGuard roles={["RESIDENT"]}>
-                <MyVisitorsPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="minha-portaria/obras"
-            element={
-              <RoleGuard roles={["RESIDENT"]}>
-                <MinhasObrasPage />
-              </RoleGuard>
-            }
-          />
-          <Route
-            path="minha-portaria/visitantes-recorrentes"
-            element={
-              <RoleGuard roles={["RESIDENT"]}>
-                <VisitorRecurrencesPage />
-              </RoleGuard>
-            }
-          />
+            {/* Relatórios */}
+            <Route
+              path="relatorios"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <ReportsPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Obras (admin/síndico) */}
-          <Route
-            path="obras"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <ObrasAdminPage />
-              </RoleGuard>
-            }
-          />
+            {/* Funcionários e Prestadores */}
+            <Route
+              path="funcionarios"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <EmployeesPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="prestadores"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <ServiceProvidersPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Documentos */}
-          <Route
-            path="documentos"
-            element={
-              <RoleGuard roles={RESIDENT_MANAGEMENT}>
-                <DocumentsPage />
-              </RoleGuard>
-            }
-          />
+            {/* Admin */}
+            <Route
+              path="admin/condominios"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <CondominiumsPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Estoque */}
-          <Route
-            path="estoque"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <StockPage />
-              </RoleGuard>
-            }
-          />
+            {/* Portal do Morador */}
+            <Route
+              path="minha-portaria/visitantes"
+              element={
+                <RoleGuard roles={["RESIDENT"]}>
+                  <MyVisitorsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="minha-portaria/obras"
+              element={
+                <RoleGuard roles={["RESIDENT"]}>
+                  <MinhasObrasPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="minha-portaria/visitantes-recorrentes"
+              element={
+                <RoleGuard roles={["RESIDENT"]}>
+                  <VisitorRecurrencesPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Chamados */}
-          <Route
-            path="chamados"
-            element={
-              <RoleGuard roles={COMMUNITY}>
-                <TicketsPage />
-              </RoleGuard>
-            }
-          />
+            {/* Obras (admin/síndico) */}
+            <Route
+              path="obras"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <ObrasAdminPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Galeria de Fotos */}
-          <Route
-            path="galeria"
-            element={
-              <RoleGuard roles={RESIDENT_MANAGEMENT}>
-                <GalleryPage />
-              </RoleGuard>
-            }
-          />
+            {/* Documentos */}
+            <Route
+              path="documentos"
+              element={
+                <RoleGuard roles={RESIDENT_MANAGEMENT}>
+                  <DocumentsPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Cobranças do morador */}
-          <Route
-            path="minhas-cobrancas"
-            element={
-              <RoleGuard roles={["RESIDENT"]}>
-                <MyChargesPage />
-              </RoleGuard>
-            }
-          />
+            {/* Estoque */}
+            <Route
+              path="estoque"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <StockPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Marketplace */}
-          <Route
-            path="marketplace"
-            element={
-              <RoleGuard roles={["SUPER_ADMIN"]}>
-                <MarketplaceAdminPage />
-              </RoleGuard>
-            }
-          />
+            {/* Chamados */}
+            <Route
+              path="chamados"
+              element={
+                <RoleGuard roles={COMMUNITY}>
+                  <TicketsPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Controle de Acesso */}
-          <Route
-            path="acesso"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <AccessControlPage />
-              </RoleGuard>
-            }
-          />
+            {/* Galeria de Fotos */}
+            <Route
+              path="galeria"
+              element={
+                <RoleGuard roles={RESIDENT_MANAGEMENT}>
+                  <GalleryPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Multas condominiais */}
-          <Route
-            path="multas"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <FinesPage />
-              </RoleGuard>
-            }
-          />
+            {/* Cobranças do morador */}
+            <Route
+              path="minhas-cobrancas"
+              element={
+                <RoleGuard roles={["RESIDENT"]}>
+                  <MyChargesPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Contratos condominiais */}
-          <Route
-            path="contratos"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <ContractsPage />
-              </RoleGuard>
-            }
-          />
+            {/* Marketplace */}
+            <Route
+              path="marketplace"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <MarketplaceAdminPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Digital Signage */}
-          <Route
-            path="digital-signage"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <DigitalSignagePage />
-              </RoleGuard>
-            }
-          />
+            {/* Controle de Acesso */}
+            <Route
+              path="acesso"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <AccessControlPage />
+                </RoleGuard>
+              }
+            />
 
-          {/* Perfil e Configurações */}
-          <Route path="perfil" element={<ProfilePage />} />
-          <Route
-            path="configuracoes"
-            element={
-              <RoleGuard roles={MANAGEMENT}>
-                <SettingsPage />
-              </RoleGuard>
-            }
-          />
-        </Route>
+            {/* Multas condominiais */}
+            <Route
+              path="multas"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <FinesPage />
+                </RoleGuard>
+              }
+            />
 
-        {/* Redirecionar rotas desconhecidas */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+            {/* Contratos condominiais */}
+            <Route
+              path="contratos"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <ContractsPage />
+                </RoleGuard>
+              }
+            />
+
+            {/* Digital Signage */}
+            <Route
+              path="digital-signage"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <DigitalSignagePage />
+                </RoleGuard>
+              }
+            />
+
+            {/* Perfil e Configurações */}
+            <Route path="perfil" element={<ProfilePage />} />
+            <Route
+              path="configuracoes"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <SettingsPage />
+                </RoleGuard>
+              }
+            />
+          </Route>
+
+          {/* Redirecionar rotas desconhecidas */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
 
       <Toaster />
     </BrowserRouter>
