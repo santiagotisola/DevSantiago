@@ -1,3 +1,7 @@
+// OpenTelemetry inicializa ANTES de qualquer outro import — auto-
+// instrumentação precisa interceptar require() de módulos como
+// http, express, ioredis. Side-effect import.
+import './config/tracing';
 import * as Sentry from '@sentry/node';
 
 // Sentry deve ser inicializado antes de qualquer outro import.

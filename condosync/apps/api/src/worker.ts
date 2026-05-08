@@ -10,6 +10,9 @@
  * imagem e CMD diferente. Setar RUN_WORKERS=false na API para
  * que ela não dispare workers próprios.
  */
+// OpenTelemetry hoisted — auto-instrumenta http/ioredis/bullmq/prisma
+// nos workers também.
+import "./config/tracing";
 import "express-async-errors";
 import { logger } from "./config/logger";
 import { prisma } from "./config/prisma";
