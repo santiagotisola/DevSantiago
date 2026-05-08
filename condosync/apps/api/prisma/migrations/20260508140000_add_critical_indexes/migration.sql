@@ -38,9 +38,9 @@ CREATE INDEX "service_orders_condominiumId_status_createdAt_idx"
     ON "service_orders"("condominiumId", "status", "createdAt");
 
 -- ── fines ─────────────────────────────────────────────────────
-CREATE INDEX "fines_condominiumId_status_createdAt_idx"
-    ON "fines"("condominiumId", "status", "createdAt");
-CREATE INDEX "fines_unitId_idx" ON "fines"("unitId");
+-- (removido temporariamente — tabela "fines" ainda nao existe em
+--  producao; recriar quando feature de multas for efetivamente
+--  ativada via migration dedicada que cria a tabela primeiro.)
 
 -- ── vehicle_access_logs: cresce sem limite, queries por tempo
 --    e por placa ────────────────────────────────────────────
