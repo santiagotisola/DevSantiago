@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import axios from "axios";
 import { authenticate, authorize } from "../../middleware/auth";
+import { aiRateLimiter } from "../../middleware/rateLimiter";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
@@ -33,7 +34,9 @@ const aiChatSchema = z.object({
 });
 
 // POST /ai/chat — envia mensagem ao assistente
-router.post("/chat", async (req: Request, res: Response) => {
+// aiRateLimiter limita 10/min por usuário — chamadas externas a
+// OpenAI custam $$ e podem ser abusadas por usuário autenticado.
+router.post("/chat", aiRateLimiter, async (req: Request, res: Response) => {
   if (!env.OPENAI_API_KEY) {
     return res.status(503).json({
       success: false,

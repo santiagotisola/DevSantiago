@@ -22,12 +22,54 @@ export const rateLimiter = rateLimit({
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
   store: new RedisStore({
     sendCommand: (...args: string[]) => (redis as any).call(...args),
     prefix: 'rl:auth:',
   }),
   message: {
     status: 429,
-    message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+    message: 'Muitas tentativas. Tente novamente em 15 minutos.',
+  },
+});
+
+// Rate-limit dedicado para o módulo AI: chamadas externas (OpenAI)
+// custam $$ e podem ser abusadas por usuário autenticado.
+// Bucket por usuário (não por IP) — 10 chamadas/min por user.
+export const aiRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.userId ?? req.ip ?? 'anon',
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => (redis as any).call(...args),
+    prefix: 'rl:ai:',
+  }),
+  message: {
+    status: 429,
+    message: 'Limite de uso do assistente IA atingido. Aguarde 1 minuto.',
+  },
+});
+
+// Rate-limit por (email + ip) para forgot-password — evita
+// enumeração e spam para a caixa de uma vítima específica.
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = String(req.body?.email ?? '').toLowerCase();
+    return `${email}:${req.ip ?? ''}`;
+  },
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => (redis as any).call(...args),
+    prefix: 'rl:forgot:',
+  }),
+  message: {
+    status: 429,
+    message: 'Muitas solicitações de redefinição. Tente novamente em 1 hora.',
   },
 });

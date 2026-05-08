@@ -180,6 +180,41 @@ io.on("connection", (socket) => {
     socket.join(`unit:${unitId}`);
   });
 
+  // Sala de conversa: o handler antes não existia. communication
+  // emitia para `conversation:<id>` mas só `join:user/condominium/unit`
+  // tinham handler — qualquer mensagem que chegasse à sala dependia
+  // de um join não verificado pelo cliente. Agora o servidor valida
+  // que o usuário é participante antes de permitir o join.
+  socket.on(
+    "join:conversation",
+    async (conversationId: string, ack?: (ok: boolean) => void) => {
+      try {
+        if (typeof conversationId !== "string" || !conversationId) {
+          ack?.(false);
+          return;
+        }
+        const conv = await prisma.chatConversation.findUnique({
+          where: { id: conversationId },
+          select: { id: true, participants: true },
+        });
+        const userId = socket.data.userId as string;
+        if (!conv || !conv.participants.includes(userId)) {
+          logger.warn(
+            { socketId: socket.id, conversationId, userId },
+            "Socket sem participação tentou entrar em conversation",
+          );
+          ack?.(false);
+          return;
+        }
+        socket.join(`conversation:${conversationId}`);
+        ack?.(true);
+      } catch (err) {
+        logger.error({ err }, "Erro em join:conversation");
+        ack?.(false);
+      }
+    },
+  );
+
   socket.on("disconnect", () => {
     logger.info(`Socket desconectado: ${socket.id}`);
   });
