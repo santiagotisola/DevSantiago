@@ -3,33 +3,68 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.string().default('3333'),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatório'),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter ao menos 32 caracteres'),
-  JWT_REFRESH_SECRET: z.string().min(32),
-  JWT_EXPIRES_IN: z.string().default('1h'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
-  UPLOAD_PATH: z.string().default('./uploads'),
-  MAX_FILE_SIZE: z.string().default('5242880'), // 5MB
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.string().default('587'),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default('noreply@condosync.com.br'),
-  BCRYPT_ROUNDS: z.string().default('12'),
-  REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
-  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
-  FRONTEND_URL: z.string().default('http://localhost:5173'),
-  // Resend — e-mail transacional em produção
-  RESEND_API_KEY: z.string().optional(),
-  // Sentry — monitoramento de erros em produção
-  SENTRY_DSN: z.string().optional(),
-});
+const INSECURE_SECRET_PATTERNS: RegExp[] = [
+  /condosync-super-secret/i,
+  /change-?in-?production/i,
+  /troque-por/i,
+];
+
+const isInsecureSecret = (value: string) =>
+  INSECURE_SECRET_PATTERNS.some((re) => re.test(value));
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.string().default('3333'),
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatório'),
+    JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter ao menos 32 caracteres'),
+    JWT_REFRESH_SECRET: z.string().min(32),
+    JWT_EXPIRES_IN: z.string().default('1h'),
+    JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+    CORS_ORIGINS: z.string().default('http://localhost:5173'),
+    UPLOAD_PATH: z.string().default('./uploads'),
+    MAX_FILE_SIZE: z.string().default('5242880'), // 5MB
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.string().default('587'),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().default('noreply@condosync.com.br'),
+    BCRYPT_ROUNDS: z.string().default('12'),
+    REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
+    OPENAI_API_KEY: z.string().optional(),
+    OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+    ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+    FRONTEND_URL: z.string().default('http://localhost:5173'),
+    // Resend — e-mail transacional em produção
+    RESEND_API_KEY: z.string().optional(),
+    // Sentry — monitoramento de erros em produção
+    SENTRY_DSN: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (isInsecureSecret(data.JWT_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_SECRET'],
+        message:
+          'JWT_SECRET parece um valor de exemplo/default. Gere um novo com `openssl rand -base64 48`.',
+      });
+    }
+    if (isInsecureSecret(data.JWT_REFRESH_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_REFRESH_SECRET'],
+        message:
+          'JWT_REFRESH_SECRET parece um valor de exemplo/default. Gere um novo com `openssl rand -base64 48`.',
+      });
+    }
+    if (data.JWT_SECRET === data.JWT_REFRESH_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_REFRESH_SECRET'],
+        message: 'JWT_REFRESH_SECRET deve ser diferente de JWT_SECRET.',
+      });
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 
