@@ -34,7 +34,9 @@ export const authenticate = async (
   const token = authHeader.slice(7);
   const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 
-  // Verificar se o usuário ainda está ativo
+  // Verificar se o usuário ainda está ativo e ler role atual do DB.
+  // Usar a role do JWT permite escalada de privilégio: um SUPER_ADMIN
+  // rebaixado a RESIDENT mantém poderes até o token expirar.
   const user = await prisma.user.findUnique({
     where: { id: decoded.userId },
     select: { id: true, isActive: true, role: true },
@@ -44,7 +46,7 @@ export const authenticate = async (
     throw new UnauthorizedError("Usuário inativo ou não encontrado");
   }
 
-  req.user = decoded;
+  req.user = { ...decoded, role: user.role };
   next();
 };
 
