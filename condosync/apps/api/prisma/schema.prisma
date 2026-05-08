@@ -261,6 +261,20 @@ model Condominium {
   documents          CondominiumDocument[]
   panicAlerts        PanicAlert[]
   visitorRecurrences VisitorRecurrence[]
+  // C4 — back-relations adicionadas pela conversão de
+  // condominiumId String → FK em 13 modelos.
+  chatConversations  ChatConversation[]
+  financialCategories FinancialCategory[]
+  serviceOrders      ServiceOrder[]
+  finalizedAssemblies FinalizedAssembly[]
+  renovations        Renovation[]
+  stockItems         StockItem[]
+  tickets            Ticket[]
+  photos             Photo[]
+  condominiumContracts CondominiumContract[]
+  fines              Fine[]
+  collectionRules    CollectionRule[]
+  digitalSignageScreens DigitalSignageScreen[]
 
   @@map("condominiums")
 }
@@ -513,6 +527,7 @@ model Notification {
 
 model ChatConversation {
   id            String   @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
   unitId        String?
   subject       String?
@@ -523,6 +538,7 @@ model ChatConversation {
 
   messages ChatMessage[]
 
+  @@index([condominiumId])
   @@map("chat_conversations")
 }
 
@@ -633,6 +649,7 @@ model FinancialAccount {
 
 model FinancialCategory {
   id          String                   @id @default(uuid())
+  condominium Condominium              @relation(fields: [condominiumId], references: [id])
   condominiumId String
   name        String
   type        FinancialTransactionType
@@ -643,6 +660,7 @@ model FinancialCategory {
   transactions FinancialTransaction[]
   charges      Charge[]
 
+  @@index([condominiumId])
   @@map("financial_categories")
 }
 
@@ -731,6 +749,7 @@ model ServiceOrder {
   id              String               @id @default(uuid())
   unit            Unit?                @relation(fields: [unitId], references: [id])
   unitId          String?
+  condominium     Condominium          @relation(fields: [condominiumId], references: [id])
   condominiumId   String
   requestedBy     String
   assignedTo      String?
@@ -966,8 +985,10 @@ model FinalizedAssembly {
   description String?
   date        DateTime @default(now())
   minutesUrl  String?
+  condominium Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  
+
+  @@index([condominiumId])
   @@map("finalized_assemblies")
 }
 
@@ -1057,6 +1078,7 @@ model Renovation {
   id            String           @id @default(uuid())
   unit          Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
   unitId        String
+  condominium   Condominium      @relation(fields: [condominiumId], references: [id])
   condominiumId String
   description   String
   type          String           // pintura, hidráulica, elétrica, estrutural, outro
@@ -1100,6 +1122,7 @@ enum StockMovementType {
 
 model StockItem {
   id              String          @id @default(uuid())
+  condominium     Condominium     @relation(fields: [condominiumId], references: [id])
   condominiumId   String
   name            String
   description     String?
@@ -1152,6 +1175,7 @@ enum TicketCategory {
 
 model Ticket {
   id            String          @id @default(uuid())
+  condominium   Condominium     @relation(fields: [condominiumId], references: [id])
   condominiumId String
   title         String
   category      TicketCategory  @default(outro)
@@ -1184,6 +1208,7 @@ model TicketMessage {
 
 model Photo {
   id            String   @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
   title         String
   description   String?
@@ -1196,6 +1221,7 @@ model Photo {
   uploadedBy    String
   createdAt     DateTime @default(now())
 
+  @@index([condominiumId])
   @@map("photos")
 }
 
@@ -1325,6 +1351,7 @@ model VisitorQRUse {
 
 model CondominiumContract {
   id              String   @id @default(uuid())
+  condominium     Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId   String
   title           String   // "Contrato Elevador Atlas 2026"
   vendor          String   // nome da empresa contratada
@@ -1341,6 +1368,7 @@ model CondominiumContract {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@index([condominiumId])
   @@map("condominium_contracts")
 }
 
@@ -1350,6 +1378,7 @@ model CondominiumContract {
 
 model Fine {
   id             String   @id @default(uuid())
+  condominium    Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId  String
   unitId         String
   reportedBy     String   // userId do síndico/admin
@@ -1378,6 +1407,7 @@ model Fine {
 
 model CollectionRule {
   id            String           @id @default(uuid())
+  condominium   Condominium      @relation(fields: [condominiumId], references: [id])
   condominiumId String
   name          String           // "Régua Padrão 2026"
   isActive      Boolean          @default(true)
@@ -1385,6 +1415,7 @@ model CollectionRule {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  @@index([condominiumId, isActive])
   @@map("collection_rules")
 }
 
@@ -1406,6 +1437,7 @@ model CollectionStep {
 
 model DigitalSignageScreen {
   id            String                @id @default(uuid())
+  condominium   Condominium           @relation(fields: [condominiumId], references: [id])
   condominiumId String
   name          String                // "Elevador Torre A", "Hall Social"
   location      String                // localização física
@@ -1419,6 +1451,7 @@ model DigitalSignageScreen {
 
   slides        DigitalSignageSlide[]
 
+  @@index([condominiumId])
   @@map("digital_signage_screens")
 }
 
