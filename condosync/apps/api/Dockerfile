@@ -6,9 +6,17 @@ WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Instalar todas as dependências (incluindo dev)
-COPY package.json ./
-RUN npm install --ignore-scripts
+# Lockfile junto = build determinístico (npm ci).
+COPY package.json package-lock.json* ./
+
+# npm ci falha se package-lock.json estiver fora de sincronia com
+# package.json — mais previsível que npm install em CI/Docker.
+# Se o monorepo não tem lockfile no apps/api, fallback para install.
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts; \
+    else \
+      npm install --ignore-scripts; \
+    fi
 
 # Copiar todo o código-fonte da API
 COPY . ./
@@ -16,19 +24,27 @@ COPY . ./
 # Gerar o Prisma Client
 RUN ./node_modules/.bin/prisma generate
 
-# Compilar TypeScript → dist/
-RUN rm -rf dist && node_modules/.bin/tsc --skipLibCheck --noEmitOnError false; exit 0
-RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
+# Compilar TypeScript → dist/. Sem `|| true` — falha cedo em erro
+# de tipo (combinado com noEmitOnError:true em tsconfig.json).
+RUN rm -rf dist && node_modules/.bin/tsc
 
-# Remover devDependencies antes de copiar para produção
-RUN npm install --omit=dev --ignore-scripts
+# Verifica artefato e prepara node_modules de produção (sem dev deps)
+RUN test -f dist/server.js || (echo "ERRO: dist/server.js nao foi gerado" && exit 1)
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --ignore-scripts; \
+    else \
+      npm install --omit=dev --ignore-scripts; \
+    fi
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:22-alpine AS production
 
 WORKDIR /app
 
-RUN apk add --no-cache openssl wget
+# tini é um init mínimo (PID 1) que reaproveita SIGTERM/SIGINT para o
+# processo node, garantindo que o graceful shutdown em server.ts
+# realmente dispare. wget é usado pelo HEALTHCHECK.
+RUN apk add --no-cache openssl wget tini
 
 COPY --from=builder /app/node_modules  ./node_modules
 COPY --from=builder /app/dist          ./dist
@@ -38,9 +54,20 @@ COPY --from=builder /app/package.json  ./
 COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
 
+# Não-root: usuário node já vem na imagem oficial do Node Alpine,
+# uid/gid 1000. /app precisa ser de propriedade do node para que
+# o entrypoint consiga executar (e prisma migrate gravar lockfiles).
+RUN chown -R node:node /app
+USER node
+
 ENV NODE_ENV=production
 ENV PORT=3333
 
 EXPOSE 3333
 
-ENTRYPOINT ["./entrypoint.sh"]
+# Healthcheck integrado à imagem — antes só existia no compose,
+# então `docker run` standalone ficava sem signal.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:3333/health || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--", "./entrypoint.sh"]

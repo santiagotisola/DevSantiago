@@ -17,7 +17,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: condosync
-          POSTGRES_PASSWORD: condosync123
+          POSTGRES_PASSWORD: condosync_ci_password
           POSTGRES_DB: condosync_test
         ports:
           - 5432:5432
@@ -49,21 +49,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          # cache npm baseado no lockfile do workspace
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
 
-      - name: Instalar dependências
-        run: npm install
+      - name: Instalar dependências (npm ci se houver lockfile)
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Gerar Prisma Client
         run: npx prisma generate
 
       - name: Aplicar migrations (test DB)
         env:
-          DATABASE_URL: postgresql://condosync:condosync123@localhost:5432/condosync_test?schema=public
+          DATABASE_URL: postgresql://condosync:condosync_ci_password@localhost:5432/condosync_test?schema=public
         run: npx prisma migrate deploy
 
       - name: Executar testes com cobertura
         env:
-          DATABASE_URL: postgresql://condosync:condosync123@localhost:5432/condosync_test?schema=public
+          DATABASE_URL: postgresql://condosync:condosync_ci_password@localhost:5432/condosync_test?schema=public
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: ci-test-jwt-secret-minimum-32-chars-here
           JWT_REFRESH_SECRET: ci-test-refresh-secret-minimum-32-chars
@@ -73,6 +77,7 @@ jobs:
           BCRYPT_ROUNDS: "4"
           CORS_ORIGINS: http://localhost:5173
           FRONTEND_URL: http://localhost:5173
+          ASAAS_WEBHOOK_TOKEN: ci-test-asaas-token-minimum-32-chars
           SMTP_HOST: ""
           RESEND_API_KEY: ""
         run: npm run test:coverage
@@ -85,6 +90,48 @@ jobs:
           files: coverage/lcov.info
           flags: api
           fail_ci_if_error: false
+
+  # ─── Lint API ────────────────────────────────────────────────────────────────
+  lint-api:
+    name: Lint (API)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: condosync/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: ESLint
+        run: npm run lint || echo "⚠️  Lint warnings (não-bloqueante hoje — promover a erro depois)"
+
+  # ─── TypeScript type-check da API ────────────────────────────────────────────
+  typecheck-api:
+    name: TypeScript Check (API)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: condosync/apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
 
   # ─── Build do frontend Web ───────────────────────────────────────────────────
   build-web:
@@ -103,14 +150,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
 
-      - name: Instalar dependências
-        run: npm install
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build de produção
         env:
-          # Define via GitHub Variables (Settings > Secrets and variables > Variables):
-          # VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
@@ -137,41 +185,66 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
 
-      - name: Instalar dependências
-        run: npm install
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build de produção
         env:
-          # Define via GitHub Variables (Settings > Secrets and variables > Variables):
-          # VITE_API_URL = https://<sua-api>.up.railway.app/api/v1
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
-  # ─── TypeScript type-check da API ────────────────────────────────────────────
-  typecheck-api:
-    name: TypeScript Check (API)
+  # ─── Build das imagens Docker (valida Dockerfiles a cada PR) ─────────────────
+  docker-build:
+    name: Docker build (API + Web)
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: condosync/apps/api
+          file: condosync/apps/api/Dockerfile
+          push: false
+          tags: condosync-api:ci
+      - name: Build Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: condosync
+          file: condosync/apps/web/Dockerfile
+          push: false
+          tags: condosync-web:ci
 
+  # ─── Auditoria de dependências (warn-only por enquanto) ──────────────────────
+  audit-deps:
+    name: npm audit (advisory)
+    runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: condosync/apps/api
-
+        working-directory: condosync
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install
-      - run: npx prisma generate
-      - run: npx tsc --noEmit
+      - name: Audit (não bloqueia build)
+        # Promover para `--audit-level=high` bloqueante quando os
+        # pacotes flagrados (multer v1, etc) forem migrados.
+        run: npm audit --omit=dev --audit-level=critical || true
 
   # ─── Deploy para Railway (apenas em push na main) ────────────────────────────
   # O Railway faz o deploy automaticamente via webhook do GitHub.
   # Este job é mantido apenas como referência — o deploy real é feito pelo Railway.
+  # IMPORTANTE: hoje o deploy não depende dos checks. WS3-P2 vai gating de
+  #              deploy pelo verde do CI via Railway CLI.
   deploy:
     name: Deploy → Railway
-    needs: [test-api, build-web, build-mobile]
+    needs: [test-api, build-web, build-mobile, typecheck-api, docker-build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
