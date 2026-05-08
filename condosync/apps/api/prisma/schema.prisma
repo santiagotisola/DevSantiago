@@ -439,6 +439,8 @@ model VehicleAccessLog {
   notes       String?
   registeredBy String?
 
+  @@index([entryAt])
+  @@index([plate])
   @@map("vehicle_access_logs")
 }
 
@@ -466,6 +468,7 @@ model Parcel {
   notes               String?
   registeredBy        String?
 
+  @@index([unitId, status, receivedAt])
   @@map("parcels")
 }
 
@@ -504,6 +507,7 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime         @default(now())
 
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 
@@ -652,6 +656,8 @@ model FinancialTransaction {
   createdAt        DateTime                 @default(now())
   updatedAt        DateTime                 @updatedAt
 
+  @@index([accountId, type, paidAt])
+  @@index([accountId, referenceMonth, type])
   @@map("financial_transactions")
 }
 
@@ -702,6 +708,9 @@ model Charge {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
+  @@index([gatewayId])
+  @@index([unitId, status, dueDate])
+  @@index([status, dueDate])
   @@map("charges")
 }
 
@@ -738,6 +747,7 @@ model ServiceOrder {
 
   checklistItems    ServiceOrderChecklist[]
 
+  @@index([condominiumId, status, createdAt])
   @@map("service_orders")
 }
 
@@ -837,6 +847,7 @@ model Reservation {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
+  @@index([commonAreaId, startDate, endDate])
   @@map("reservations")
 }
 
@@ -936,6 +947,8 @@ model AuditLog {
   userAgent     String?
   createdAt     DateTime    @default(now())
 
+  @@index([condominiumId, createdAt])
+  @@index([entityType, entityId])
   @@map("audit_logs")
 }
 model FinalizedAssembly {
@@ -1345,6 +1358,8 @@ model Fine {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@index([condominiumId, status, createdAt])
+  @@index([unitId])
   @@map("fines")
 }
 
