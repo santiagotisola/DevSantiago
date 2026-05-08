@@ -1,0 +1,45 @@
+# Code owners — required reviewers para cada path.
+#
+# Sintaxe: <pattern> @<github-handle> [@<handle2> ...]
+# Última regra que casa vence (ordem importa).
+# Aplicado pelo GitHub via Branch Protection (ver
+# condosync/apps/api/docs/BRANCH_PROTECTION.md).
+
+# Default — qualquer mudança não coberta abaixo.
+* @lucas-axion
+
+# ─── Segurança crítica ───────────────────────────────────────────
+# 2 reviewers obrigatórios em mudanças de auth/crypto/webhooks.
+/condosync/apps/api/src/middleware/auth.ts        @lucas-axion
+/condosync/apps/api/src/middleware/rateLimiter.ts @lucas-axion
+/condosync/apps/api/src/middleware/errorHandler.ts @lucas-axion
+/condosync/apps/api/src/utils/cryptoVault.ts      @lucas-axion
+/condosync/apps/api/src/modules/auth/             @lucas-axion
+/condosync/apps/api/src/modules/webhooks/         @lucas-axion
+
+# ─── Domínio financeiro ──────────────────────────────────────────
+/condosync/apps/api/src/modules/finance/          @lucas-axion
+/condosync/apps/api/src/services/gateway/         @lucas-axion
+
+# ─── Infraestrutura compartilhada ────────────────────────────────
+/condosync/apps/api/src/config/                   @lucas-axion
+/condosync/apps/api/src/workers/                  @lucas-axion
+/condosync/apps/api/prisma/                       @lucas-axion
+
+# ─── Plataforma / DevOps ────────────────────────────────────────
+/.github/                                          @lucas-axion
+/condosync/Dockerfile*                             @lucas-axion
+/condosync/docker-compose*.yml                     @lucas-axion
+/DevSantiago/                                      @lucas-axion
+/condosync/ops/                                    @lucas-axion
+
+# ─── Documentação arquitetural ──────────────────────────────────
+/condosync/docs/adr/                               @lucas-axion
+/condosync/docs/rfc/                               @lucas-axion
+/condosync/apps/api/docs/                          @lucas-axion
+
+# ─── Frontend ───────────────────────────────────────────────────
+# Quando time crescer, separar áreas:
+# /condosync/apps/web/src/pages/portaria/   @portaria-team
+# /condosync/apps/web/src/pages/finance/    @finance-team
+/condosync/apps/web/                               @lucas-axion

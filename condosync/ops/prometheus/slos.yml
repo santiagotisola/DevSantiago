@@ -1,0 +1,201 @@
+# SLOs (Service Level Objectives) e regras de alerta para CondoSync.
+#
+# Validar com: promtool check rules ops/prometheus/slos.yml
+# Aplicar via Prometheus operator (rules: file_name) ou em
+# `prometheus.yml: rule_files`.
+#
+# Convenção:
+#  - SLO indicators (sli_*) — métricas derivadas para dashboards.
+#  - Burn rate alerts — multi-window multi-burn-rate (Google SRE
+#    Workbook). Detecta gasto rápido e lento de error budget.
+#  - Severidade: page (oncall) | warn (Slack).
+
+groups:
+  # ─── SLO 1: API HTTP availability — 99.9% ────────────────────
+  - name: condosync-api-availability
+    interval: 30s
+    rules:
+      - record: sli:api_request_success_ratio:5m
+        expr: |
+          1 - (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          )
+      - record: sli:api_request_success_ratio:1h
+        expr: |
+          1 - (
+            sum(rate(http_requests_total{status=~"5.."}[1h]))
+            /
+            sum(rate(http_requests_total[1h]))
+          )
+      - record: sli:api_request_success_ratio:6h
+        expr: |
+          1 - (
+            sum(rate(http_requests_total{status=~"5.."}[6h]))
+            /
+            sum(rate(http_requests_total[6h]))
+          )
+
+      # Burn rate fast (1h × 14.4) → consome 2% budget mensal
+      # em 1h. PAGE oncall.
+      - alert: APIErrorBudgetBurnFast
+        expr: |
+          (1 - sli:api_request_success_ratio:5m) > (1 - 0.999) * 14.4
+          and
+          (1 - sli:api_request_success_ratio:1h) > (1 - 0.999) * 14.4
+        for: 2m
+        labels: { severity: page, slo: api_availability }
+        annotations:
+          summary: "API queimando error budget RÁPIDO (>2%/h)"
+          description: |
+            5m e 1h windows ambos acima de 14.4× burn rate.
+            Erro 5xx em 5min: {{ $value }}. Possível incidente
+            ativo.
+
+      # Burn rate slow (6h × 6) — degradação progressiva. WARN.
+      - alert: APIErrorBudgetBurnSlow
+        expr: |
+          (1 - sli:api_request_success_ratio:6h) > (1 - 0.999) * 6
+        for: 15m
+        labels: { severity: warn, slo: api_availability }
+        annotations:
+          summary: "API queimando error budget DEVAGAR"
+          description: |
+            6h window > 6× burn rate. Investigar: possível bug
+            recorrente em rota específica.
+
+  # ─── SLO 2: API latência p95 — < 500ms ───────────────────────
+  - name: condosync-api-latency
+    interval: 30s
+    rules:
+      - record: sli:api_request_duration_p95:5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      - alert: APIHighLatencyP95
+        expr: sli:api_request_duration_p95:5m > 0.5
+        for: 10m
+        labels: { severity: warn, slo: api_latency }
+        annotations:
+          summary: "API p95 > 500ms por 10min"
+          description: |
+            p95 atual: {{ $value }}s.
+            Investigar via tracing (Honeycomb/Tempo): rota mais
+            lenta? DB lento? Asaas timeout?
+
+  # ─── SLO 3: Webhook Asaas processed-within-60s — 99.5% ───────
+  - name: condosync-webhook-asaas
+    interval: 30s
+    rules:
+      - record: sli:webhook_asaas_processed_ratio:5m
+        expr: |
+          (
+            sum(rate(webhook_asaas_events_total{result="processed"}[5m]))
+            +
+            sum(rate(webhook_asaas_events_total{result="duplicate"}[5m]))
+          )
+          /
+          sum(rate(webhook_asaas_events_total{result=~"received|processed|duplicate"}[5m]))
+
+      - alert: WebhookAsaasBacklog
+        expr: bullmq_queue_depth{queue="webhook-processor", state="waiting"} > 100
+        for: 5m
+        labels: { severity: page, slo: webhook_processing }
+        annotations:
+          summary: "Backlog webhook Asaas > 100 por 5min"
+          description: |
+            Workers não estão drenando. Possíveis causas:
+            - DB lento (verificar prisma_query_duration)
+            - Worker crashado (verificar bullmq_jobs_total stalled)
+            - Asaas mandando rate alto não esperado.
+            Mitigação: scale-up do worker process.
+
+      - alert: WebhookAsaasErrors
+        expr: |
+          rate(webhook_asaas_events_total{result="error"}[5m]) > 0.083
+        for: 5m
+        labels: { severity: page, slo: webhook_processing }
+        annotations:
+          summary: "Webhook Asaas: >5 errors/min"
+          description: |
+            Possível bug em $transaction ou DB indisponível.
+            Investigar Sentry tag component=bullmq queue=webhook-processor.
+
+  # ─── BullMQ — saúde dos workers ──────────────────────────────
+  - name: condosync-bullmq
+    interval: 30s
+    rules:
+      - alert: BullMQJobsFailing
+        expr: rate(bullmq_jobs_total{result="failed"}[5m]) > 0.166
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: "{{ $labels.queue }} >10 falhas/min"
+          description: |
+            Queue {{ $labels.queue }} com falha sustentada.
+            Verificar Sentry, drenar DLQ via runbook.
+
+      - alert: BullMQLeaderLost
+        expr: increase(bullmq_leader_renewal_total{result="lost"}[1m]) > 0
+        for: 1m
+        labels: { severity: page }
+        annotations:
+          summary: "Leader lock perdida"
+          description: |
+            Worker {{ $labels.instance }} perdeu leadership.
+            Crons podem disparar 2× durante a janela de re-eleição.
+            Investigar saúde Redis.
+
+      - alert: BullMQStalledJobs
+        expr: bullmq_queue_depth{state="failed"} > 100
+        for: 30m
+        labels: { severity: warn }
+        annotations:
+          summary: "{{ $labels.queue }} com >100 jobs failed acumulados"
+
+  # ─── Segurança — IDOR detection ──────────────────────────────
+  - name: condosync-security
+    interval: 30s
+    rules:
+      - alert: IDORDenySpike
+        expr: |
+          rate(idor_guard_decisions_total{result="deny_cross_tenant"}[5m]) > 0.166
+        for: 5m
+        labels: { severity: page, category: security }
+        annotations:
+          summary: ">10 deny_cross_tenant/min em {{ $labels.module }}"
+          description: |
+            Possível ataque de UUID-guessing ou bug em rota nova.
+            Investigar logs com tag idor_guard + module={{ $labels.module }}.
+
+  # ─── Recursos compartilhados ─────────────────────────────────
+  - name: condosync-resources
+    interval: 30s
+    rules:
+      - alert: NodeEventLoopLagHigh
+        expr: nodejs_eventloop_lag_seconds > 0.1
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "Event loop lag {{ $value }}s em {{ $labels.instance }}"
+          description: |
+            Algo está bloqueando o event loop. Causas comuns:
+            - bcrypt.hashSync (se ainda houver)
+            - JSON.stringify em payloads enormes
+            - Loop síncrono pesado
+            Profile com clinic.js ou 0x.
+
+      - alert: NodeMemoryHigh
+        expr: |
+          process_resident_memory_bytes > 800 * 1024 * 1024
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: "RSS > 800MB em {{ $labels.instance }}"
+          description: |
+            Possível memory leak. Verificar workers órfãos
+            (registerWorkers chamado mais de uma vez), buffers
+            grandes em PDF/CSV imports.
