@@ -57,3 +57,66 @@ export function buildPaginatedMeta(
     totalPages: Math.max(1, Math.ceil(total / params.limit)),
   };
 }
+
+// ─── Cursor pagination ─────────────────────────────────────────
+// Para tabelas que crescem sem limite (charges, parcels, audit_logs,
+// notifications, vehicle_access_logs, chat_messages), offset
+// pagination ficou inviável: ?page=1000 força o Postgres a varrer
+// 20k linhas só para descartar 19980. Cursor é O(log N).
+//
+// O cursor canônico aqui é o `id` (uuid) — funciona como tiebreaker
+// estável quando criados no mesmo timestamp. Cliente envia
+// ?cursor=<id>&limit=20; servidor retorna { items, nextCursor }.
+
+export interface CursorParams {
+  cursor: string | undefined;
+  limit: number;
+}
+
+export function parseCursor(req: Request, defaultLimit = 20): CursorParams {
+  const rawLimit = Number(req.query.limit);
+  const limit = Math.min(
+    100,
+    Number.isFinite(rawLimit) && rawLimit >= 1
+      ? Math.floor(rawLimit)
+      : defaultLimit,
+  );
+  const cursor =
+    typeof req.query.cursor === "string" && req.query.cursor.length > 0
+      ? req.query.cursor
+      : undefined;
+  return { cursor, limit };
+}
+
+/**
+ * Aplica params Prisma para cursor pagination. Pede `limit + 1`
+ * para saber se existe próxima página sem segundo round-trip.
+ *
+ * Uso:
+ *   const { cursor, limit } = parseCursor(req);
+ *   const items = await prisma.charge.findMany({
+ *     ...buildCursorArgs({ cursor, limit }),
+ *     where: { ... },
+ *     orderBy: { createdAt: 'desc' },
+ *   });
+ *   const { page, nextCursor } = sliceCursorPage(items, limit);
+ */
+export function buildCursorArgs(params: CursorParams) {
+  return {
+    take: params.limit + 1,
+    ...(params.cursor
+      ? { cursor: { id: params.cursor }, skip: 1 }
+      : {}),
+  };
+}
+
+export function sliceCursorPage<T extends { id: string }>(
+  items: T[],
+  limit: number,
+): { page: T[]; nextCursor: string | null } {
+  if (items.length > limit) {
+    const page = items.slice(0, limit);
+    return { page, nextCursor: page[page.length - 1]?.id ?? null };
+  }
+  return { page: items, nextCursor: null };
+}
