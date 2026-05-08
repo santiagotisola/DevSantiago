@@ -1,4 +1,32 @@
 node_modules
 dist
+build
+coverage
+
+# Env / secrets — VITE_* viraria bundle public, mas o .env em si fica fora
 .env
+.env.*
+!.env.example
 .env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Source control
+.git
+.gitignore
+
+# Testes
+__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Docs e infra
+README.md
+*.md
+Dockerfile*
+.dockerignore

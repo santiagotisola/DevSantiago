@@ -1,6 +1,31 @@
 node_modules
 dist
+build
+coverage
+.nyc_output
+
+# Env / secrets
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
 logs/
+tmp/
+temp/
+
+# Source control
 .git
+.gitignore
+
+# Testes (não rodam dentro da imagem prod)
+__tests__
+**/*.test.ts
+**/*.spec.ts
+
+# Docs e infra
+README.md
+*.md
+Dockerfile*
+.dockerignore
