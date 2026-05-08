@@ -34,7 +34,7 @@ export const collectionWorker = new Worker(
     log.info("Running collection rules check");
     const now = new Date();
 
-    // Busca todas as cobranças OVERDUE com rule ativa no mesmo condomínio
+    // 1. Busca todas as cobranças OVERDUE.
     const overdueCharges = await prisma.charge.findMany({
       where: { status: "OVERDUE" },
       include: {
@@ -50,6 +50,23 @@ export const collectionWorker = new Worker(
       },
     });
 
+    if (overdueCharges.length === 0) {
+      log.info("No overdue charges — skipping");
+      return;
+    }
+
+    // 2. Carrega TODAS as réguas ativas dos condomínios envolvidos
+    //    em UMA query (em vez de 1 por charge — antes era N+1).
+    //    Em pico de inadimplência (500+ charges) o ganho é ~500x.
+    const condominiumIds = Array.from(
+      new Set(overdueCharges.map((c) => c.account.condominiumId)),
+    );
+    const rules = await prisma.collectionRule.findMany({
+      where: { condominiumId: { in: condominiumIds }, isActive: true },
+      include: { steps: { orderBy: { daysAfterDue: "asc" } } },
+    });
+    const ruleByCondo = new Map(rules.map((r) => [r.condominiumId, r]));
+
     let notified = 0;
 
     for (const charge of overdueCharges) {
@@ -58,11 +75,7 @@ export const collectionWorker = new Worker(
         (now.getTime() - charge.dueDate.getTime()) / (1000 * 60 * 60 * 24),
       );
 
-      // Busca régua ativa do condomínio
-      const rule = await prisma.collectionRule.findFirst({
-        where: { condominiumId, isActive: true },
-        include: { steps: { orderBy: { daysAfterDue: "asc" } } },
-      });
+      const rule = ruleByCondo.get(condominiumId);
       if (!rule || rule.steps.length === 0) continue;
 
       // Encontra o step cujo daysAfterDue === daysOverdue (dispara exatamente no dia)
@@ -80,33 +93,42 @@ export const collectionWorker = new Worker(
           .replace("{{vencimento}}", dueFormatted)
           .replace("{{dias}}", String(daysOverdue));
 
+        // Enfileira em paralelo por canal — antes serializava
+        // inapp/email seq.
+        const enqueues: Promise<unknown>[] = [];
         if (step.channels.includes("inapp")) {
-          await NotificationService.enqueue({
-            userId: resident.id,
-            type: "FINANCIAL",
-            title: `Cobrança em atraso — ${daysOverdue} dia(s)`,
-            message,
-            channels: ["inapp"],
-            data: { chargeId: charge.id },
-          });
+          enqueues.push(
+            NotificationService.enqueue({
+              userId: resident.id,
+              type: "FINANCIAL",
+              title: `Cobrança em atraso — ${daysOverdue} dia(s)`,
+              message,
+              channels: ["inapp"],
+              data: { chargeId: charge.id },
+            }),
+          );
         }
-
         if (step.channels.includes("email")) {
-          await NotificationService.enqueue({
-            userId: resident.id,
-            type: "FINANCIAL",
-            title: `Cobrança em atraso — ${daysOverdue} dia(s)`,
-            message,
-            channels: ["email"],
-            data: { chargeId: charge.id },
-          });
+          enqueues.push(
+            NotificationService.enqueue({
+              userId: resident.id,
+              type: "FINANCIAL",
+              title: `Cobrança em atraso — ${daysOverdue} dia(s)`,
+              message,
+              channels: ["email"],
+              data: { chargeId: charge.id },
+            }),
+          );
         }
-
+        await Promise.all(enqueues);
         notified++;
       }
     }
 
-    log.info(`Collection rules: ${notified} notificações enviadas`);
+    log.info(
+      { overdueCount: overdueCharges.length, condos: condominiumIds.length, notified },
+      "Collection rules: notificações enviadas",
+    );
   },
   { connection: redis as any },
 );
