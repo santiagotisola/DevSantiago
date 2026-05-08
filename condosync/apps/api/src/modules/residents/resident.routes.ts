@@ -1,15 +1,37 @@
 import { Router, Request, Response } from "express";
 import { randomBytes } from "crypto";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import {
+  authenticate,
+  authorize,
+  MANAGEMENT_ROLES,
+} from "../../middleware/auth";
 import { ForbiddenError, ValidationError } from "../../middleware/errorHandler";
 import { validateRequest } from "../../utils/validateRequest";
+import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { residentService } from "./resident.service";
 
 const router = Router();
 router.use(authenticate);
+
+// Verifica que o ator pertence ativamente ao condomínio alvo (ou é
+// SUPER_ADMIN). Centraliza a checagem para que cada rota com :id
+// não esqueça de validar tenant scope — antes várias rotas só
+// chamavam authorize() de role e o IDOR cruzava condomínios.
+async function assertActorBelongsToCondominium(
+  req: Request,
+  condominiumId: string,
+) {
+  const actor = req.user!;
+  if (actor.role === UserRole.SUPER_ADMIN) return;
+  const membership = await prisma.condominiumUser.findFirst({
+    where: { userId: actor.userId, condominiumId, isActive: true },
+    select: { id: true },
+  });
+  if (!membership) throw new ForbiddenError("Acesso negado a este condomínio");
+}
 
 // Dependentes de uma unidade
 router.get("/unit/:unitId/dependents", async (req: Request, res: Response) => {
@@ -41,26 +63,48 @@ const dependentSchema = z.object({
   photoUrl: z.string().url().optional(),
 });
 
-router.post("/dependents", async (req: Request, res: Response) => {
-  const data = validateRequest(dependentSchema, req.body);
-  // Valida existência da unidade antes de persistir (B2)
-  await prisma.unit.findUniqueOrThrow({ where: { id: data.unitId } });
-  const dependent = await prisma.dependent.create({
-    data: {
-      ...data,
-      birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
-    },
-  });
-  res.status(201).json({ success: true, data: { dependent } });
-});
+router.post(
+  "/dependents",
+  authorize(...MANAGEMENT_ROLES, UserRole.RESIDENT),
+  async (req: Request, res: Response) => {
+    const data = validateRequest(dependentSchema, req.body);
+    // Carrega a unidade para descobrir o condomínio e validar tenant
+    // scope. Antes a rota só chamava findUniqueOrThrow sem verificar
+    // que o ator pertencia ao condomínio da unidade — qualquer
+    // logado podia criar dependentes em unidades arbitrárias.
+    const unit = await prisma.unit.findUniqueOrThrow({
+      where: { id: data.unitId },
+      select: { id: true, condominiumId: true },
+    });
+    await assertActorBelongsToCondominium(req, unit.condominiumId);
 
-router.delete("/dependents/:id", async (req: Request, res: Response) => {
-  await prisma.dependent.update({
-    where: { id: req.params.id },
-    data: { isActive: false },
-  });
-  res.json({ success: true });
-});
+    const dependent = await prisma.dependent.create({
+      data: {
+        ...data,
+        birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+      },
+    });
+    res.status(201).json({ success: true, data: { dependent } });
+  },
+);
+
+router.delete(
+  "/dependents/:id",
+  authorize(...MANAGEMENT_ROLES, UserRole.RESIDENT),
+  async (req: Request, res: Response) => {
+    const dep = await prisma.dependent.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { id: true, unit: { select: { condominiumId: true } } },
+    });
+    await assertActorBelongsToCondominium(req, dep.unit.condominiumId);
+
+    await prisma.dependent.update({
+      where: { id: req.params.id },
+      data: { isActive: false },
+    });
+    res.json({ success: true });
+  },
+);
 
 // Residentes de um condomínio
 router.get(
@@ -212,6 +256,9 @@ router.patch(
       include: { user: true },
     });
 
+    // Tenant scope: admin do condo A não pode editar morador do condo B.
+    await assertActorBelongsToCondominium(req, condominiumUser.condominiumId);
+
     if (condominiumUser.role !== "RESIDENT") {
       throw new ValidationError("Dados invalidos", {
         id: ["O registro informado nao pertence a um morador."],
@@ -266,6 +313,12 @@ router.delete(
   "/:id",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
   async (req: Request, res: Response) => {
+    const target = await prisma.condominiumUser.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { id: true, condominiumId: true },
+    });
+    await assertActorBelongsToCondominium(req, target.condominiumId);
+
     await prisma.condominiumUser.update({
       where: { id: req.params.id },
       data: { isActive: false },

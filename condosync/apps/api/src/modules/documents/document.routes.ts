@@ -33,16 +33,37 @@ const ALLOWED_MIMES = new Set([
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 // ── Multer storage ───────────────────────────────────────────
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const UPLOAD_ROOT = path.resolve("/app/uploads");
+
 const storage = multer.diskStorage({
   destination: (req: Request, _file, cb) => {
-    const condoId =
-      req.params.condominiumId || req.body.condominiumId || "misc";
-    const dir = path.join("/app/uploads", condoId);
+    // Multer storage executa ANTES de qualquer validateRequest. Se
+    // confiarmos em req.body.condominiumId aqui sem validar, um
+    // atacante pode passar "../../../etc" e o path.join resolve para
+    // fora de /app/uploads. Forçamos o id a ser um UUID antes de
+    // compor o path; qualquer outra coisa cai em "misc".
+    const raw =
+      req.params.condominiumId || (req.body && req.body.condominiumId) || "";
+    const condoId = UUID_REGEX.test(String(raw)) ? String(raw) : "misc";
+    const dir = path.resolve(UPLOAD_ROOT, condoId);
+    if (!dir.startsWith(UPLOAD_ROOT + path.sep) && dir !== UPLOAD_ROOT) {
+      return cb(
+        new Error("Path inválido para upload"),
+        UPLOAD_ROOT,
+      );
+    }
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    // Apenas a extensão original é mantida; o nome final é UUID.
+    // Strip qualquer caractere não-alfanumérico/.
+    const ext = path
+      .extname(file.originalname)
+      .toLowerCase()
+      .replace(/[^.a-z0-9]/g, "")
+      .slice(0, 10);
     cb(null, `${randomUUID()}${ext}`);
   },
 });

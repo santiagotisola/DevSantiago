@@ -25,15 +25,29 @@ const ALLOWED_MIMES = new Set([
 ]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const UPLOAD_ROOT = path.resolve("/app/uploads");
+
 const storage = multer.diskStorage({
   destination: (req: Request, _file, cb) => {
-    const condoId = req.params.condominiumId || "misc";
-    const dir = path.join("/app/uploads", condoId, "gallery");
+    // Path traversal guard: condoId precisa ser UUID; senão cai em
+    // "misc". path.resolve + assert prefixo evita escape do diretório
+    // de uploads (ver document.routes.ts para detalhes).
+    const raw = req.params.condominiumId ?? "";
+    const condoId = UUID_REGEX.test(String(raw)) ? String(raw) : "misc";
+    const dir = path.resolve(UPLOAD_ROOT, condoId, "gallery");
+    if (!dir.startsWith(UPLOAD_ROOT + path.sep)) {
+      return cb(new Error("Path inválido para upload"), UPLOAD_ROOT);
+    }
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = path
+      .extname(file.originalname)
+      .toLowerCase()
+      .replace(/[^.a-z0-9]/g, "")
+      .slice(0, 10);
     cb(null, `${randomUUID()}${ext}`);
   },
 });
