@@ -20,6 +20,11 @@ import {
   encryptJson,
 } from "../../utils/cryptoVault";
 import { cacheKeys, getOrCompute, invalidate } from "../../config/cache";
+// ─── Bounded contexts (migração incremental) ────────────────────
+// Sub-services migrados aparecem aqui; FinanceService delega via
+// facade. Ver src/modules/finance/domain/README.md.
+// MIGRADO: accounts (sprint 1).
+import { accountsService } from "./domain/accounts/accounts.service";
 
 /**
  * Lê o gatewayKey decifrando se houver versão Enc, senão fallback
@@ -125,60 +130,12 @@ export class FinanceService {
     });
   }
 
+  /**
+   * Delegação para AccountsService (sub-context migrado).
+   * Mantém assinatura idêntica para preservar callers atuais.
+   */
   async getAccountBalance(accountId: string, actor: FinanceActor) {
-    const account = await prisma.financialAccount.findUniqueOrThrow({
-      where: { id: accountId },
-    });
-    if (actor.role !== UserRole.SUPER_ADMIN) {
-      const membership = await prisma.condominiumUser.findFirst({
-        where: {
-          userId: actor.userId,
-          condominiumId: account.condominiumId,
-          isActive: true,
-        },
-      });
-      if (!membership) throw new ForbiddenError("Acesso negado a esta conta");
-    }
-
-    // Cache 30s + single-flight: aggregate é caro em conta com
-    // muitas transactions (PG agrega tudo); 30s é precisão
-    // aceitável para listagens financeiras (não é fluxo
-    // transacional). Invalidação automática em createTransaction.
-    const aggregates = await getOrCompute(
-      cacheKeys.accountBalance(accountId),
-      30,
-      async () => {
-        const [income, expense] = await prisma.$transaction([
-          prisma.financialTransaction.aggregate({
-            where: {
-              accountId,
-              type: FinancialTransactionType.INCOME,
-              paidAt: { not: null },
-            },
-            _sum: { amount: true },
-          }),
-          prisma.financialTransaction.aggregate({
-            where: {
-              accountId,
-              type: FinancialTransactionType.EXPENSE,
-              paidAt: { not: null },
-            },
-            _sum: { amount: true },
-          }),
-        ]);
-        return {
-          totalIncome: toNumber(income._sum.amount),
-          totalExpense: toNumber(expense._sum.amount),
-        };
-      },
-    );
-
-    return {
-      account,
-      balance: aggregates.totalIncome - aggregates.totalExpense,
-      totalIncome: aggregates.totalIncome,
-      totalExpense: aggregates.totalExpense,
-    };
+    return accountsService.getBalance(accountId, actor);
   }
 
   // ─── Cobranças ───────────────────────────────────────────────
