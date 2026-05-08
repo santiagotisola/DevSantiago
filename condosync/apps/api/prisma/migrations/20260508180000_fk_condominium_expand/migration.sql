@@ -75,33 +75,16 @@ ALTER TABLE "photos"
 CREATE INDEX IF NOT EXISTS "photos_condominiumId_idx"
     ON "photos"("condominiumId");
 
--- CondominiumContract
-ALTER TABLE "condominium_contracts"
-    ADD CONSTRAINT "condominium_contracts_condominiumId_fkey"
-    FOREIGN KEY ("condominiumId") REFERENCES "condominiums"("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE NOT VALID;
-CREATE INDEX IF NOT EXISTS "condominium_contracts_condominiumId_idx"
-    ON "condominium_contracts"("condominiumId");
-
--- Fine
-ALTER TABLE "fines"
-    ADD CONSTRAINT "fines_condominiumId_fkey"
-    FOREIGN KEY ("condominiumId") REFERENCES "condominiums"("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE NOT VALID;
--- Já existe índice composto (condominiumId, status, createdAt) — OK.
-
--- CollectionRule
-ALTER TABLE "collection_rules"
-    ADD CONSTRAINT "collection_rules_condominiumId_fkey"
-    FOREIGN KEY ("condominiumId") REFERENCES "condominiums"("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE NOT VALID;
-CREATE INDEX IF NOT EXISTS "collection_rules_condominiumId_isActive_idx"
-    ON "collection_rules"("condominiumId", "isActive");
-
--- DigitalSignageScreen
-ALTER TABLE "digital_signage_screens"
-    ADD CONSTRAINT "digital_signage_screens_condominiumId_fkey"
-    FOREIGN KEY ("condominiumId") REFERENCES "condominiums"("id")
-    ON DELETE RESTRICT ON UPDATE CASCADE NOT VALID;
-CREATE INDEX IF NOT EXISTS "digital_signage_screens_condominiumId_idx"
-    ON "digital_signage_screens"("condominiumId");
+-- TABELAS AINDA NAO CRIADAS EM PRODUCAO — FKs adiados ate que as
+-- features sejam efetivamente ativadas via migrations dedicadas que
+-- (1) criem a tabela; (2) adicionem a FK + indices.
+--
+-- Tabelas pendentes:
+--   - condominium_contracts (existe "contracts" em prod, sem prefix)
+--   - fines
+--   - collection_rules
+--   - digital_signage_screens
+--
+-- Quando ativar essas features, criar migration "create_<tabela>"
+-- que inclua a FK condominiumId. As linhas originais foram removidas
+-- desta migration para destravar deploy.
