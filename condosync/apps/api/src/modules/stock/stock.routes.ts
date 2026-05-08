@@ -6,7 +6,8 @@ import {
   authorize,
   authorizeCondominium,
 } from "../../middleware/auth";
-import { ForbiddenError } from "../../middleware/errorHandler";
+import { BadRequestError, ForbiddenError } from "../../middleware/errorHandler";
+import { Prisma } from "@prisma/client";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
 
@@ -134,41 +135,72 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
 router.post("/:id/movements", async (req: Request, res: Response) => {
   const { type, quantity, reason } = validateRequest(movementSchema, req.body);
-  const current = await ensureItemAccess(req, req.params.id);
+  await ensureItemAccess(req, req.params.id);
 
-  let newQuantity: number;
-  if (type === "IN") {
-    newQuantity = current.quantity + quantity;
-  } else if (type === "OUT") {
-    if (current.quantity < quantity) {
-      res.status(400).json({
-        success: false,
-        error: { message: "Quantidade insuficiente em estoque" },
+  // Atomicidade: usar increment/decrement no DB para evitar lost-update
+  // entre OUTs concorrentes. Antes era read→compute→write em
+  // transação, o que NÃO previne race com Read Committed (ambas
+  // transações leem 5, ambas escrevem 4).
+  // A constraint CHECK (quantity >= 0) no DB transforma estoque
+  // negativo em P2010/P2002 e abortamos a transação.
+  try {
+    const [movement, item] = await prisma.$transaction(async (tx) => {
+      let updated;
+      if (type === "IN") {
+        updated = await tx.stockItem.update({
+          where: { id: req.params.id },
+          data: { quantity: { increment: quantity } },
+        });
+      } else if (type === "OUT") {
+        updated = await tx.stockItem.update({
+          where: { id: req.params.id },
+          data: { quantity: { decrement: quantity } },
+        });
+      } else {
+        // ADJUSTMENT — set absoluto continua sem race risk pois é
+        // sobrescrita explícita; se duas chegarem juntas, a última
+        // vence (semântica esperada de ajuste).
+        updated = await tx.stockItem.update({
+          where: { id: req.params.id },
+          data: { quantity },
+        });
+      }
+
+      const mov = await tx.stockMovement.create({
+        data: {
+          itemId: req.params.id,
+          type: type as StockMovementType,
+          quantity,
+          reason,
+          performedBy: req.user!.userId,
+        },
       });
-      return;
+
+      return [mov, updated] as const;
+    });
+
+    res.status(201).json({ success: true, data: { movement, item } });
+  } catch (err) {
+    // Postgres viola CHECK constraint quando quantity ficaria < 0.
+    // Prisma traduz como P2010 ou P2034. Tratamos como erro de
+    // negócio (400), não 500.
+    const code = (err as { code?: string }).code;
+    const isCheckViolation =
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      (code === "P2010" || code === "P2034");
+    const isNumericRange =
+      err instanceof Prisma.PrismaClientKnownRequestError && code === "P2003";
+    const msg = String((err as Error).message ?? "");
+    if (
+      isCheckViolation ||
+      isNumericRange ||
+      msg.includes("stock_quantity_nonneg") ||
+      msg.includes("violates check constraint")
+    ) {
+      throw new BadRequestError("Quantidade insuficiente em estoque");
     }
-    newQuantity = current.quantity - quantity;
-  } else {
-    newQuantity = quantity;
+    throw err;
   }
-
-  const [movement, item] = await prisma.$transaction([
-    prisma.stockMovement.create({
-      data: {
-        itemId: req.params.id,
-        type: type as StockMovementType,
-        quantity,
-        reason,
-        performedBy: req.user!.userId,
-      },
-    }),
-    prisma.stockItem.update({
-      where: { id: req.params.id },
-      data: { quantity: newQuantity },
-    }),
-  ]);
-
-  res.status(201).json({ success: true, data: { movement, item } });
 });
 
 router.get("/:id/movements", async (req: Request, res: Response) => {
