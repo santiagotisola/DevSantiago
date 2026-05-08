@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
+import { webhookAsaasEvents } from '../../config/metrics';
 
 const router = Router();
 
@@ -89,10 +90,13 @@ router.post('/asaas', async (req: Request, res: Response) => {
         { externalId, event },
         'Webhook Asaas duplicado — ignorado idempotentemente',
       );
+      webhookAsaasEvents.labels(event, 'duplicate').inc();
       return res.status(200).send();
     }
+    webhookAsaasEvents.labels(event, 'error').inc();
     throw err;
   }
+  webhookAsaasEvents.labels(event, 'ok').inc();
 
   logger.info(
     { event, paymentId: payment.id, externalId },

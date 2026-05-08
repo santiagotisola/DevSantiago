@@ -4,6 +4,7 @@ import {
   renewLeaderLock,
   tryAcquireLeaderLock,
 } from "../config/redis";
+import { bullLeaderRenewals } from "../config/metrics";
 
 const log = logger.child({ module: "workers" });
 
@@ -98,13 +99,16 @@ export async function registerWorkers(): Promise<WorkerHandles> {
           TTL_SECONDS,
         );
         if (!renewed) {
+          bullLeaderRenewals.labels("lost").inc();
           log.error(
             { fingerprint },
             "Leader lock perdida — encerrando para re-eleição",
           );
           process.exit(1);
         }
+        bullLeaderRenewals.labels("ok").inc();
       } catch (err) {
+        bullLeaderRenewals.labels("error").inc();
         log.error({ err }, "Erro renovando leader lock — encerrando");
         process.exit(1);
       }
