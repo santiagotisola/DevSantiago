@@ -45,6 +45,11 @@ RUN if [ -f package-lock.json ]; then \
 # REGERAR Prisma Client apos o npm ci de prod (que apagou node_modules).
 # Sem isso: Cannot find module '.prisma/client/default' em runtime.
 RUN ./node_modules/.bin/prisma generate
+# REBUILD do bcrypt (binding nativo .node). Como npm ci usou
+# --ignore-scripts, o postinstall do bcrypt nao rodou e o binario
+# nao foi compilado. Build tools ja estao no estagio builder.
+# Sem isso: Cannot find module 'bcrypt_lib.node' em runtime.
+RUN npm rebuild bcrypt
 
 # ─── Stage 2: Production ──────────────────────────────────────────────────────
 FROM node:22-alpine AS production
