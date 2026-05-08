@@ -4,7 +4,7 @@
  * schedules due within the next 7 days.
  */
 import { Queue, Worker, Job } from "bullmq";
-import { redis } from "../../config/redis";
+import { bullConnection, redis } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { maintenanceService } from "./maintenance.service";
@@ -17,7 +17,7 @@ const QUEUE_NAME = "maintenance-alerts";
 
 // ── Queue ──────────────────────────────────────────────────────────
 export const maintenanceAlertsQueue = new Queue(QUEUE_NAME, {
-  connection: redis as any,
+  connection: bullConnection(),
   defaultJobOptions: {
     removeOnComplete: true,
     removeOnFail: 50,
@@ -129,7 +129,7 @@ export const maintenanceAlertsWorker = new Worker(
 
     log.info("Maintenance alerts dispatch complete");
   },
-  { connection: redis as any },
+  { connection: bullConnection() },
 );
 
 maintenanceAlertsWorker.on("failed", (job, err) => {

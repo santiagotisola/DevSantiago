@@ -4,7 +4,7 @@
  * régua de cobrança ativa deve disparar e enfileira notificações.
  */
 import { Queue, Worker, Job } from "bullmq";
-import { redis } from "../../config/redis";
+import { bullConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
@@ -14,7 +14,7 @@ const log = logger.child({ module: "collection.worker" });
 const QUEUE_NAME = "collection-rule";
 
 export const collectionQueue = new Queue(QUEUE_NAME, {
-  connection: redis as any,
+  connection: bullConnection(),
   defaultJobOptions: { removeOnComplete: true, removeOnFail: 100 },
 });
 
@@ -130,7 +130,7 @@ export const collectionWorker = new Worker(
       "Collection rules: notificações enviadas",
     );
   },
-  { connection: redis as any },
+  { connection: bullConnection() },
 );
 
 collectionWorker.on("failed", (job, err) =>

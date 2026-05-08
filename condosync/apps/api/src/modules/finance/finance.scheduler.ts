@@ -5,7 +5,7 @@
  *  - Daily: send 3-day payment reminder notifications
  */
 import { Queue, Worker } from "bullmq";
-import { redis } from "../../config/redis";
+import { bullConnection } from "../../config/redis";
 import { prisma } from "../../config/prisma";
 import { logger } from "../../config/logger";
 import { io } from "../../server";
@@ -16,7 +16,7 @@ const log = logger.child({ module: "finance.scheduler" });
 const QUEUE_NAME = "finance-scheduler";
 
 // ─── Queue ────────────────────────────────────────────────────
-export const financeQueue = new Queue(QUEUE_NAME, { connection: redis as any });
+export const financeQueue = new Queue(QUEUE_NAME, { connection: bullConnection() });
 
 // ─── Worker ───────────────────────────────────────────────────
 export const financeWorker = new Worker(
@@ -28,7 +28,7 @@ export const financeWorker = new Worker(
       await sendPaymentReminders();
     }
   },
-  { connection: redis as any },
+  { connection: bullConnection() },
 );
 
 financeWorker.on("completed", (job) => log.info(`Job ${job.name} completed`));

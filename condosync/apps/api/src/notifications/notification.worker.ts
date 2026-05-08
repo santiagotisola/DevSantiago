@@ -1,5 +1,5 @@
 import { Worker, Job } from 'bullmq';
-import { redis } from '../config/redis';
+import { bullConnection } from '../config/redis';
 import { logger } from '../config/logger';
 import { NotificationPayload } from './types';
 import { InAppChannel } from './channels/inapp.channel';
@@ -32,7 +32,14 @@ export const notificationWorker = new Worker<NotificationPayload>(
     
     log.info(`Notification job ${job.id} processed successfully`);
   },
-  { connection: redis as any }
+  {
+    connection: bullConnection(),
+    // Concurrency 20: notifications inapp/email são IO-bound, não
+    // têm afinidade por contenção interna (cada job processa um
+    // payload independente). Sem concurrency, default=1 → fila
+    // serializa em pico (5k cobranças → 1.4h com SMTP de 500ms).
+    concurrency: Number(process.env.NOTIFICATION_CONCURRENCY ?? 20),
+  },
 );
 
 notificationWorker.on('failed', (job, err) => {

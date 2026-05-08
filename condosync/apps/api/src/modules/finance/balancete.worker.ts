@@ -4,7 +4,7 @@
  * envia por email para todos os moradores e admins do condomínio.
  */
 import { Queue, Worker, Job } from "bullmq";
-import { redis } from "../../config/redis";
+import { bullConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
@@ -16,7 +16,7 @@ const log = logger.child({ module: "balancete.worker" });
 const QUEUE_NAME = "balancete";
 
 export const balanceteQueue = new Queue(QUEUE_NAME, {
-  connection: redis as any,
+  connection: bullConnection(),
   defaultJobOptions: { removeOnComplete: true, removeOnFail: 50 },
 });
 
@@ -154,7 +154,7 @@ export const balanceteWorker = new Worker(
       }
     }
   },
-  { connection: redis as any },
+  { connection: bullConnection() },
 );
 
 balanceteWorker.on("failed", (job, err) =>

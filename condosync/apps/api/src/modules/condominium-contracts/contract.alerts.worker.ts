@@ -4,7 +4,7 @@
  * e envia notificação in-app para CONDOMINIUM_ADMIN e SYNDIC.
  */
 import { Queue, Worker, Job } from "bullmq";
-import { redis } from "../../config/redis";
+import { bullConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
 import { NotificationService } from "../../notifications/notification.service";
@@ -14,7 +14,7 @@ const log = logger.child({ module: "contract.alerts.worker" });
 const QUEUE_NAME = "contract-alerts";
 
 export const contractAlertsQueue = new Queue(QUEUE_NAME, {
-  connection: redis as any,
+  connection: bullConnection(),
   defaultJobOptions: { removeOnComplete: true, removeOnFail: 50 },
 });
 
@@ -93,7 +93,7 @@ export const contractAlertsWorker = new Worker(
       data: { status: "EXPIRED" },
     });
   },
-  { connection: redis as any },
+  { connection: bullConnection() },
 );
 
 contractAlertsWorker.on("failed", (job, err) =>
