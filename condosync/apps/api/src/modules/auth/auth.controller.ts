@@ -3,10 +3,21 @@ import { authService } from './auth.service';
 import { validateRequest } from '../../utils/validateRequest';
 import { z } from 'zod';
 
+// Política única de senha — usada por register, reset, change e
+// pelo admin reset (/users/:id/reset-password).
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])/;
+const PASSWORD_MIN = 8;
+const PASSWORD_MSG =
+  "A senha deve ter no mínimo 8 caracteres, 1 maiúscula e 1 número";
+export const passwordSchema = z
+  .string()
+  .min(PASSWORD_MIN, PASSWORD_MSG)
+  .regex(PASSWORD_REGEX, PASSWORD_MSG);
+
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
-  password: z.string().min(8).regex(/^(?=.*[A-Z])(?=.*[0-9])/, 'A senha deve ter ao menos 1 maiúscula e 1 número'),
+  password: passwordSchema,
   phone: z.string().optional(),
   cpf: z.string().regex(/^\d{11}$/, 'CPF deve ter 11 dígitos').optional(),
 });
@@ -20,11 +31,11 @@ const refreshSchema = z.object({ refreshToken: z.string() });
 const emailSchema = z.object({ email: z.string().email() });
 const resetSchema = z.object({
   token: z.string(),
-  newPassword: z.string().min(8),
+  newPassword: passwordSchema,
 });
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: passwordSchema,
 });
 
 export class AuthController {

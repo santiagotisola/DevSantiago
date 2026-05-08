@@ -42,16 +42,22 @@ export class AuthService {
   }
 
   async register(data: RegisterDTO) {
+    // Mensagem genérica para evitar enumeração de email/CPF.
+    // Antes retornávamos "este e-mail já está cadastrado" / "este CPF
+    // já está cadastrado", o que permitia enumerar a base.
+    const ENUMERATION_SAFE_MSG =
+      "Não foi possível concluir o cadastro com os dados informados.";
+
     const existing = await prisma.user.findUnique({
       where: { email: data.email },
     });
-    if (existing) throw new ConflictError("Este e-mail já está cadastrado");
+    if (existing) throw new ConflictError(ENUMERATION_SAFE_MSG);
 
     if (data.cpf) {
       const cpfExists = await prisma.user.findUnique({
         where: { cpf: data.cpf },
       });
-      if (cpfExists) throw new ConflictError("Este CPF já está cadastrado");
+      if (cpfExists) throw new ConflictError(ENUMERATION_SAFE_MSG);
     }
 
     const passwordHash = await bcrypt.hash(
@@ -139,28 +145,91 @@ export class AuthService {
   }
 
   async refreshTokens(token: string) {
-    const stored = await prisma.refreshToken.findUnique({ where: { token } });
-    if (!stored || stored.expiresAt < new Date()) {
+    // Verificar JWT primeiro — se inválido/expirado, sai cedo sem
+    // tocar no DB.
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
+    } catch {
       throw new UnauthorizedError("Refresh token inválido ou expirado");
     }
 
-    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
-    const payload: JwtPayload = { userId: decoded.userId, role: decoded.role };
+    const stored = await prisma.refreshToken.findUnique({ where: { token } });
+
+    // Detecção de reuso: o JWT é válido (assinado pela nossa chave
+    // e não expirou), mas o registro foi removido — significa que
+    // alguém já rotacionou esse token. Se um atacante interceptou e
+    // usou primeiro, o legítimo cai aqui. Em qualquer caso, é seguro
+    // invalidar TODA a família de refresh tokens do usuário,
+    // forçando re-login em todos os dispositivos.
+    if (!stored) {
+      await prisma.refreshToken.deleteMany({
+        where: { userId: decoded.userId },
+      });
+      logger.warn(
+        { userId: decoded.userId },
+        "Refresh token reuso detectado — todas as sessões revogadas",
+      );
+      throw new UnauthorizedError("Refresh token inválido ou expirado");
+    }
+
+    if (stored.expiresAt < new Date()) {
+      throw new UnauthorizedError("Refresh token inválido ou expirado");
+    }
+
+    // Reler usuário do DB — role e isActive podem ter mudado desde
+    // a emissão do JWT. Antes propagávamos decoded.role, o que
+    // mantinha privilégios revogados.
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, role: true, name: true, isActive: true },
+    });
+    if (!user || !user.isActive) {
+      // Limpa também o refresh atual; não há motivo para mantê-lo.
+      await prisma.refreshToken.deleteMany({
+        where: { userId: decoded.userId },
+      });
+      throw new UnauthorizedError("Usuário inativo ou não encontrado");
+    }
+
+    const payload: JwtPayload = {
+      userId: user.id,
+      role: user.role,
+      name: user.name,
+    };
     const tokens = this.generateTokens(payload);
 
-    // Rotacionar refresh token
+    // Rotacionar refresh token (delete antigo, cria novo)
     await prisma.refreshToken.delete({ where: { token } });
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await prisma.refreshToken.create({
-      data: { token: tokens.refreshToken, userId: decoded.userId, expiresAt },
+      data: { token: tokens.refreshToken, userId: user.id, expiresAt },
     });
 
     return tokens;
   }
 
   async logout(refreshToken: string) {
-    await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
+    // Confirma que o refreshToken pertence ao próprio dono (verificando
+    // a assinatura do JWT) antes de deletar. Antes era deleteMany sem
+    // filtro de userId — um atacante que conhecesse o refreshToken
+    // de outro usuário podia deslogá-lo (DoS de sessão).
+    let userId: string | undefined;
+    try {
+      const decoded = jwt.verify(
+        refreshToken,
+        env.JWT_REFRESH_SECRET,
+      ) as JwtPayload;
+      userId = decoded.userId;
+    } catch {
+      // Token inválido/expirado — silenciosamente noop. Logout sempre
+      // responde 200 para não vazar se o token era válido.
+      return;
+    }
+    await prisma.refreshToken.deleteMany({
+      where: { token: refreshToken, userId },
+    });
   }
 
   async requestPasswordReset(email: string) {

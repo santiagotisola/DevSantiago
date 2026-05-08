@@ -3,6 +3,8 @@ import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError } from "../../middleware/errorHandler";
+import { passwordSchema } from "../auth/auth.controller";
+import { env } from "../../config/env";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -111,7 +113,9 @@ router.patch(
   authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN"),
   async (req: Request, res: Response) => {
     const actor = req.user!;
-    const schema = z.object({ newPassword: z.string().min(6) });
+    // Mesma política de senha do register (8+, 1 maiúscula, 1 número).
+    // Antes era min(6), permitindo "abc123" para qualquer morador.
+    const schema = z.object({ newPassword: passwordSchema });
     const { newPassword } = validateRequest(schema, req.body);
 
     const target = await prisma.user.findUniqueOrThrow({
@@ -142,9 +146,18 @@ router.patch(
         throw new ForbiddenError("Usuário não pertence ao seu condomínio");
     }
 
-    const rounds = Number(process.env.BCRYPT_ROUNDS) || 12;
+    const rounds = Number(env.BCRYPT_ROUNDS) || 12;
     const passwordHash = await bcrypt.hash(newPassword, rounds);
-    await prisma.user.update({ where: { id: req.params.id }, data: { passwordHash } });
+    // Reset administrativo invalida sessões da vítima — antes elas
+    // permaneciam válidas e o usuário continuava logado com a senha
+    // antiga até o access token expirar.
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: req.params.id },
+        data: { passwordHash },
+      }),
+      prisma.refreshToken.deleteMany({ where: { userId: req.params.id } }),
+    ]);
     res.json({ success: true, message: "Senha redefinida com sucesso" });
   },
 );
