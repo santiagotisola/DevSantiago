@@ -610,8 +610,14 @@ model FinancialAccount {
   
   // Gateway config
   gatewayType   GatewayType @default(NONE)
-  gatewayKey    String?     // API Key or Token
-  gatewayConfig Json?       // walletId, common settings, etc.
+  // Plaintext legado — ainda lido durante a fase EXPAND da migração
+  // de criptografia. Será DROPado em CONTRACT (Sprint seguinte).
+  gatewayKey    String?     // API Key or Token (LEGADO PLAINTEXT)
+  gatewayConfig Json?       // walletId, common settings (LEGADO PLAINTEXT)
+  // Cifrados via cryptoVault (AES-256-GCM, formato v1.iv.tag.ct).
+  // Source-of-truth a partir do CONTRACT.
+  gatewayKeyEnc    String?
+  gatewayConfigEnc String?
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

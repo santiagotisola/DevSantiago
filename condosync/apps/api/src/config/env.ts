@@ -39,6 +39,12 @@ const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     // Sentry — monitoramento de erros em produção
     SENTRY_DSN: z.string().optional(),
+    // Encryption — chave-mestre (base64, 32 bytes) usada para cifrar
+    // campos sensíveis no DB (gatewayKey, gatewayConfig, etc).
+    // Gerar com: openssl rand -base64 32
+    APP_ENCRYPTION_KEY: z.string().optional(),
+    // Chave anterior — usada apenas em rotação (decrypt fallback).
+    APP_ENCRYPTION_KEY_PREVIOUS: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (isInsecureSecret(data.JWT_SECRET)) {

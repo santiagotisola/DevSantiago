@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:prod": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
+    "encrypt:gateway-keys": "ts-node prisma/encrypt-gateway-keys.ts",
     "db:studio": "prisma studio",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",

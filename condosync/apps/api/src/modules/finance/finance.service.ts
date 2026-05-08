@@ -13,6 +13,45 @@ import {
 import { toNumber, roundMoney } from "../../utils/decimal";
 import { GatewayFactory } from "../../services/gateway";
 import { logger } from "../../config/logger";
+import {
+  decrypt,
+  decryptJson,
+  encrypt,
+  encryptJson,
+} from "../../utils/cryptoVault";
+
+/**
+ * Lê o gatewayKey decifrando se houver versão Enc, senão fallback
+ * para o plaintext legado durante a fase EXPAND da migração.
+ * Após CONTRACT, a coluna plaintext desaparece.
+ */
+function readGatewayKey(account: {
+  gatewayKey: string | null;
+  gatewayKeyEnc: string | null;
+}): string | null {
+  if (account.gatewayKeyEnc) {
+    try {
+      return decrypt(account.gatewayKeyEnc);
+    } catch (err) {
+      logger.error("Falha ao decifrar gatewayKeyEnc — usando fallback", err);
+    }
+  }
+  return account.gatewayKey;
+}
+
+function readGatewayConfig(account: {
+  gatewayConfig: unknown;
+  gatewayConfigEnc: string | null;
+}): unknown {
+  if (account.gatewayConfigEnc) {
+    try {
+      return decryptJson(account.gatewayConfigEnc);
+    } catch (err) {
+      logger.error("Falha ao decifrar gatewayConfigEnc — fallback", err);
+    }
+  }
+  return account.gatewayConfig;
+}
 import { subMonths, startOfMonth, format } from "date-fns";
 import { NotificationService } from "../../notifications/notification.service";
 
@@ -285,15 +324,16 @@ export class FinanceService {
       },
     });
 
-    if (!charge || !charge.account.gatewayKey || charge.gatewayId) return;
+    const apiKey = readGatewayKey(charge?.account ?? { gatewayKey: null, gatewayKeyEnc: null });
+    if (!charge || !apiKey || charge.gatewayId) return;
 
     const gateway = GatewayFactory.getService(charge.account.gatewayType);
     if (!gateway) return;
 
     try {
       const response = await gateway.createPayment(charge, {
-        apiKey: charge.account.gatewayKey,
-        config: charge.account.gatewayConfig,
+        apiKey,
+        config: readGatewayConfig(charge.account),
       });
 
       return prisma.charge.update({
@@ -336,15 +376,16 @@ export class FinanceService {
     if (!charge) throw new AppError("Cobrança não encontrada", 404);
     if (charge.status !== "PENDING")
       throw new AppError("Apenas cobranças pendentes podem ser sincronizadas");
-    if (!charge.account.gatewayKey)
+    const apiKey = readGatewayKey(charge.account);
+    if (!apiKey)
       throw new AppError("Conta financeira não possui gateway configurado");
 
     const gateway = GatewayFactory.getService(charge.account.gatewayType);
     if (!gateway) throw new AppError("Gateway não suportado");
 
     const response = await gateway.createPayment(charge, {
-      apiKey: charge.account.gatewayKey,
-      config: charge.account.gatewayConfig,
+      apiKey,
+      config: readGatewayConfig(charge.account),
     });
     return prisma.charge.update({
       where: { id: chargeId },
@@ -364,12 +405,20 @@ export class FinanceService {
     accountId: string,
     config: { gatewayType: string; gatewayKey: string; gatewayConfig?: any },
   ) {
+    // Dual-write: durante EXPAND, escrevemos a versão cifrada
+    // (Enc) E zeramos o plaintext legado para reduzir janela de
+    // exposição. Quem ainda precisar ler durante a transição usa
+    // readGatewayKey() que faz fallback transparente.
     return prisma.financialAccount.update({
       where: { id: accountId },
       data: {
-        gatewayType: config.gatewayType as any,
-        gatewayKey: config.gatewayKey,
-        gatewayConfig: config.gatewayConfig ?? undefined,
+        gatewayType: config.gatewayType as GatewayType,
+        gatewayKey: null,
+        gatewayKeyEnc: encrypt(config.gatewayKey),
+        gatewayConfig: undefined,
+        gatewayConfigEnc: config.gatewayConfig
+          ? encryptJson(config.gatewayConfig)
+          : null,
       },
       select: { id: true, name: true, gatewayType: true },
     });
