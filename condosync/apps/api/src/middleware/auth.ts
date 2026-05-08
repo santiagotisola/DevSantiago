@@ -2,7 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { prisma } from "../config/prisma";
-import { UnauthorizedError, ForbiddenError, BadRequestError } from "./errorHandler";
+import {
+  UnauthorizedError,
+  ForbiddenError,
+  BadRequestError,
+  NotFoundError,
+} from "./errorHandler";
 import { UserRole } from "@prisma/client";
 
 export interface JwtPayload {
@@ -135,3 +140,134 @@ export const authorizeCondominium = async (
 
   next();
 };
+
+// ─── requireResourceMembership ────────────────────────────────
+//
+// Middleware reutilizável que carrega um recurso pelo `:id` da URL,
+// extrai o `condominiumId` dele, e valida que o ator pertence
+// ativamente a esse condomínio (ou é SUPER_ADMIN).
+//
+// Mata a classe inteira de IDORs em rotas que faziam
+// `findUniqueOrThrow({ where: { id }})` sem comparar tenant — atacante
+// SYNDIC do condo A passava UUID de recurso do condo B e o handler
+// não percebia.
+//
+// Suporte a recursos onde `condominiumId` está em campo aninhado
+// (ex: Charge.unit.condominiumId) via `condominiumIdResolver`.
+//
+// Uso:
+//   router.patch('/:id',
+//     authorize(...STAFF_ROLES),
+//     requireResourceMembership('ticket'),
+//     handler,
+//   );
+//
+//   router.delete('/:id',
+//     requireResourceMembership('charge', {
+//       include: { unit: { select: { condominiumId: true }}},
+//       resolveCondominiumId: r => r.unit.condominiumId,
+//     }),
+//     handler,
+//   );
+
+type PrismaModelKey = Exclude<
+  keyof typeof prisma,
+  | "$connect"
+  | "$disconnect"
+  | "$on"
+  | "$transaction"
+  | "$use"
+  | "$extends"
+  | "$queryRaw"
+  | "$queryRawUnsafe"
+  | "$executeRaw"
+  | "$executeRawUnsafe"
+  | symbol
+>;
+
+interface ResourceMembershipOptions {
+  paramName?: string;
+  /** include adicional para resolver condominiumId aninhado */
+  include?: Record<string, unknown>;
+  /** resolver custom; default é record.condominiumId */
+  resolveCondominiumId?: (record: Record<string, unknown>) => string | null | undefined;
+  /** label para mensagem de erro */
+  resourceLabel?: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      /** Recurso carregado por requireResourceMembership */
+      resource?: Record<string, unknown>;
+    }
+  }
+}
+
+export function requireResourceMembership(
+  model: PrismaModelKey,
+  options: ResourceMembershipOptions = {},
+) {
+  const paramName = options.paramName ?? "id";
+  const resolveCondominiumId =
+    options.resolveCondominiumId ??
+    ((r: Record<string, unknown>) => r.condominiumId as string | undefined);
+  const label = options.resourceLabel ?? String(model);
+
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) throw new UnauthorizedError();
+
+    const id = req.params[paramName];
+    if (!id) {
+      throw new BadRequestError(`${paramName} é obrigatório nesta rota`);
+    }
+
+    const delegate = (prisma as unknown as Record<string, {
+      findUnique(args: unknown): Promise<Record<string, unknown> | null>;
+    }>)[model as string];
+    if (!delegate || typeof delegate.findUnique !== "function") {
+      throw new Error(
+        `requireResourceMembership: model '${String(model)}' inválido`,
+      );
+    }
+
+    const record = await delegate.findUnique({
+      where: { id },
+      ...(options.include ? { include: options.include } : {}),
+    });
+    if (!record) throw new NotFoundError(label, id);
+
+    // SUPER_ADMIN bypass — segue passando recurso para o handler.
+    if (req.user.role === UserRole.SUPER_ADMIN) {
+      req.resource = record;
+      return next();
+    }
+
+    const targetCondoId = resolveCondominiumId(record);
+    if (!targetCondoId) {
+      // Recurso sem condominiumId resolvível — não há como provar
+      // pertença. Falha fechada por segurança.
+      throw new ForbiddenError(
+        `Não foi possível resolver condominiumId para ${label}`,
+      );
+    }
+
+    const membership = await prisma.condominiumUser.findFirst({
+      where: {
+        userId: req.user.userId,
+        condominiumId: targetCondoId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!membership) {
+      // 404 em vez de 403 para não vazar a existência do recurso
+      // de outro condomínio. Atacante recebe a mesma resposta de
+      // "id não existe".
+      throw new NotFoundError(label, id);
+    }
+
+    req.resource = record;
+    next();
+  };
+}
