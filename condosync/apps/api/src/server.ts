@@ -6,15 +6,18 @@ import * as Sentry from '@sentry/node';
 if (process.env.SENTRY_DSN) {
   const SENSITIVE_KEYS = new Set([
     'password',
-    'passwordHash',
-    'currentPassword',
-    'newPassword',
+    'passwordhash',
+    'currentpassword',
+    'newpassword',
     'token',
-    'refreshToken',
-    'accessToken',
+    'refreshtoken',
+    'accesstoken',
     'authorization',
     'cookie',
     'cpf',
+    'phone',
+    'gatewaykey',
+    'gatewayconfig',
     'asaas-access-token',
   ]);
   const scrubObject = (obj: unknown): unknown => {
@@ -48,9 +51,9 @@ if (process.env.SENTRY_DSN) {
         if (event.request.data) {
           event.request.data = scrubObject(event.request.data);
         }
-        if (event.request.cookies) {
-          event.request.cookies = '[REDACTED]' as unknown as never;
-        }
+        // delete em vez de cast `as never`: tipo-seguro e equivalente
+        // em proteção (Sentry não envia campo ausente).
+        delete event.request.cookies;
       }
       if (event.extra) {
         event.extra = scrubObject(event.extra) as Record<string, unknown>;
@@ -279,7 +282,12 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: "10mb" }));
+// Body limit default conservador (1MB). Antes era 10MB global, o
+// que permitia DoS-amplification em /auth/login etc. Endpoints
+// que aceitam payloads maiores (assembleias com opções extensas,
+// imports) devem aplicar express.json({ limit: '10mb' })
+// explicitamente como middleware da rota.
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(
   morgan("combined", {

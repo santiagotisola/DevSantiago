@@ -1,5 +1,10 @@
 "use strict";
 // seed-units-70.js — Cria 70 unidades (Casa 01 a Casa 70) no condomínio principal
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+  console.error("❌ seed-units-70.js bloqueado em NODE_ENV=production");
+  process.exit(1);
+}
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 

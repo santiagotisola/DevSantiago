@@ -1,6 +1,11 @@
 "use strict";
 // seed-units-blocos.js
 // Cria/atualiza Casa 14-40 (Rua 2) e Casa 41-70 (Rua 1) no condomínio principal
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+  console.error("❌ seed-units-blocos.js bloqueado em NODE_ENV=production");
+  process.exit(1);
+}
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 

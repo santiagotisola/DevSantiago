@@ -4,6 +4,13 @@
 // Adiciona visitantes, encomendas, ordens de serviço, cobranças,
 // reservas de área comum, ocorrências, comunicados e enquetes.
 
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+  console.error(
+    "❌ seed-demo.js bloqueado em NODE_ENV=production (defina ALLOW_DEMO_SEED=yes para forçar)",
+  );
+  process.exit(1);
+}
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 

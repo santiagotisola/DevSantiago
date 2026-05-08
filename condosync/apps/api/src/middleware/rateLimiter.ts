@@ -1,6 +1,17 @@
 import rateLimit from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
+import crypto from 'node:crypto';
 import { redis } from '../config/redis';
+
+// Hash curto e estável do email — evita armazenar PII em chaves
+// Redis (que aparecem em MONITOR, replicação, backups, métricas).
+function hashEmail(email: string): string {
+  return crypto
+    .createHash('sha256')
+    .update(email.trim().toLowerCase())
+    .digest('hex')
+    .slice(0, 16);
+}
 
 const redisStore = new RedisStore({
   // ioredis não expõe `.call()` diretamente — usa sendCommand wrapper
@@ -61,8 +72,8 @@ export const forgotPasswordRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    const email = String(req.body?.email ?? '').toLowerCase();
-    return `${email}:${req.ip ?? ''}`;
+    const email = String(req.body?.email ?? '');
+    return `${hashEmail(email)}:${req.ip ?? ''}`;
   },
   store: new RedisStore({
     sendCommand: (...args: string[]) => (redis as any).call(...args),

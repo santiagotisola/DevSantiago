@@ -1,4 +1,9 @@
 "use strict";
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "yes") {
+  console.error("❌ seed-pets.js bloqueado em NODE_ENV=production");
+  process.exit(1);
+}
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
