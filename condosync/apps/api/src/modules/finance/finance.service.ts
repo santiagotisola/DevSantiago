@@ -23,9 +23,11 @@ import { cacheKeys, getOrCompute, invalidate } from "../../config/cache";
 // ─── Bounded contexts (migração incremental) ────────────────────
 // Sub-services migrados aparecem aqui; FinanceService delega via
 // facade. Ver src/modules/finance/domain/README.md.
-// MIGRADO: accounts (sprint 1), transactions (sprint 2).
+// MIGRADO: accounts (sprint 1), transactions (sprint 2),
+//          charges parcial (sprint 3 — list/getById/markAsPaid/cancel).
 import { accountsService } from "./domain/accounts/accounts.service";
 import { transactionsService } from "./domain/transactions/transactions.service";
+import { chargesService } from "./domain/charges/charges.service";
 
 /**
  * Lê o gatewayKey decifrando se houver versão Enc, senão fallback
@@ -150,33 +152,13 @@ export class FinanceService {
       limit?: number;
     },
   ) {
-    const { page = 1, limit = 20, ...where } = filters;
-
-    const [charges, total] = await prisma.$transaction([
-      prisma.charge.findMany({
-        where: {
-          unit: { condominiumId },
-          ...(where.unitId && { unitId: where.unitId }),
-          ...(where.status && { status: where.status }),
-          ...(where.referenceMonth && { referenceMonth: where.referenceMonth }),
-        },
-        include: {
-          unit: { select: { identifier: true, block: true } },
-          category: { select: { name: true } },
-        },
-        orderBy: [{ dueDate: "asc" }, { status: "asc" }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.charge.count({ where: { unit: { condominiumId } } }),
-    ]);
-
+    const result = await chargesService.list(condominiumId, filters);
     return {
-      charges,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      charges: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
     };
   }
 
@@ -328,15 +310,7 @@ export class FinanceService {
   }
 
   async getChargeById(chargeId: string) {
-    return prisma.charge.findUnique({
-      where: { id: chargeId },
-      include: {
-        unit: {
-          select: { identifier: true, block: true, condominiumId: true },
-        },
-        category: { select: { name: true } },
-      },
-    });
+    return chargesService.getById(chargeId);
   }
 
   async forceSyncWithGateway(chargeId: string) {
