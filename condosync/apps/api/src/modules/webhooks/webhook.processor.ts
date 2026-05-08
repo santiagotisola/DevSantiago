@@ -26,6 +26,7 @@ import { bullConnection } from "../../config/redis";
 import { prisma } from "../../config/prisma";
 import { logger } from "../../config/logger";
 import { webhookAsaasEvents } from "../../config/metrics";
+import { cacheKeys, invalidate } from "../../config/cache";
 
 const log = logger.child({ module: "webhook.processor" });
 const QUEUE_NAME = "webhook-processor";
@@ -158,6 +159,9 @@ async function processAsaasPayment(eventId: string) {
       ]);
       log.info({ chargeId: charge.id, eventId }, "Pagamento processado (outbox)");
       webhookAsaasEvents.labels(event, "processed").inc();
+      // Invalida cache do balance — webhook acabou de criar uma
+      // INCOME, listagem subsequente deve refletir.
+      await invalidate(cacheKeys.accountBalance(charge.accountId)).catch(() => {});
     } catch (err) {
       // P2002 no UNIQUE parcial fin_tx_charge_income significa que
       // outro processamento (race entre duas réplicas BullMQ) já

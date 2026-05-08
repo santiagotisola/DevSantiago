@@ -19,6 +19,7 @@ import {
   encrypt,
   encryptJson,
 } from "../../utils/cryptoVault";
+import { cacheKeys, getOrCompute, invalidate } from "../../config/cache";
 
 /**
  * Lê o gatewayKey decifrando se houver versão Enc, senão fallback
@@ -139,32 +140,44 @@ export class FinanceService {
       if (!membership) throw new ForbiddenError("Acesso negado a esta conta");
     }
 
-    const [income, expense] = await prisma.$transaction([
-      prisma.financialTransaction.aggregate({
-        where: {
-          accountId,
-          type: FinancialTransactionType.INCOME,
-          paidAt: { not: null },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.financialTransaction.aggregate({
-        where: {
-          accountId,
-          type: FinancialTransactionType.EXPENSE,
-          paidAt: { not: null },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
+    // Cache 30s + single-flight: aggregate é caro em conta com
+    // muitas transactions (PG agrega tudo); 30s é precisão
+    // aceitável para listagens financeiras (não é fluxo
+    // transacional). Invalidação automática em createTransaction.
+    const aggregates = await getOrCompute(
+      cacheKeys.accountBalance(accountId),
+      30,
+      async () => {
+        const [income, expense] = await prisma.$transaction([
+          prisma.financialTransaction.aggregate({
+            where: {
+              accountId,
+              type: FinancialTransactionType.INCOME,
+              paidAt: { not: null },
+            },
+            _sum: { amount: true },
+          }),
+          prisma.financialTransaction.aggregate({
+            where: {
+              accountId,
+              type: FinancialTransactionType.EXPENSE,
+              paidAt: { not: null },
+            },
+            _sum: { amount: true },
+          }),
+        ]);
+        return {
+          totalIncome: toNumber(income._sum.amount),
+          totalExpense: toNumber(expense._sum.amount),
+        };
+      },
+    );
 
-    const balance =
-      toNumber(income._sum.amount) - toNumber(expense._sum.amount);
     return {
       account,
-      balance,
-      totalIncome: toNumber(income._sum.amount),
-      totalExpense: toNumber(expense._sum.amount),
+      balance: aggregates.totalIncome - aggregates.totalExpense,
+      totalIncome: aggregates.totalIncome,
+      totalExpense: aggregates.totalExpense,
     };
   }
 
@@ -495,7 +508,13 @@ export class FinanceService {
   }
 
   async createTransaction(data: CreateTransactionDTO, createdBy: string) {
-    return prisma.financialTransaction.create({ data: { ...data, createdBy } });
+    const tx = await prisma.financialTransaction.create({
+      data: { ...data, createdBy },
+    });
+    // Invalida cache do balance da account afetada — leitura
+    // imediata pós-write entrega valor correto sem esperar TTL.
+    await invalidate(cacheKeys.accountBalance(data.accountId)).catch(() => {});
+    return tx;
   }
 
   // ─── Relatórios ──────────────────────────────────────────────
