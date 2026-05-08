@@ -91,6 +91,28 @@ jobs:
           flags: api
           fail_ci_if_error: false
 
+  # ─── Lint Web (eslint + jsx-a11y) ────────────────────────────────────────────
+  lint-web:
+    name: Lint (Web + a11y)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: condosync/apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: condosync/package-lock.json
+      - name: Instalar
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: ESLint (jsx-a11y/recommended)
+        # Hoje warn-only (--max-warnings é alto); rebaixar
+        # para 0 quando as páginas god forem refatoradas.
+        run: npx eslint src --ext ts,tsx --max-warnings 9999 || echo "⚠️  Lint warnings"
+
   # ─── Lint API ────────────────────────────────────────────────────────────────
   lint-api:
     name: Lint (API)
