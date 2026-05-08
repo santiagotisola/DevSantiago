@@ -1,76 +1,171 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'node:crypto';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';
-import { ChargeStatus, FinancialTransactionType } from '@prisma/client';
 import { logger } from '../../config/logger';
 
 const router = Router();
 
-// Endpoint: /api/v1/webhooks/asaas
+// Eventos que processamos. Outros eventos são apenas registrados
+// como WebhookEvent para auditoria e respondidos com 200.
+const PAYMENT_RECEIVED_EVENTS = new Set([
+  'PAYMENT_RECEIVED',
+  'PAYMENT_CONFIRMED',
+]);
+
+const AsaasWebhookSchema = z.object({
+  // Asaas envia "id" no nível raiz a partir da v3 do webhook
+  // (event id do próprio gateway). Mantemos optional + fallback
+  // para compor a chave de idempotência.
+  id: z.string().min(1).optional(),
+  event: z.string().min(1),
+  payment: z
+    .object({
+      id: z.string().min(1),
+      value: z.coerce.number().finite().nonnegative(),
+      status: z.string().optional(),
+      confirmedDate: z.string().optional(),
+      clientPaymentDate: z.string().optional(),
+    })
+    .passthrough(),
+});
+
+type AsaasWebhookPayload = z.infer<typeof AsaasWebhookSchema>;
+
+const compareTokens = (a: string, b: string): boolean => {
+  // timingSafeEqual exige buffers de mesmo tamanho.
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+};
+
 router.post('/asaas', async (req: Request, res: Response) => {
-  // Validar token do webhook (segurança contra requisições forjadas)
-  if (env.ASAAS_WEBHOOK_TOKEN) {
-    const incomingToken = req.headers['asaas-access-token'] as string;
-    if (incomingToken !== env.ASAAS_WEBHOOK_TOKEN) {
-      logger.warn('Webhook Asaas rejeitado — token inválido');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+  // 1. Auth: token obrigatório, sempre. Sem token configurado = 503.
+  const expected = env.ASAAS_WEBHOOK_TOKEN;
+  if (!expected) {
+    logger.error(
+      'Webhook Asaas chamado mas ASAAS_WEBHOOK_TOKEN não está configurado',
+    );
+    return res.status(503).json({ error: 'Webhook indisponível' });
   }
 
-  const { event, payment } = req.body;
+  const incoming = String(req.headers['asaas-access-token'] ?? '');
+  if (!incoming || !compareTokens(incoming, expected)) {
+    logger.warn('Webhook Asaas rejeitado — token inválido');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-  logger.info(`Webhook Asaas recebido: ${event} para pagamento ${payment.id}`);
+  // 2. Validação do payload — qualquer corpo malformado é 400.
+  let body: AsaasWebhookPayload;
+  try {
+    body = AsaasWebhookSchema.parse(req.body);
+  } catch (err) {
+    logger.warn({ err }, 'Webhook Asaas com payload inválido');
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
 
-  // 1. Verificar se o evento é de pagamento confirmado ou recebido
-  if (['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'].includes(event)) {
+  const { event, payment } = body;
+  // Chave de idempotência: usa o id do evento se houver,
+  // senão compõe (event + paymentId).
+  const externalId = body.id ?? `${event}:${payment.id}`;
+
+  // 3. Idempotência: tentamos gravar o evento. Se duplicado, 200 sem efeito.
+  try {
+    await prisma.webhookEvent.create({
+      data: {
+        provider: 'asaas',
+        externalId,
+        eventType: event,
+        payload: req.body as Prisma.InputJsonValue,
+      },
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === 'P2002'
+    ) {
+      logger.info(
+        { externalId, event },
+        'Webhook Asaas duplicado — ignorado idempotentemente',
+      );
+      return res.status(200).send();
+    }
+    throw err;
+  }
+
+  logger.info(
+    { event, paymentId: payment.id, externalId },
+    'Webhook Asaas recebido',
+  );
+
+  // 4. Processamento por tipo de evento.
+  if (PAYMENT_RECEIVED_EVENTS.has(event)) {
     const charge = await prisma.charge.findFirst({
       where: { gatewayId: payment.id },
       include: { account: true },
     });
 
     if (!charge) {
-      logger.warn(`Cobrança não encontrada para gatewayId: ${payment.id}`);
-      return res.status(200).send(); // Responder 200 para o Asaas não reenviar
+      logger.warn(
+        { gatewayId: payment.id },
+        'Cobrança não encontrada para gatewayId',
+      );
+      return res.status(200).send();
     }
 
     if (charge.status === 'PAID') {
       return res.status(200).send();
     }
 
-    // 2. Atualizar status da cobrança e criar transação financeira
-    await prisma.$transaction([
-      // Atualizar cobrança
-      prisma.charge.update({
-        where: { id: charge.id },
-        data: {
-          status: 'PAID',
-          paidAt: new Date(payment.confirmedDate || payment.clientPaymentDate || new Date()),
-          paidAmount: payment.value,
-          gatewayStatus: payment.status,
-        },
-      }),
-      // Criar transação de crédito na conta
-      prisma.financialTransaction.create({
-        data: {
-          accountId: charge.accountId,
-          categoryId: charge.categoryId,
-          type: 'INCOME',
-          amount: payment.value,
-          description: `Recebimento: ${charge.description} (Unidade ${charge.unitId})`,
-          dueDate: charge.dueDate,
-          paidAt: new Date(),
-          referenceMonth: charge.referenceMonth,
-          chargeId: charge.id,
-          createdBy: 'SYSTEM_WEBHOOK',
-        },
-      }),
-    ]);
-
-    logger.info(`Pagamento processado com sucesso: ${charge.id}`);
-  }
-
-  // 3. Tratar outros eventos (vencimento, cancelamento, etc) opcionalmente
-  if (event === 'PAYMENT_OVERDUE') {
+    try {
+      await prisma.$transaction([
+        prisma.charge.update({
+          where: { id: charge.id },
+          data: {
+            status: 'PAID',
+            paidAt: new Date(
+              payment.confirmedDate ||
+                payment.clientPaymentDate ||
+                new Date(),
+            ),
+            paidAmount: payment.value,
+            gatewayStatus: payment.status ?? null,
+          },
+        }),
+        prisma.financialTransaction.create({
+          data: {
+            accountId: charge.accountId,
+            categoryId: charge.categoryId,
+            type: 'INCOME',
+            amount: payment.value,
+            description: `Recebimento: ${charge.description} (Unidade ${charge.unitId})`,
+            dueDate: charge.dueDate,
+            paidAt: new Date(),
+            referenceMonth: charge.referenceMonth,
+            chargeId: charge.id,
+            createdBy: 'SYSTEM_WEBHOOK',
+          },
+        }),
+      ]);
+      logger.info({ chargeId: charge.id }, 'Pagamento processado');
+    } catch (err) {
+      // P2002 no índice único parcial fin_tx_charge_income_unique
+      // significa que outra réplica já processou o mesmo charge —
+      // aceitamos como sucesso silencioso.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        logger.info(
+          { chargeId: charge.id },
+          'Transação INCOME já existe para este charge — duplicado',
+        );
+        return res.status(200).send();
+      }
+      throw err;
+    }
+  } else if (event === 'PAYMENT_OVERDUE') {
     await prisma.charge.updateMany({
       where: { gatewayId: payment.id },
       data: { status: 'OVERDUE', gatewayStatus: 'OVERDUE' },

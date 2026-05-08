@@ -655,6 +655,22 @@ model FinancialTransaction {
   @@map("financial_transactions")
 }
 
+// Idempotência de webhooks externos. Cada (provider, externalId)
+// é processado uma única vez. Garante que retry/duplicação do
+// gateway não cause dupla cobrança ou dupla transação financeira.
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  provider    String   // "asaas", "pjbank", etc.
+  externalId  String   // event id do provider, ou paymentId+eventType
+  eventType   String
+  payload     Json
+  receivedAt  DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([provider, receivedAt])
+  @@map("webhook_events")
+}
+
 model Charge {
   id            String            @id @default(uuid())
   unit          Unit              @relation(fields: [unitId], references: [id])
