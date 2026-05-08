@@ -23,8 +23,9 @@ import { cacheKeys, getOrCompute, invalidate } from "../../config/cache";
 // ─── Bounded contexts (migração incremental) ────────────────────
 // Sub-services migrados aparecem aqui; FinanceService delega via
 // facade. Ver src/modules/finance/domain/README.md.
-// MIGRADO: accounts (sprint 1).
+// MIGRADO: accounts (sprint 1), transactions (sprint 2).
 import { accountsService } from "./domain/accounts/accounts.service";
+import { transactionsService } from "./domain/transactions/transactions.service";
 
 /**
  * Lê o gatewayKey decifrando se houver versão Enc, senão fallback
@@ -420,6 +421,7 @@ export class FinanceService {
   }
 
   // ─── Transações ──────────────────────────────────────────────
+  // Delegação para TransactionsService (sub-context migrado).
   async listTransactions(
     accountId: string,
     actor: FinanceActor,
@@ -430,48 +432,24 @@ export class FinanceService {
       limit?: number;
     },
   ) {
-    const account = await prisma.financialAccount.findUniqueOrThrow({
-      where: { id: accountId },
-      select: { condominiumId: true },
-    });
-    if (actor.role !== UserRole.SUPER_ADMIN) {
-      const membership = await prisma.condominiumUser.findFirst({
-        where: {
-          userId: actor.userId,
-          condominiumId: account.condominiumId,
-          isActive: true,
-        },
-      });
-      if (!membership) throw new ForbiddenError("Acesso negado a esta conta");
-    }
-    const { page = 1, limit = 20, ...where } = filters;
-
-    const [transactions, total] = await prisma.$transaction([
-      prisma.financialTransaction.findMany({
-        where: {
-          accountId,
-          ...(where.type && { type: where.type }),
-          ...(where.referenceMonth && { referenceMonth: where.referenceMonth }),
-        },
-        include: { category: { select: { name: true } } },
-        orderBy: { dueDate: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.financialTransaction.count({ where: { accountId } }),
-    ]);
-
-    return { transactions, total, page, limit };
+    const result = await transactionsService.listByAccount(
+      accountId,
+      actor,
+      filters,
+    );
+    // Manter shape antigo (transactions array em vez de items) para
+    // não quebrar callers atuais. Quando TODOS migrarem para usar
+    // transactionsService direto, remover este wrapper.
+    return {
+      transactions: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    };
   }
 
   async createTransaction(data: CreateTransactionDTO, createdBy: string) {
-    const tx = await prisma.financialTransaction.create({
-      data: { ...data, createdBy },
-    });
-    // Invalida cache do balance da account afetada — leitura
-    // imediata pós-write entrega valor correto sem esperar TTL.
-    await invalidate(cacheKeys.accountBalance(data.accountId)).catch(() => {});
-    return tx;
+    return transactionsService.create({ ...data, createdBy });
   }
 
   // ─── Relatórios ──────────────────────────────────────────────
