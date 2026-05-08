@@ -42,7 +42,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   // Imports locais para isolar side-effects da inicialização —
   // server.ts não paga o custo de importar os workers se
   // RUN_WORKERS=false.
-  const { notificationWorker } = await import(
+  const { notificationWorker, inappWorker, emailWorker } = await import(
     "../notifications/notification.worker"
   );
   const {
@@ -75,7 +75,9 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     ) => void;
   };
   const workers = [
-    notificationWorker,
+    notificationWorker, // legacy queue drain
+    inappWorker,
+    emailWorker,
     maintenanceAlertsWorker,
     financeWorker,
     contractAlertsWorker,
@@ -148,6 +150,8 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   try {
     const n = await import("../notifications/notification.queue");
     queues.push(n.notificationQueue as unknown as Queue);
+    queues.push(n.inappQueue as unknown as Queue);
+    queues.push(n.emailQueue as unknown as Queue);
   } catch {}
   try {
     const wh = await import("../modules/webhooks/webhook.processor");
