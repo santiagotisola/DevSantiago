@@ -45,6 +45,7 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial().extend({
   isActive: z.boolean().optional(),
+  logoUrl: z.string().url().or(z.literal("")).optional(),
 });
 
 router.get("/", async (req: Request, res: Response) => {
