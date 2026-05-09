@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { residentService } from "../residents/resident.service";
@@ -41,6 +41,10 @@ const createSchema = z.object({
   timezone: z.string().optional(),
   plan: z.enum(["basic", "professional", "enterprise"]).optional(),
   maxUnits: z.number().int().positive().optional(),
+});
+
+const updateSchema = createSchema.partial().extend({
+  isActive: z.boolean().optional(),
 });
 
 router.get("/", async (req: Request, res: Response) => {
@@ -110,12 +114,85 @@ router.put(
       req.user!.role as UserRole,
       req.params.id,
     );
-    const data = validateRequest(createSchema.partial(), req.body);
+    const data = validateRequest(updateSchema, req.body);
+    if (data.isActive !== undefined && req.user!.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError(
+        "Apenas super-admin pode ativar ou inativar um condomínio",
+      );
+    }
     const condominium = await prisma.condominium.update({
       where: { id: req.params.id },
       data,
     });
     res.json({ success: true, data: { condominium } });
+  },
+);
+
+// DELETE /:id — exclusão definitiva (SUPER_ADMIN); bloqueia se houver vínculos.
+router.delete(
+  "/:id",
+  authorize("SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const id = req.params.id;
+
+    const counts = await prisma.condominium.findUniqueOrThrow({
+      where: { id },
+      select: {
+        _count: {
+          select: {
+            units: true,
+            condominiumUsers: true,
+            contracts: true,
+            financialAccounts: true,
+            employees: true,
+            commonAreas: true,
+            serviceProviders: true,
+            announcements: true,
+            occurrences: true,
+            polls: true,
+            assemblies: true,
+            lostAndFoundItems: true,
+            documents: true,
+            panicAlerts: true,
+            visitorRecurrences: true,
+            chatConversations: true,
+            maintenanceSchedules: true,
+          },
+        },
+      },
+    });
+
+    const blockers: Record<string, number> = Object.fromEntries(
+      Object.entries(counts._count).filter(([, v]) => (v as number) > 0),
+    ) as Record<string, number>;
+
+    if (Object.keys(blockers).length) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Condomínio possui vínculos e não pode ser excluído. Remova-os ou inative o condomínio.",
+        data: { blockers },
+      });
+    }
+
+    try {
+      await prisma.condominium.delete({ where: { id } });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2003"
+      ) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Condomínio possui registros vinculados que impedem a exclusão. Inative-o em vez de excluir.",
+          data: { blockers: { foreignKey: 1 } },
+        });
+      }
+      throw err;
+    }
+
+    res.json({ success: true });
   },
 );
 

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
-import { Building2, Plus, Loader2, Users, Home, UserPlus, Trash2, UserCog, Pencil, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Building2, Plus, Loader2, Users, Home, UserCog, Pencil, KeyRound, Eye, EyeOff, Search, Power, Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail } from '../../lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -76,6 +76,38 @@ export function CondominiumsPage() {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
 
+  // ── Filtros / busca / paginação / ordenação ────────────────────
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
+  type SortKey = 'name' | 'city' | 'cnpj' | 'units' | 'members' | 'status';
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // ── Excluir / Toggle Ativo ─────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteBlockers, setDeleteBlockers] = useState<Record<string, number> | null>(null);
+  const [toggleTarget, setToggleTarget] = useState<any | null>(null);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  function SortIcon({ k }: { k: SortKey }) {
+    if (sortKey !== k) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="w-3 h-3" />
+      : <ArrowDown className="w-3 h-3" />;
+  }
+
   const { data: condominiums, isLoading } = useQuery({
     queryKey: ['condominiums'],
     queryFn: async () => {
@@ -123,6 +155,37 @@ export function CondominiumsPage() {
     },
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.put(`/condominiums/${id}`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setToggleTarget(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/condominiums/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setDeleteTarget(null);
+      setDeleteConfirmName('');
+      setDeleteError('');
+      setDeleteBlockers(null);
+    },
+    onError: (err: any) => {
+      // Refresca contadores: o estado real pode ter mudado desde a abertura do modal.
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      const data = err.response?.data;
+      if (err.response?.status === 409 && data?.data?.blockers) {
+        setDeleteBlockers(data.data.blockers);
+        setDeleteError(data.message || 'Condomínio possui vínculos.');
+      } else {
+        setDeleteError(data?.message || 'Erro ao excluir condomínio.');
+      }
+    },
+  });
+
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['condominium-members', membersTarget?.id],
     queryFn: async () => {
@@ -149,6 +212,41 @@ export function CondominiumsPage() {
     },
   });
 
+  const filtered = useMemo(() => {
+    if (!condominiums) return [] as any[];
+    const q = search.trim().toLowerCase();
+    const list = condominiums.filter((c: any) => {
+      if (statusFilter === 'active' && !c.isActive) return false;
+      if (statusFilter === 'inactive' && c.isActive) return false;
+      if (!q) return true;
+      const hay = [c.name, c.cnpj, c.city, c.state, c.address, c.email]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const get = (c: any): string | number => {
+      switch (sortKey) {
+        case 'name': return (c.name ?? '').toLowerCase();
+        case 'city': return (c.city ?? '').toLowerCase();
+        case 'cnpj': return (c.cnpj ?? '').toLowerCase();
+        case 'units': return c._count?.units ?? 0;
+        case 'members': return c._count?.condominiumUsers ?? 0;
+        case 'status': return c.isActive ? 1 : 0;
+      }
+    };
+    return [...list].sort((a, b) => {
+      const av = get(a);
+      const bv = get(b);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [condominiums, search, statusFilter, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,6 +262,37 @@ export function CondominiumsPage() {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Buscar por nome, CNPJ, cidade..."
+            className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex gap-2">
+          {(['all', 'active', 'inactive'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => { setStatusFilter(s); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                statusFilter === s
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {s === 'all' ? 'Todos' : s === 'active' ? 'Ativos' : 'Inativos'}
+            </button>
+          ))}
+        </div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">
+          {filtered.length} de {condominiums?.length ?? 0}
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -176,65 +305,166 @@ export function CondominiumsPage() {
             Criar o primeiro condomínio
           </button>
         </div>
+      ) : !filtered.length ? (
+        <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
+          <Search className="w-8 h-8" />
+          <p className="text-sm">Nenhum condomínio encontrado para os filtros atuais</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {condominiums.map((c: any) => (
-            <div key={c.id} className="bg-white rounded-xl border p-5 space-y-3 hover:shadow-md transition-shadow">
-              <div className="flex items-start gap-3">
-                <div className="bg-blue-100 p-2 rounded-lg">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold truncate">{c.name}</h3>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        c.isActive
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {c.isActive ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </div>
-                  {c.city && <p className="text-xs text-muted-foreground">{c.city}{c.state ? ` - ${c.state}` : ''}</p>}
-                    {c.address && (
-                      <p className="text-xs text-muted-foreground truncate">{c.address}</p>
-                    )}
-                </div>
-              </div>
-              <div className="flex gap-4 text-xs text-muted-foreground border-t pt-3">
-                <span className="flex items-center gap-1"><Home className="w-3.5 h-3.5" /> {c._count?.units ?? 0} unidades</span>
-                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {c._count?.condominiumUsers ?? 0} membros</span>
-              </div>
-              {c.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {c.cnpj}</p>}
-              <div className="border-t pt-2 flex gap-3">
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Condomínio <SortIcon k="name" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
+                    <button onClick={() => toggleSort('city')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Localização <SortIcon k="city" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
+                    <button onClick={() => toggleSort('cnpj')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      CNPJ <SortIcon k="cnpj" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort('units')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Unidades <SortIcon k="units" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">
+                    <button onClick={() => toggleSort('members')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Membros <SortIcon k="members" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort('status')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Status <SortIcon k="status" />
+                    </button>
+                  </th>
+                  <th className="text-right px-4 py-3 font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {pageItems.map((c: any) => (
+                  <tr key={c.id} className={`hover:bg-gray-50/60 ${!c.isActive ? 'opacity-60' : ''}`}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="bg-blue-100 p-1.5 rounded-md shrink-0">
+                          <Building2 className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{c.name}</p>
+                          {c.address && (
+                            <p className="text-xs text-muted-foreground truncate md:hidden">{c.address}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                      {c.city ? `${c.city}${c.state ? ` - ${c.state}` : ''}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                      {c.cnpj || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                        <Home className="w-3.5 h-3.5" /> {c._count?.units ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                        <Users className="w-3.5 h-3.5" /> {c._count?.condominiumUsers ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          c.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {c.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          title="Editar"
+                          onClick={() => {
+                            setEditForm({
+                              name: c.name ?? '', address: c.address ?? '', city: c.city ?? '',
+                              state: c.state ?? '', zipCode: c.zipCode ?? '', cnpj: c.cnpj ?? '',
+                              phone: c.phone ?? '', email: c.email ?? '',
+                            });
+                            setEditTarget(c);
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 rounded hover:bg-blue-50 text-blue-600"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          title="Senhas / Usuários"
+                          onClick={() => { setMembersTarget(c); setShowMembersModal(true); }}
+                          className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                        <button
+                          title={c.isActive ? 'Inativar' : 'Reativar'}
+                          disabled={toggleActiveMutation.isPending && toggleTarget?.id === c.id}
+                          onClick={() => setToggleTarget(c)}
+                          className={`p-1.5 rounded hover:bg-amber-50 disabled:opacity-50 ${c.isActive ? 'text-amber-600' : 'text-green-600'}`}
+                        >
+                          {toggleActiveMutation.isPending && toggleTarget?.id === c.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <Power className="w-4 h-4" />}
+                        </button>
+                        <button
+                          title="Excluir"
+                          onClick={() => {
+                            setDeleteTarget(c);
+                            setDeleteConfirmName('');
+                            setDeleteError('');
+                            setDeleteBlockers(null);
+                          }}
+                          className="p-1.5 rounded hover:bg-red-50 text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-gray-600">
+              <span>Página {currentPage} de {totalPages}</span>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    setEditForm({
-                      name: c.name ?? '', address: c.address ?? '', city: c.city ?? '',
-                      state: c.state ?? '', zipCode: c.zipCode ?? '', cnpj: c.cnpj ?? '',
-                      phone: c.phone ?? '', email: c.email ?? '',
-                    });
-                    setEditTarget(c);
-                    setShowEditModal(true);
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-40"
                 >
-                  <Pencil className="w-3.5 h-3.5" /> Editar
+                  Anterior
                 </button>
                 <button
-                  onClick={() => {
-                    setMembersTarget(c);
-                    setShowMembersModal(true);
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-40"
                 >
-                  <KeyRound className="w-3.5 h-3.5" /> Senhas
+                  Próxima
                 </button>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -621,6 +851,161 @@ export function CondominiumsPage() {
               >
                 {setupAdminMutation.isPending ? 'Criando...' : 'Criar Admin'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toggle Active Confirmation Modal ── */}
+      {toggleTarget && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg ${toggleTarget.isActive ? 'bg-amber-100' : 'bg-green-100'}`}>
+                <Power className={`w-5 h-5 ${toggleTarget.isActive ? 'text-amber-600' : 'text-green-600'}`} />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold">
+                  {toggleTarget.isActive ? 'Inativar' : 'Reativar'} condomínio
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <span className="font-medium">{toggleTarget.name}</span>
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700">
+              {toggleTarget.isActive
+                ? 'Moradores e funcionários perderão acesso ao condomínio até a reativação. As contagens e dados são preservados.'
+                : 'O acesso de moradores e funcionários será restaurado.'}
+            </p>
+            {toggleActiveMutation.isError && (
+              <p className="text-sm text-red-600">
+                {(toggleActiveMutation.error as any)?.response?.data?.message
+                  || 'Erro ao alterar status.'}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setToggleTarget(null)}
+                disabled={toggleActiveMutation.isPending}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => toggleActiveMutation.mutate({ id: toggleTarget.id, isActive: !toggleTarget.isActive })}
+                disabled={toggleActiveMutation.isPending}
+                className={`flex-1 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
+                  toggleTarget.isActive ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {toggleActiveMutation.isPending
+                  ? 'Salvando...'
+                  : toggleTarget.isActive ? 'Inativar' : 'Reativar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-100 p-2 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold">Excluir Condomínio</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Esta ação é <span className="font-semibold text-red-600">irreversível</span>. Para condomínios com histórico, prefira <span className="font-medium">inativar</span>.
+                </p>
+              </div>
+            </div>
+
+            {deleteBlockers ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+                <p className="text-sm font-medium text-red-800">
+                  Não é possível excluir — existem vínculos:
+                </p>
+                <ul className="text-xs text-red-700 list-disc pl-5 space-y-0.5">
+                  {Object.entries(deleteBlockers).map(([k, v]) => {
+                    const labels: Record<string, string> = {
+                      units: 'unidade(s)',
+                      condominiumUsers: 'membro(s)',
+                      contracts: 'contrato(s)',
+                      financialAccounts: 'conta(s) financeira(s)',
+                      employees: 'funcionário(s)',
+                      commonAreas: 'área(s) comum(ns)',
+                      serviceProviders: 'prestador(es) de serviço',
+                      announcements: 'comunicado(s)',
+                      occurrences: 'ocorrência(s)',
+                      polls: 'enquete(s)',
+                      assemblies: 'assembleia(s)',
+                      lostAndFoundItems: 'item(ns) achados e perdidos',
+                      documents: 'documento(s)',
+                      panicAlerts: 'alerta(s) de pânico',
+                      visitorRecurrences: 'recorrência(s) de visita',
+                      chatConversations: 'conversa(s) de chat',
+                      maintenanceSchedules: 'agendamento(s) de manutenção',
+                      foreignKey: 'registro(s) vinculado(s) (FK)',
+                    };
+                    return (
+                      <li key={k}>
+                        <span className="font-semibold">{v}</span>{' '}
+                        {labels[k] ?? k}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-xs text-red-700 pt-1">
+                  Remova os vínculos ou inative o condomínio.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-700">
+                  Para confirmar, digite o nome exato do condomínio:
+                </p>
+                <p className="text-sm font-mono bg-gray-100 rounded px-2 py-1">{deleteTarget.name}</p>
+                <input
+                  type="text"
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  placeholder="Digite o nome do condomínio"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                {deleteError && (
+                  <p className="text-xs text-red-600">{deleteError}</p>
+                )}
+              </>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteConfirmName('');
+                  setDeleteError('');
+                  setDeleteBlockers(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+              {!deleteBlockers && (
+                <button
+                  onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                  disabled={
+                    deleteConfirmName.trim() !== deleteTarget.name ||
+                    deleteMutation.isPending
+                  }
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+                </button>
+              )}
             </div>
           </div>
         </div>
