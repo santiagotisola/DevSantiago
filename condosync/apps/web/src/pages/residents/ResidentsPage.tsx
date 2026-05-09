@@ -1,21 +1,49 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X } from 'lucide-react';
+import {
+  UsersRound, PlusCircle, Search, Loader2, Pencil, Trash2, UserRoundPlus, X,
+  ArrowUp, ArrowDown, ArrowUpDown,
+} from 'lucide-react';
 import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
 
+type SortKey = 'name' | 'email' | 'joinedAt' | 'unit';
+type Status = 'active' | 'inactive' | 'all';
+type HasDeps = 'all' | 'yes' | 'no';
+
 export function ResidentsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
+
+  // ── Filtros / paginação ────────────────────────────────────────
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [unitFilter, setUnitFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<Status>('active');
+  const [hasDepFilter, setHasDepFilter] = useState<HasDeps>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
+
+  // Debounce do campo de busca → search efetivo (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput.trim()); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Reset de página quando filtros mudam
+  useEffect(() => { setPage(1); }, [unitFilter, statusFilter, hasDepFilter, sortKey, sortDir]);
+
+  // ── Modais ─────────────────────────────────────────────────────
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [depTarget, setDepTarget] = useState<any>(null);
+  const [drawerTarget, setDrawerTarget] = useState<any>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [editForm, setEditForm] = useState({ name: '', phone: '', cpf: '', unitId: '' });
   const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '', birthDate: '' });
@@ -23,37 +51,76 @@ export function ResidentsPage() {
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
-  const { data: residents, isLoading } = useQuery({
-    queryKey: ['residents', selectedCondominiumId],
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['residents', selectedCondominiumId, { page, search, unitFilter, statusFilter, hasDepFilter, sortKey, sortDir }],
     queryFn: async () => {
-      const res = await api.get(`/residents/condominium/${selectedCondominiumId}`);
-      return res.data.data.residents;
+      const params: Record<string, string> = {
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+        status: statusFilter,
+        hasDependents: hasDepFilter,
+        sortKey,
+        sortDir,
+      };
+      if (search) params.search = search;
+      if (unitFilter) params.unitId = unitFilter;
+      const res = await api.get(`/residents/condominium/${selectedCondominiumId}`, { params });
+      return res.data.data as {
+        residents: any[];
+        pagination: { total: number; page: number; pageSize: number; totalPages: number };
+      };
     },
     enabled: !!selectedCondominiumId,
+    placeholderData: keepPreviousData,
   });
 
+  const residents = data?.residents ?? [];
+  const total = data?.pagination?.total ?? 0;
+  const totalPages = data?.pagination?.totalPages ?? 1;
+
+  // Lista de unidades — carrega sempre que tem condomínio (usada no filtro e nos modais)
   const { data: units } = useQuery({
     queryKey: ['units', selectedCondominiumId],
     queryFn: async () => {
       const res = await api.get(`/units/condominium/${selectedCondominiumId}`);
       return res.data.data.units;
     },
-    enabled: !!selectedCondominiumId && (showModal || !!editTarget),
+    enabled: !!selectedCondominiumId,
   });
+
+  // Mantém o drawer sincronizado com a lista atualizada (ex: após adicionar dependente)
+  useEffect(() => {
+    if (!drawerTarget) return;
+    const fresh = residents.find((r: any) => r.id === drawerTarget.id);
+    if (fresh) setDrawerTarget(fresh);
+  }, [residents]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createMutation = useMutation({
     mutationFn: (d: typeof form) => api.post('/residents', { ...d, condominiumId: selectedCondominiumId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setShowModal(false); setForm({ ...emptyForm }); setCreateErrors({}); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      setShowModal(false);
+      setForm({ ...emptyForm });
+      setCreateErrors({});
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: (d: typeof editForm) => api.patch(`/residents/${editTarget.id}`, d),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setEditTarget(null); setEditErrors({}); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      setEditTarget(null);
+      setEditErrors({});
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/residents/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setDeleteTarget(null); setExpanded(null); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      setDeleteTarget(null);
+      setDrawerTarget(null);
+    },
   });
 
   const addDepMutation = useMutation({
@@ -62,7 +129,11 @@ export function ResidentsPage() {
       unitId: depTarget?.unit?.id,
       birthDate: d.birthDate ? new Date(d.birthDate).toISOString() : undefined,
     }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['residents'] }); setDepTarget(null); setDepForm({ name: '', relationship: '', cpf: '', birthDate: '' }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      setDepTarget(null);
+      setDepForm({ name: '', relationship: '', cpf: '', birthDate: '' });
+    },
   });
 
   const removeDepMutation = useMutation({
@@ -75,11 +146,15 @@ export function ResidentsPage() {
     setEditTarget(r);
   };
 
-  const filtered = ((residents || []) as any[]).filter((r: any) =>
-    (r.user?.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (r.user?.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (r.unit?.identifier ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  function toggleSort(k: SortKey) {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(k); setSortDir('asc'); }
+  }
+
+  function SortIcon({ k }: { k: SortKey }) {
+    if (sortKey !== k) return <ArrowUpDown className="w-3 h-3 opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+  }
 
   return (
     <div className="space-y-6">
@@ -96,90 +171,315 @@ export function ResidentsPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome, email ou unidade..." className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      {/* Filtros */}
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Buscar por nome, email, telefone, CPF, unidade..."
+            className="w-full pl-9 pr-9 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {isFetching && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+          )}
+        </div>
+
+        <select
+          value={unitFilter}
+          onChange={(e) => setUnitFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Todas as unidades</option>
+          {((units || []) as any[]).map((u: any) => (
+            <option key={u.id} value={u.id}>
+              {u.identifier}{u.block ? ` / Bloco ${u.block}` : ''}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as Status)}
+          className="px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="active">Ativos</option>
+          <option value="inactive">Inativos</option>
+          <option value="all">Todos</option>
+        </select>
+
+        <select
+          value={hasDepFilter}
+          onChange={(e) => setHasDepFilter(e.target.value as HasDeps)}
+          className="px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">Com/sem dependentes</option>
+          <option value="yes">Com dependentes</option>
+          <option value="no">Sem dependentes</option>
+        </select>
+
+        <div className="text-xs text-muted-foreground lg:ml-auto whitespace-nowrap">
+          {total} morador{total === 1 ? '' : 'es'}
+        </div>
       </div>
 
-      <div className="grid gap-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
-            <UsersRound className="w-10 h-10" />
-            <p>Nenhum morador encontrado</p>
-          </div>
-        ) : (
-          filtered.map((r: any) => (
-            <div key={r.id} className="bg-white rounded-xl border overflow-hidden">
-              <button
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left"
-                onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
-                    {r.user?.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{r.user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{r.user?.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {r.unit && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                      Unid. {r.unit.identifier}{r.unit.block ? ' / Bloco ' + r.unit.block : ''}
-                    </span>
-                  )}
-                  {expanded === r.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                </div>
-              </button>
-              {expanded === r.id && (
-                <div className="border-t px-4 py-4 bg-gray-50 space-y-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p><span className="font-medium">Telefone:</span> {r.user?.phone || '—'}</p>
-                    <p><span className="font-medium">CPF:</span> {r.user?.cpf || '—'}</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium">Dependentes</p>
-                      {isAdmin && r.unitId && (
-                        <button onClick={() => setDepTarget(r)} className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                          <UserRoundPlus className="w-3 h-3" /> Adicionar
-                        </button>
+      {/* Tabela */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        </div>
+      ) : residents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
+          <UsersRound className="w-10 h-10" />
+          <p>Nenhum morador encontrado</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Morador <SortIcon k="name" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
+                    <button onClick={() => toggleSort('email')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Contato <SortIcon k="email" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    <button onClick={() => toggleSort('unit')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Unidade <SortIcon k="unit" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Dep.</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
+                    <button onClick={() => toggleSort('joinedAt')} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      Vínculo <SortIcon k="joinedAt" />
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">Status</th>
+                  <th className="text-right px-4 py-3 font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {residents.map((r: any) => (
+                  <tr
+                    key={r.id}
+                    onClick={() => setDrawerTarget(r)}
+                    className={`cursor-pointer hover:bg-blue-50/40 ${!r.isActive ? 'opacity-60' : ''}`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
+                          {r.user?.name?.charAt(0).toUpperCase() ?? '?'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{r.user?.name || '—'}</p>
+                          <p className="text-xs text-muted-foreground truncate md:hidden">{r.user?.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <p className="truncate text-gray-700">{r.user?.email || '—'}</p>
+                      <p className="text-xs text-muted-foreground">{r.user?.phone || ''}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.unit ? (
+                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                          {r.unit.identifier}{r.unit.block ? ` / ${r.unit.block}` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
-                    </div>
-                    {r.unit?.dependents?.length > 0 ? (
-                      <ul className="space-y-1 ml-1">
-                        {r.unit?.dependents?.map((d: any) => (
-                          <li key={d.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{d.name} <span className="text-gray-400">({d.relationship})</span></span>
-                            {isAdmin && (
-                              <button onClick={() => removeDepMutation.mutate(d.id)} className="text-red-400 hover:text-red-600 ml-2"><X className="w-3 h-3" /></button>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                      {r.unit?.dependents?.length ?? 0}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                      {r.joinedAt ? new Date(r.joinedAt).toLocaleDateString('pt-BR') : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          r.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {r.isActive ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        {isAdmin && (
+                          <>
+                            <button
+                              title="Editar"
+                              onClick={() => openEdit(r)}
+                              className="p-1.5 rounded hover:bg-blue-50 text-blue-600"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            {r.unit && (
+                              <button
+                                title="Adicionar dependente"
+                                onClick={() => setDepTarget(r)}
+                                className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+                              >
+                                <UserRoundPlus className="w-4 h-4" />
+                              </button>
                             )}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Nenhum dependente</p>
-                    )}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex gap-2 pt-1">
-                      <button onClick={() => openEdit(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white border rounded-lg hover:bg-gray-100 text-gray-700">
-                        <Pencil className="w-3 h-3" /> Editar
-                      </button>
-                      <button onClick={() => setDeleteTarget(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 text-red-600">
-                        <Trash2 className="w-3 h-3" /> Remover do condomínio
-                      </button>
-                    </div>
+                            <button
+                              title="Remover do condomínio"
+                              onClick={() => setDeleteTarget(r)}
+                              className="p-1.5 rounded hover:bg-red-50 text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-gray-600">
+              <span>Página {page} de {totalPages} · {total} resultados</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1 || isFetching}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-40"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || isFetching}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-40"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Drawer de detalhes */}
+      {drawerTarget && (
+        <div className="fixed inset-0 z-40 flex" onClick={() => setDrawerTarget(null)}>
+          <div className="flex-1 bg-black/40" />
+          <div
+            className="w-full max-w-md bg-white h-full shadow-xl overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white">
+              <h2 className="font-semibold">Detalhes do morador</h2>
+              <button
+                onClick={() => setDrawerTarget(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
+                  {drawerTarget.user?.name?.charAt(0).toUpperCase() ?? '?'}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold truncate">{drawerTarget.user?.name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{drawerTarget.user?.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Telefone</p>
+                  <p>{drawerTarget.user?.phone || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">CPF</p>
+                  <p>{drawerTarget.user?.cpf || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Unidade</p>
+                  <p>
+                    {drawerTarget.unit
+                      ? `${drawerTarget.unit.identifier}${drawerTarget.unit.block ? ` / Bloco ${drawerTarget.unit.block}` : ''}`
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Vinculado em</p>
+                  <p>{drawerTarget.joinedAt ? new Date(drawerTarget.joinedAt).toLocaleDateString('pt-BR') : '—'}</p>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Dependentes</p>
+                  {isAdmin && drawerTarget.unitId && (
+                    <button
+                      onClick={() => setDepTarget(drawerTarget)}
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    >
+                      <UserRoundPlus className="w-3 h-3" /> Adicionar
+                    </button>
                   )}
+                </div>
+                {drawerTarget.unit?.dependents?.length > 0 ? (
+                  <ul className="space-y-1">
+                    {drawerTarget.unit.dependents.map((d: any) => (
+                      <li key={d.id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2 text-sm">
+                        <span>
+                          {d.name}{' '}
+                          <span className="text-xs text-gray-400">({d.relationship})</span>
+                        </span>
+                        {isAdmin && (
+                          <button
+                            onClick={() => removeDepMutation.mutate(d.id)}
+                            className="text-red-400 hover:text-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum dependente</p>
+                )}
+              </div>
+
+              {isAdmin && (
+                <div className="flex gap-2 pt-2 border-t">
+                  <button
+                    onClick={() => { openEdit(drawerTarget); setDrawerTarget(null); }}
+                    className="flex items-center gap-1.5 text-sm px-3 py-2 bg-white border rounded-lg hover:bg-gray-100 text-gray-700"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  </button>
+                  <button
+                    onClick={() => { setDeleteTarget(drawerTarget); }}
+                    className="flex items-center gap-1.5 text-sm px-3 py-2 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 text-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remover do condomínio
+                  </button>
                 </div>
               )}
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Novo Morador */}
       {showModal && (

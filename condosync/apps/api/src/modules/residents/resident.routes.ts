@@ -106,39 +106,114 @@ router.delete(
   },
 );
 
-// Residentes de um condomínio
+// Residentes de um condomínio (paginado + filtros)
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).optional().default(25),
+  search: z.string().trim().optional().default(""),
+  unitId: z.string().uuid().optional(),
+  status: z.enum(["active", "inactive", "all"]).optional().default("active"),
+  hasDependents: z.enum(["yes", "no", "all"]).optional().default("all"),
+  sortKey: z
+    .enum(["name", "email", "joinedAt", "unit"])
+    .optional()
+    .default("name"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+
 router.get(
   "/condominium/:condominiumId",
   async (req: Request, res: Response) => {
-    const residents = await prisma.condominiumUser.findMany({
-      where: {
-        condominiumId: req.params.condominiumId,
-        role: "RESIDENT",
-        isActive: true,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatarUrl: true,
-            cpf: true,
+    await assertActorBelongsToCondominium(req, req.params.condominiumId);
+
+    const q = listQuerySchema.parse(req.query);
+
+    const where: any = {
+      condominiumId: req.params.condominiumId,
+      role: "RESIDENT",
+    };
+    if (q.status === "active") where.isActive = true;
+    else if (q.status === "inactive") where.isActive = false;
+
+    if (q.unitId) where.unitId = q.unitId;
+
+    if (q.search) {
+      where.OR = [
+        { user: { name: { contains: q.search, mode: "insensitive" } } },
+        { user: { email: { contains: q.search, mode: "insensitive" } } },
+        { user: { phone: { contains: q.search, mode: "insensitive" } } },
+        { user: { cpf: { contains: q.search, mode: "insensitive" } } },
+        { unit: { identifier: { contains: q.search, mode: "insensitive" } } },
+        { unit: { block: { contains: q.search, mode: "insensitive" } } },
+      ];
+    }
+
+    if (q.hasDependents === "yes") {
+      where.unit = {
+        ...(where.unit ?? {}),
+        dependents: { some: { isActive: true } },
+      };
+    } else if (q.hasDependents === "no") {
+      where.unit = {
+        ...(where.unit ?? {}),
+        dependents: { none: { isActive: true } },
+      };
+    }
+
+    const orderBy: any =
+      q.sortKey === "email"
+        ? { user: { email: q.sortDir } }
+        : q.sortKey === "joinedAt"
+          ? { joinedAt: q.sortDir }
+          : q.sortKey === "unit"
+            ? { unit: { identifier: q.sortDir } }
+            : { user: { name: q.sortDir } };
+
+    const [total, residents] = await Promise.all([
+      prisma.condominiumUser.count({ where }),
+      prisma.condominiumUser.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatarUrl: true,
+              cpf: true,
+            },
+          },
+          unit: {
+            select: {
+              id: true,
+              identifier: true,
+              block: true,
+              dependents: {
+                where: { isActive: true },
+                orderBy: { name: "asc" },
+              },
+            },
           },
         },
-        unit: {
-          select: {
-            id: true,
-            identifier: true,
-            block: true,
-            dependents: { where: { isActive: true }, orderBy: { name: "asc" } },
-          },
+        orderBy,
+        skip: (q.page - 1) * q.pageSize,
+        take: q.pageSize,
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        residents,
+        pagination: {
+          total,
+          page: q.page,
+          pageSize: q.pageSize,
+          totalPages: Math.max(1, Math.ceil(total / q.pageSize)),
         },
       },
-      orderBy: { joinedAt: "asc" },
     });
-    res.json({ success: true, data: { residents } });
   },
 );
 
