@@ -333,7 +333,7 @@ function NewInvitationModal({
   const units = useQuery({
     queryKey: ['units-for-invite', condominiumId],
     queryFn: async () => {
-      const r = await api.get(`/units?condominiumId=${condominiumId}`);
+      const r = await api.get(`/units/condominium/${condominiumId}`);
       return r.data.data.units as Array<{ id: string; identifier: string; block: string | null }>;
     },
     enabled: role === 'RESIDENT',

@@ -279,6 +279,7 @@ model Condominium {
   fines              Fine[]
   collectionRules    CollectionRule[]
   digitalSignageScreens DigitalSignageScreen[]
+  invitations        Invitation[]
 
   @@map("condominiums")
 }
@@ -329,6 +330,7 @@ model Unit {
   renovations   Renovation[]
   visitorRecurrences VisitorRecurrence[]
   visitorQRCodes     VisitorQRCode[]
+  invitations        Invitation[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -1524,26 +1526,28 @@ model Plan {
 // link por email e define a própria senha. Quando aceito, cria User
 // (se não existir pelo email/CPF) e vincula via CondominiumUser.
 model Invitation {
-  id             String     @id @default(uuid())
-  tokenHash      String     @unique // sha256 do token; o token plain só viaja no email
+  id             String      @id @default(uuid())
+  tokenHash      String      @unique // sha256 do token; o token plain só viaja no email
   email          String
   name           String?
   cpf            String?
   phone          String?
   role           UserRole
+  condominium    Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
   condominiumId  String
-  unitId         String?    // obrigatório para RESIDENT
+  unit           Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId         String?     // obrigatório para RESIDENT
   invitedById    String
-  invitedBy      User       @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+  invitedBy      User        @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
   acceptedById   String?
-  acceptedBy     User?      @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedBy     User?       @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
   expiresAt      DateTime
   acceptedAt     DateTime?
   revokedAt      DateTime?
-  lastSentAt     DateTime   @default(now())
-  sendCount      Int        @default(1)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  lastSentAt     DateTime    @default(now())
+  sendCount      Int         @default(1)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([email])
   @@index([condominiumId])

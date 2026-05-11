@@ -92,7 +92,9 @@ export function usePushSubscription() {
       if (!subscription) {
         subscription = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
+          // Cast: TS espera BufferSource mais estrito que Uint8Array
+          // em alguns lib.dom builds. Runtime aceita ambos.
+          applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
         });
       }
 

@@ -1,26 +1,79 @@
+# ============================================================
+# CondoSync — docker-compose para TESTE LOCAL COMPLETO
+# ============================================================
+# Sobe TUDO em containers: api + web + postgres + redis + mailpit.
+# Boa paridade com produção, mas com SMTP -> Mailpit e
+# NODE_ENV=development (sem Resend obrigatório).
+#
+# Uso:
+#   1. cp .env.example .env (se ainda não existir)
+#   2. docker compose up -d --build
+#   3. docker exec condosync-api npx prisma migrate deploy
+#   4. docker exec condosync-api npx ts-node prisma/seed.ts
+#
+# URLs:
+#   - Web:       http://localhost
+#   - API:       http://localhost:3333
+#   - Mailpit:   http://localhost:8025
+#   - Postgres:  postgres://condosync:condosync@127.0.0.1:5432/condosync
+#   - Redis:     redis://:condosync@127.0.0.1:6379
+#
+# Stack só-infra (api/web fora do docker, com hot-reload) está em
+# docker-compose.dev.yml — útil pra desenvolver e iterar rápido.
+# Stack original full-build de produção em docker-compose.prod.yml.
+# ============================================================
+
 services:
-  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  # ─── PostgreSQL ────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: condosync-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER obrigatorio no .env}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obrigatorio no .env}"
+      POSTGRES_USER: "${POSTGRES_USER:-condosync}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-condosync}"
       POSTGRES_DB: "${POSTGRES_DB:-condosync}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Bind apenas em loopback — banco não deve estar exposto na rede do host.
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # ─── API (Backend) ────────────────────────────────────────────────────────
+  # ─── Redis ─────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: condosync-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-condosync}"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-condosync}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Mailpit ───────────────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: condosync-mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit_data:/data
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+
+  # ─── API (Backend) ─────────────────────────────────────────
   api:
     build:
       context: apps/api
@@ -32,24 +85,42 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      mailpit:
+        condition: service_started
     environment:
-      NODE_ENV: "${NODE_ENV:-production}"
+      # NODE_ENV=development = SEM Resend obrigatório; cai no SMTP (Mailpit).
+      NODE_ENV: "${NODE_ENV:-development}"
       PORT: "3333"
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-condosync}?schema=public"
-      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET obrigatorio - gerar com openssl rand -base64 48}"
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET obrigatorio e DIFERENTE de JWT_SECRET}"
-      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-1h}"
-      JWT_REFRESH_EXPIRES_IN: "${JWT_REFRESH_EXPIRES_IN:-7d}"
-      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:80,http://localhost}"
-      BCRYPT_ROUNDS: "${BCRYPT_ROUNDS:-12}"
-      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-      ASAAS_WEBHOOK_TOKEN: "${ASAAS_WEBHOOK_TOKEN:-}"
-      SMTP_HOST: "${SMTP_HOST:-mailpit}"
-      SMTP_PORT: "${SMTP_PORT:-1025}"
-      SMTP_USER: "${SMTP_USER:-condosync}"
-      SMTP_PASS: "${SMTP_PASS:-condosync}"
-      SMTP_FROM: "${SMTP_FROM:-CondoSync <noreply@condosync.com.br>}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-condosync}:${POSTGRES_PASSWORD:-condosync}@postgres:5432/${POSTGRES_DB:-condosync}?schema=public"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-condosync}@redis:6379"
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      JWT_EXPIRES_IN: "1h"
+      JWT_REFRESH_EXPIRES_IN: "7d"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:5173,http://localhost}"
+      BCRYPT_ROUNDS: "10"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:5173}"
+      # SMTP -> Mailpit (sem auth)
+      SMTP_HOST: "mailpit"
+      SMTP_PORT: "1025"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "CondoSync <convite@condosync.local>"
+      RESEND_API_KEY: ""
+      # VAPID — gerados via web-push.generateVAPIDKeys
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY}"
+      VAPID_SUBJECT: "${VAPID_SUBJECT:-mailto:dev@condosync.local}"
+      # WebAuthn — RP_ID precisa bater com o hostname do browser
+      WEBAUTHN_RP_NAME: "CondoSync (dev)"
+      WEBAUTHN_RP_ID: "${WEBAUTHN_RP_ID:-localhost}"
+      WEBAUTHN_ORIGIN: "${WEBAUTHN_ORIGIN:-http://localhost:5173}"
+      # Anti-spam de convite — 60/hora (1/min) é prático em dev local
+      INVITATION_MAX_RESEND_PER_HOUR: "60"
+      # Opcionais
+      OPENAI_API_KEY: ""
+      ASAAS_WEBHOOK_TOKEN: ""
+      SENTRY_DSN: ""
     ports:
       - "3333:3333"
     volumes:
@@ -60,9 +131,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
-  # ─── Web (Frontend nginx) ─────────────────────────────────────────────────
+  # ─── Web (Frontend nginx) ──────────────────────────────────
   web:
     build:
       context: .
@@ -72,41 +143,16 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    # Imagem nginx-unprivileged escuta em 8080 internamente.
+    # 5173 no host (port 80 está ocupado pelo Digifort em algumas máquinas).
+    # Internamente o nginx-unprivileged escuta em 8080.
     ports:
-      - "80:8080"
+      - "5173:8080"
     environment:
       - API_URL=http://api:3333
 
-  # ─── Redis ──────────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: condosync-redis
-    restart: unless-stopped
-    # Senha obrigatória; bind apenas em loopback.
-    command:
-      ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD obrigatorio no .env}"]
-    ports:
-      - "127.0.0.1:6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  # ─── Mailpit (capturador de email para desenvolvimento) ───────────────────
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: condosync-mailpit
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8025:8025"
-      - "127.0.0.1:1025:1025"
-
 volumes:
   postgres_data:
-  api_logs:
   redis_data:
+  mailpit_data:
+  api_logs:
   uploads_data:

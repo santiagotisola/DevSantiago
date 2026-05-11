@@ -18,7 +18,12 @@ const log = logger.child({ module: 'invitations' });
 // do DB não dá acesso. O plain só viaja no email enviado ao convidado.
 const TOKEN_BYTES = 32;
 const DEFAULT_TTL_HOURS = 72;
-const MAX_RESEND_PER_HOUR = 3;
+// Anti-spam: padrão 3 reenvios/hora (1 a cada 20min). Configurável via
+// INVITATION_MAX_RESEND_PER_HOUR — em dev é prático elevar pra 60 (1/min)
+// e ainda assim manter alguma proteção contra loop.
+const MAX_RESEND_PER_HOUR = Number(
+  process.env.INVITATION_MAX_RESEND_PER_HOUR ?? '3',
+);
 
 export interface CreateInvitationInput {
   email: string;

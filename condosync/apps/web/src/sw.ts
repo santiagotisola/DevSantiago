@@ -9,8 +9,10 @@ import {
 declare const self: ServiceWorkerGlobalScope;
 
 // __WB_MANIFEST é injetado pelo vite-plugin-pwa em build com a lista
-// de assets para precache (HTML, JS, CSS, ícones).
-precacheAndRoute(self.__WB_MANIFEST);
+// de assets para precache (HTML, JS, CSS, ícones). O cast cobre uma
+// incompatibilidade entre as definições de Workbox e DOM lib sobre
+// SharedArrayBuffer vs ArrayBuffer no Manifest entries.
+precacheAndRoute((self as any).__WB_MANIFEST);
 
 // Imagens — stale-while-revalidate
 registerRoute(
@@ -53,14 +55,17 @@ self.addEventListener('push', (event: PushEvent) => {
     // Push sem JSON válido — usa default
   }
 
+  // renotify cast em any: existe na Notifications API (re-toca som/vibra
+  // quando uma notification de mesma `tag` substitui outra), mas o
+  // typedef do lib.dom ainda não inclui na assinatura.
   const promise = self.registration.showNotification(payload.title, {
     body: payload.body,
     icon: payload.icon ?? '/pwa-192x192.png',
     badge: payload.badge ?? '/pwa-192x192.png',
     tag: payload.tag,
-    renotify: !!payload.tag,
     data: { url: payload.url ?? '/', ...payload.data },
-  });
+    ...(payload.tag ? { renotify: true } : {}),
+  } as NotificationOptions);
   event.waitUntil(promise);
 });
 
