@@ -28,6 +28,10 @@ const ForgotPasswordPage = lazyNamed(
   () => import("./pages/auth/ForgotPasswordPage") as any,
   "ForgotPasswordPage",
 );
+const AcceptInvitePage = lazyNamed(
+  () => import("./pages/auth/AcceptInvitePage") as any,
+  "AcceptInvitePage",
+);
 
 // ─── Sistema (named exports) ───────────────────────────────────
 const DashboardPage = lazyNamed(
@@ -109,6 +113,10 @@ const CondominiumsPage = lazyNamed(
 const PlansPage = lazyNamed(
   () => import("./pages/admin/PlansPage") as any,
   "PlansPage",
+);
+const InvitationsPage = lazyNamed(
+  () => import("./pages/admin/InvitationsPage") as any,
+  "InvitationsPage",
 );
 const MyVisitorsPage = lazyNamed(
   () => import("./pages/minha-portaria/MyVisitorsPage") as any,
@@ -249,6 +257,16 @@ export default function App() {
               <PublicRoute>
                 <AuthLayout>
                   <ForgotPasswordPage />
+                </AuthLayout>
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/aceitar-convite/:token"
+            element={
+              <PublicRoute>
+                <AuthLayout>
+                  <AcceptInvitePage />
                 </AuthLayout>
               </PublicRoute>
             }
@@ -447,6 +465,14 @@ export default function App() {
               element={
                 <RoleGuard roles={["SUPER_ADMIN"]}>
                   <PlansPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="convites"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <InvitationsPage />
                 </RoleGuard>
               }
             />

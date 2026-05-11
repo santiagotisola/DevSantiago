@@ -91,6 +91,20 @@ export const webhookAsaasEvents = new Counter({
   registers: [registry],
 });
 
+export const invitationsTotal = new Counter({
+  name: "invitations_total",
+  help: "Eventos do fluxo de convites de usuário",
+  labelNames: ["status"], // created | resent | accepted | expired | revoked | email_failed
+  registers: [registry],
+});
+
+export const pushDeliveriesTotal = new Counter({
+  name: "push_deliveries_total",
+  help: "Tentativas de envio de push notifications",
+  labelNames: ["status"], // sent | failed | expired_subscription
+  registers: [registry],
+});
+
 // ─── Middleware HTTP ───────────────────────────────────────────
 /**
  * Mede duração de cada request. Aplica como middleware GLOBAL

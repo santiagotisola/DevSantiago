@@ -70,6 +70,16 @@ const envSchema = z
         message: 'JWT_REFRESH_SECRET deve ser diferente de JWT_SECRET.',
       });
     }
+    // Em produção, email transacional é obrigatório (convites de morador,
+    // recuperação de senha, etc). Em dev/test podemos cair no Mailpit SMTP.
+    if (data.NODE_ENV === 'production' && !data.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['RESEND_API_KEY'],
+        message:
+          'RESEND_API_KEY é obrigatório em produção (convites de morador e reset de senha dependem disso).',
+      });
+    }
   });
 
 const parsed = envSchema.safeParse(process.env);

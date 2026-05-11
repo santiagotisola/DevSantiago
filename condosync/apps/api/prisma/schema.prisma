@@ -164,6 +164,10 @@ model User {
   auditLogs          AuditLog[]
   refreshTokens      RefreshToken[]
   passwordResets     PasswordReset[]
+  invitationsCreated Invitation[]   @relation("InvitationCreator")
+  invitationsAccepted Invitation[]  @relation("InvitationAcceptedBy")
+  pushSubscriptions  PushSubscription[]
+  webAuthnCredentials WebAuthnCredential[]
   lostAndFoundItems  LostAndFound[] @relation("CreatedLostAndFound")
   ticketsCreated     Ticket[]       @relation("TicketCreator")
   ticketsAssigned    Ticket[]       @relation("TicketAssignee")
@@ -1511,4 +1515,75 @@ model Plan {
   updatedAt   DateTime @updatedAt
 
   @@map("plans")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONVITES DE MORADOR / USUÁRIO
+// ─────────────────────────────────────────────────────────────
+// Síndico/admin cria convite com token de uso único. Morador recebe
+// link por email e define a própria senha. Quando aceito, cria User
+// (se não existir pelo email/CPF) e vincula via CondominiumUser.
+model Invitation {
+  id             String     @id @default(uuid())
+  tokenHash      String     @unique // sha256 do token; o token plain só viaja no email
+  email          String
+  name           String?
+  cpf            String?
+  phone          String?
+  role           UserRole
+  condominiumId  String
+  unitId         String?    // obrigatório para RESIDENT
+  invitedById    String
+  invitedBy      User       @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+  acceptedById   String?
+  acceptedBy     User?      @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  lastSentAt     DateTime   @default(now())
+  sendCount      Int        @default(1)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([email])
+  @@index([condominiumId])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PUSH NOTIFICATIONS (Web Push / VAPID)
+// ─────────────────────────────────────────────────────────────
+model PushSubscription {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint    String   @unique
+  p256dh      String   // chave pública do cliente
+  auth        String   // segredo de autenticação do cliente
+  userAgent   String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// WEBAUTHN / BIOMETRIA (passkeys)
+// ─────────────────────────────────────────────────────────────
+model WebAuthnCredential {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId    String   @unique // base64url do credential id retornado pelo authenticator
+  publicKey       Bytes
+  counter         Int      @default(0)
+  transports      String[] // ex: ["internal", "hybrid"]
+  deviceName      String?  // rótulo amigável definido pelo usuário
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@map("webauthn_credentials")
 }

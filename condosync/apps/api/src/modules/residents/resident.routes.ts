@@ -12,6 +12,8 @@ import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { residentService } from "./resident.service";
+import { invitationService } from "../invitations/invitation.service";
+import { logger } from "../../config/logger";
 
 const router = Router();
 router.use(authenticate);
@@ -308,7 +310,32 @@ router.post(
           },
         });
 
-    res.status(existing ? 200 : 201).json({ success: true, data: { resident } });
+    // Dispara convite por email para que o morador defina sua própria senha.
+    // Não bloqueia a resposta — falha no email não pode impedir o cadastro.
+    let invitationSent = false;
+    try {
+      await invitationService.create({
+        email: data.email,
+        name: data.name,
+        cpf: data.cpf,
+        phone: data.phone,
+        role: UserRole.RESIDENT,
+        condominiumId: data.condominiumId,
+        unitId: data.unitId,
+        invitedById: req.user!.userId,
+      });
+      invitationSent = true;
+    } catch (err) {
+      logger.warn("Falha ao criar convite para morador (cadastro continuou)", {
+        residentEmail: data.email,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    res.status(existing ? 200 : 201).json({
+      success: true,
+      data: { resident, invitationSent },
+    });
   },
 );
 
