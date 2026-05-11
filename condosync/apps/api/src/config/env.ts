@@ -50,6 +50,11 @@ const envSchema = z
     VAPID_PUBLIC_KEY: z.string().optional(),
     VAPID_PRIVATE_KEY: z.string().optional(),
     VAPID_SUBJECT: z.string().default('mailto:contato@condosync.com.br'),
+    // WebAuthn / Passkeys (Q1.5). RP_ID é o domínio (sem protocolo); a
+    // origin precisa bater no que o navegador envia.
+    WEBAUTHN_RP_NAME: z.string().default('CondoSync'),
+    WEBAUTHN_RP_ID: z.string().optional(),
+    WEBAUTHN_ORIGIN: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (isInsecureSecret(data.JWT_SECRET)) {

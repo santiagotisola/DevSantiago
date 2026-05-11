@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { UserRound, Save, Loader2, Lock } from 'lucide-react';
 import { maskPhone, validatePhone, validateName } from '../../lib/utils';
 import { PushNotificationCard } from '../../components/push/PushNotificationCard';
+import { PasskeysCard } from '../../components/auth/PasskeysCard';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -50,6 +51,8 @@ export function ProfilePage() {
       </div>
 
       <PushNotificationCard />
+
+      <PasskeysCard />
 
       <div className="bg-white rounded-xl border p-6 space-y-5">
         <div className="flex items-center gap-4">

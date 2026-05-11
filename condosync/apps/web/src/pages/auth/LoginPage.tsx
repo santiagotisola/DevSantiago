@@ -3,9 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader2, KeyRound } from 'lucide-react';
+import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { loginWithPasskey } from '../../hooks/useWebAuthn';
 
 function isLikelyCpf(value: string): boolean {
   const digits = value.replace(/\D/g, '');
@@ -167,6 +169,34 @@ export function LoginPage() {
           )}
           {isSubmitting ? 'Entrando...' : 'Entrar'}
         </button>
+
+        {browserSupportsWebAuthn() && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                setError('');
+                const data = await loginWithPasskey(
+                  identifierValue.trim() || undefined,
+                );
+                setAuth(data.user, data.accessToken, data.refreshToken);
+                navigate('/');
+              } catch (err: any) {
+                setError(
+                  err?.name === 'NotAllowedError'
+                    ? 'Autenticação cancelada.'
+                    : err?.response?.data?.message ??
+                        err?.message ??
+                        'Não foi possível entrar com passkey.',
+                );
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors"
+          >
+            <KeyRound className="w-4 h-4" />
+            Entrar com biometria / passkey
+          </button>
+        )}
       </form>
 
     </div>
