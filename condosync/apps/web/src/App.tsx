@@ -3,6 +3,8 @@ import { useEffect, lazy, Suspense, type ComponentType } from "react";
 import { Toaster } from "./components/ui/toaster";
 import { useAuthStore } from "./store/authStore";
 import { connectRealtime } from "./services/socket";
+import { InstallPrompt } from "./components/pwa/InstallPrompt";
+import { OnlineIndicator } from "./components/pwa/OnlineIndicator";
 
 // Layouts (carregamento síncrono — fazem parte da casca da app)
 import { AuthLayout } from "./components/layouts/AuthLayout";
@@ -225,6 +227,8 @@ export default function App() {
     <BrowserRouter
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
+      <OnlineIndicator />
+      <InstallPrompt />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           {/* Landing page */}
