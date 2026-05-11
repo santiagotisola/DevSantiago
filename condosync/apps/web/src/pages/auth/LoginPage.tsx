@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, LogIn, Loader2, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader2, KeyRound, ShieldCheck } from 'lucide-react';
 import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -67,6 +67,10 @@ export function LoginPage() {
     setValue('identifier', raw, { shouldValidate: true });
   }
 
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFASubmitting, setTwoFASubmitting] = useState(false);
+
   const onSubmit = async (data: LoginForm) => {
     try {
       setError('');
@@ -77,6 +81,11 @@ export function LoginPage() {
         identifier,
         password: data.password,
       });
+      // 2FA: backend responde { requires2FA: true, challengeToken } sem tokens.
+      if (response.data.data?.requires2FA) {
+        setChallengeToken(response.data.data.challengeToken);
+        return;
+      }
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
       navigate('/');
@@ -84,6 +93,88 @@ export function LoginPage() {
       setError(err.response?.data?.error?.message || 'Erro ao fazer login. Tente novamente.');
     }
   };
+
+  async function submit2FA() {
+    if (!challengeToken) return;
+    setTwoFASubmitting(true);
+    setError('');
+    try {
+      const r = await api.post('/auth/2fa-challenge', {
+        challengeToken,
+        code: twoFACode.replace(/\s/g, ''),
+      });
+      const { user, accessToken, refreshToken } = r.data.data;
+      setAuth(user, accessToken, refreshToken);
+      navigate('/');
+    } catch (err: any) {
+      setError(err?.response?.data?.error?.message || 'Código 2FA inválido.');
+      setTwoFACode('');
+    } finally {
+      setTwoFASubmitting(false);
+    }
+  }
+
+  if (challengeToken) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="w-6 h-6 text-blue-600" />
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Verificação em 2 etapas</h2>
+            <p className="text-muted-foreground text-sm">
+              Digite o código do seu app autenticador (ou um código de backup).
+            </p>
+          </div>
+        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit2FA();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="twofa-code">
+              Código (6 dígitos ou XXXXX-XXXXX)
+            </label>
+            <input
+              id="twofa-code"
+              autoFocus
+              autoComplete="one-time-code"
+              value={twoFACode}
+              onChange={(e) => setTwoFACode(e.target.value)}
+              placeholder="000000"
+              className="w-full px-3 py-2.5 border rounded-lg text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={twoFASubmitting || twoFACode.length < 6}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg disabled:opacity-50"
+          >
+            {twoFASubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+            Verificar e entrar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setChallengeToken(null);
+              setTwoFACode('');
+              setError('');
+            }}
+            className="w-full text-sm text-muted-foreground hover:underline"
+          >
+            Voltar ao login
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

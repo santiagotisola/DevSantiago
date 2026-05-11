@@ -153,6 +153,9 @@ model User {
   emailVerified Boolean  @default(false)
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
+  // Códigos de backup (hash sha256, um uso cada). Array Json estilo
+  // [{"hash":"...", "usedAt": null}].
+  twoFactorBackupCodes Json?
   lastLoginAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

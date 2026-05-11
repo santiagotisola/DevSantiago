@@ -11,6 +11,7 @@ const router = Router();
 // Rotas públicas — rate-limit em endpoints sensíveis a brute-force/abuso
 router.post('/register', authRateLimiter, authController.register.bind(authController));
 router.post('/login', authRateLimiter, authController.login.bind(authController));
+router.post('/2fa-challenge', authRateLimiter, authController.verify2FA.bind(authController));
 router.post('/refresh', authRateLimiter, authController.refresh.bind(authController));
 router.post('/logout', authController.logout.bind(authController));
 // Bucket por email+ip além do bucket geral por ip — evita spam

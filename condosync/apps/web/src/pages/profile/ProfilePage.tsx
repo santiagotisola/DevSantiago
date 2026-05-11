@@ -6,6 +6,7 @@ import { UserRound, Save, Loader2, Lock } from 'lucide-react';
 import { maskPhone, validatePhone, validateName } from '../../lib/utils';
 import { PushNotificationCard } from '../../components/push/PushNotificationCard';
 import { PasskeysCard } from '../../components/auth/PasskeysCard';
+import { TwoFactorCard } from '../../components/auth/TwoFactorCard';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -51,6 +52,8 @@ export function ProfilePage() {
       </div>
 
       <PushNotificationCard />
+
+      <TwoFactorCard />
 
       <PasskeysCard />
 

@@ -75,7 +75,7 @@ describe('AuthService.login', () => {
     prismaMock.refreshToken.create.mockResolvedValue({} as any);
     prismaMock.user.update.mockResolvedValue(loginMockUser as any);
 
-    const result = await authService.login({ email: mockUser.email, password: 'Senha@123' });
+    const result = await authService.login({ identifier: mockUser.email, password: 'Senha@123' });
 
     expect(result.accessToken).toBeTruthy();
     expect(result.refreshToken).toBeTruthy();
@@ -86,7 +86,7 @@ describe('AuthService.login', () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
 
     await expect(
-      authService.login({ email: 'naoexiste@test.com', password: 'Senha@123' }),
+      authService.login({ identifier: 'naoexiste@test.com', password: 'Senha@123' }),
     ).rejects.toThrow(UnauthorizedError);
   });
 
@@ -94,7 +94,7 @@ describe('AuthService.login', () => {
     prismaMock.user.findUnique.mockResolvedValue(loginMockUser as any);
 
     await expect(
-      authService.login({ email: mockUser.email, password: 'SenhaErrada' }),
+      authService.login({ identifier: mockUser.email, password: 'SenhaErrada' }),
     ).rejects.toThrow(UnauthorizedError);
   });
 
@@ -102,7 +102,7 @@ describe('AuthService.login', () => {
     prismaMock.user.findUnique.mockResolvedValue({ ...loginMockUser, isActive: false } as any);
 
     await expect(
-      authService.login({ email: mockUser.email, password: 'Senha@123' }),
+      authService.login({ identifier: mockUser.email, password: 'Senha@123' }),
     ).rejects.toThrow(UnauthorizedError);
   });
 });

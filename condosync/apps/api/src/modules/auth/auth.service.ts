@@ -146,6 +146,21 @@ export class AuthService {
     if (!isValidPassword)
       throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
 
+    // 2FA: se habilitado, não emite tokens — emite challengeToken (5min).
+    // O cliente precisa POST /auth/2fa-challenge {challengeToken, code}.
+    const userExt = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { twoFactorEnabled: true },
+    });
+    if (userExt?.twoFactorEnabled) {
+      const challengeToken = jwt.sign(
+        { userId: user.id, scope: "2fa-challenge" },
+        env.JWT_SECRET as Secret,
+        { expiresIn: "5m" },
+      );
+      return { requires2FA: true as const, challengeToken } as any;
+    }
+
     const payload: JwtPayload = {
       userId: user.id,
       role: user.role,
@@ -173,6 +188,66 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  /**
+   * Completa o login 2FA. Verifica challengeToken (JWT 5min com scope
+   * `2fa-challenge`) + código TOTP/backup, então emite access+refresh
+   * normais.
+   */
+  async verify2FAChallenge(challengeToken: string, code: string) {
+    let decoded: { userId: string; scope: string };
+    try {
+      decoded = jwt.verify(challengeToken, env.JWT_SECRET) as any;
+    } catch {
+      throw new UnauthorizedError("Challenge inválido ou expirado");
+    }
+    if (decoded.scope !== "2fa-challenge") {
+      throw new UnauthorizedError("Challenge inválido");
+    }
+
+    const { twoFactorService } = await import("../twofactor/twofactor.service");
+    const result = await twoFactorService.verifyLogin(decoded.userId, code);
+    if (!result.ok) throw new UnauthorizedError("Código 2FA inválido");
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        role: true,
+        isActive: true,
+        avatarUrl: true,
+        condominiumUsers: {
+          where: { isActive: true },
+          include: {
+            condominium: { select: { id: true, name: true, logoUrl: true } },
+          },
+        },
+      },
+    });
+    if (!user.isActive)
+      throw new UnauthorizedError("Conta desativada. Contate o suporte.");
+
+    const payload: JwtPayload = {
+      userId: user.id,
+      role: user.role,
+      name: user.name,
+    };
+    const { accessToken, refreshToken } = this.generateTokens(payload);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: user.id, expiresAt },
+    });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    return { user, accessToken, refreshToken, usedBackup: result.usedBackup };
   }
 
   async refreshTokens(token: string) {

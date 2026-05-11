@@ -24,7 +24,9 @@ const registerSchema = z.object({
 
 // Aceita `identifier` (email ou CPF) ou `email` (compat). Pelo menos um precisa
 // vir preenchido — preferimos `identifier` quando ambos chegam.
-const loginSchema = z
+// Schema "input": valida; controller faz a normalização (transform num
+// schema atrapalha tipagem do validateRequest, que assume input == output).
+const loginInputSchema = z
   .object({
     identifier: z.string().min(1).max(100).optional(),
     email: z.string().min(1).max(100).optional(),
@@ -33,13 +35,13 @@ const loginSchema = z
   .refine((d) => !!(d.identifier || d.email), {
     message: "Informe e-mail ou CPF",
     path: ["identifier"],
-  })
-  .transform((d) => ({
-    identifier: (d.identifier ?? d.email)!.trim(),
-    password: d.password,
-  }));
+  });
 
 const refreshSchema = z.object({ refreshToken: z.string() });
+const twoFASchema = z.object({
+  challengeToken: z.string().min(1),
+  code: z.string().min(6).max(12),
+});
 const emailSchema = z.object({ email: z.string().email() });
 const resetSchema = z.object({
   token: z.string(),
@@ -58,8 +60,21 @@ export class AuthController {
   }
 
   async login(req: Request, res: Response) {
-    const data = validateRequest(loginSchema, req.body);
-    const result = await authService.login(data, req.ip);
+    const raw = validateRequest(loginInputSchema, req.body);
+    const identifier = (raw.identifier ?? raw.email)!.trim();
+    const result = await authService.login(
+      { identifier, password: raw.password },
+      req.ip,
+    );
+    res.json({ success: true, data: result });
+  }
+
+  async verify2FA(req: Request, res: Response) {
+    const data = validateRequest(twoFASchema, req.body);
+    const result = await authService.verify2FAChallenge(
+      data.challengeToken,
+      data.code,
+    );
     res.json({ success: true, data: result });
   }
 
