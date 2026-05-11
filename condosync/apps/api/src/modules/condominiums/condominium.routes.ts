@@ -39,7 +39,7 @@ const createSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email().optional(),
   timezone: z.string().optional(),
-  plan: z.enum(["basic", "professional", "enterprise"]).optional(),
+  plan: z.string().min(1).max(40).optional(),
   maxUnits: z.number().int().positive().optional(),
 });
 
@@ -194,6 +194,35 @@ router.delete(
     }
 
     res.json({ success: true });
+  },
+);
+
+// ── Atribuir plano (SUPER_ADMIN) ────────────────────────────────
+// Aceita slug do plano. Por padrão herda maxUnits do plano; aceita
+// override explícito em maxUnits.
+router.patch(
+  "/:id/plan",
+  authorize("SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const schema = z.object({
+      planSlug: z.string().min(1).max(40),
+      maxUnits: z.number().int().positive().optional(),
+    });
+    const { planSlug, maxUnits } = validateRequest(schema, req.body);
+
+    const plan = await prisma.plan.findUnique({ where: { slug: planSlug } });
+    if (!plan || !plan.isActive) {
+      throw new ForbiddenError("Plano inexistente ou inativo");
+    }
+
+    const condominium = await prisma.condominium.update({
+      where: { id: req.params.id },
+      data: {
+        plan: plan.slug,
+        maxUnits: maxUnits ?? plan.maxUnits,
+      },
+    });
+    res.json({ success: true, data: { condominium } });
   },
 );
 

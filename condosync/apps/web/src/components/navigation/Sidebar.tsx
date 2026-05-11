@@ -34,6 +34,7 @@ import {
   MonitorPlay,
   FileSignature,
   Gavel,
+  Package,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -182,6 +183,12 @@ const navItems: NavItem[] = [
     label: "Condomínios",
     to: "/admin/condominios",
     icon: Building2,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    label: "Planos",
+    to: "/admin/planos",
+    icon: Package,
     roles: ["SUPER_ADMIN"],
   },
   {

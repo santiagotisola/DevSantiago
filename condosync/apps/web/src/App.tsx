@@ -106,6 +106,10 @@ const CondominiumsPage = lazyNamed(
   () => import("./pages/admin/CondominiumsPage") as any,
   "CondominiumsPage",
 );
+const PlansPage = lazyNamed(
+  () => import("./pages/admin/PlansPage") as any,
+  "PlansPage",
+);
 const MyVisitorsPage = lazyNamed(
   () => import("./pages/minha-portaria/MyVisitorsPage") as any,
   "MyVisitorsPage",
@@ -435,6 +439,14 @@ export default function App() {
               element={
                 <RoleGuard roles={["SUPER_ADMIN"]}>
                   <CondominiumsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/planos"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <PlansPage />
                 </RoleGuard>
               }
             />

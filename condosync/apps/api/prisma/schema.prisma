@@ -1491,3 +1491,24 @@ model DigitalSignageSlide {
 
   @@map("digital_signage_slides")
 }
+
+// ─────────────────────────────────────────────────────────────
+// PLANOS DE ASSINATURA (SUPER_ADMIN)
+// ─────────────────────────────────────────────────────────────
+// Condominium.plan armazena o `slug` deste model (relação fraca,
+// sem FK, pra não exigir migration do Condominium). maxUnits do
+// condomínio pode ser sobrescrito (override) por SUPER_ADMIN.
+model Plan {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String?
+  price       Decimal  @default(0) @db.Decimal(10, 2)
+  maxUnits    Int      @default(100)
+  features    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("plans")
+}

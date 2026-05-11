@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
-import { Building2, Plus, Loader2, Users, Home, UserCog, Pencil, KeyRound, Eye, EyeOff, Search, Power, Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Building2, Plus, Loader2, Users, Home, UserCog, Pencil, KeyRound, Eye, EyeOff, Search, Power, Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, Package, CheckCircle2, X } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail } from '../../lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -85,6 +85,14 @@ export function CondominiumsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  // ── Atribuir plano ─────────────────────────────────────────────
+  const [planTarget, setPlanTarget] = useState<any | null>(null);
+  const [planForm, setPlanForm] = useState<{ planSlug: string; maxUnits: string; useDefault: boolean }>(
+    { planSlug: '', maxUnits: '', useDefault: true },
+  );
+  const [planError, setPlanError] = useState('');
+  const [planToast, setPlanToast] = useState<string | null>(null);
+
   // ── Excluir / Toggle Ativo ─────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
@@ -113,6 +121,28 @@ export function CondominiumsPage() {
     queryFn: async () => {
       const res = await api.get('/condominiums');
       return res.data.data.condominiums as any[];
+    },
+  });
+
+  const { data: availablePlans } = useQuery({
+    queryKey: ['plans', { active: true }],
+    queryFn: async () => {
+      const r = await api.get('/plans?active=true');
+      return r.data.data.plans as Array<{ id: string; slug: string; name: string; maxUnits: number; price: string | number; isActive: boolean }>;
+    },
+  });
+
+  const assignPlanMutation = useMutation({
+    mutationFn: ({ id, planSlug, maxUnits }: { id: string; planSlug: string; maxUnits?: number }) =>
+      api.patch(`/condominiums/${id}/plan`, { planSlug, ...(maxUnits !== undefined ? { maxUnits } : {}) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['condominiums'] });
+      setPlanTarget(null);
+      setPlanToast('Plano atribuído com sucesso.');
+      setTimeout(() => setPlanToast(null), 2500);
+    },
+    onError: (err: any) => {
+      setPlanError(err?.response?.data?.message ?? 'Erro ao atribuir plano.');
     },
   });
 
@@ -413,6 +443,21 @@ export function CondominiumsPage() {
                           className="p-1.5 rounded hover:bg-gray-100 text-gray-600"
                         >
                           <KeyRound className="w-4 h-4" />
+                        </button>
+                        <button
+                          title="Atribuir plano"
+                          onClick={() => {
+                            setPlanTarget(c);
+                            setPlanForm({
+                              planSlug: c.plan ?? '',
+                              maxUnits: String(c.maxUnits ?? ''),
+                              useDefault: false,
+                            });
+                            setPlanError('');
+                          }}
+                          className="p-1.5 rounded hover:bg-indigo-50 text-indigo-600"
+                        >
+                          <Package className="w-4 h-4" />
                         </button>
                         <button
                           title={c.isActive ? 'Inativar' : 'Reativar'}
@@ -1061,6 +1106,140 @@ export function CondominiumsPage() {
                 {resetPasswordMutation.isPending ? 'Salvando...' : 'Salvar Senha'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Atribuir plano */}
+      {planTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Package className="w-5 h-5 text-indigo-600" />
+                Atribuir plano
+              </h2>
+              <button
+                onClick={() => setPlanTarget(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Condomínio: <span className="font-medium text-gray-800">{planTarget.name}</span>
+              </p>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Plano</label>
+                <select
+                  value={planForm.planSlug}
+                  onChange={(e) => {
+                    const slug = e.target.value;
+                    const p = availablePlans?.find((x) => x.slug === slug);
+                    setPlanForm((f) => ({
+                      ...f,
+                      planSlug: slug,
+                      maxUnits: f.useDefault && p ? String(p.maxUnits) : f.maxUnits,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione…</option>
+                  {(availablePlans ?? []).map((p) => (
+                    <option key={p.id} value={p.slug}>
+                      {p.name} ({p.slug}) — até {p.maxUnits.toLocaleString('pt-BR')} unidades
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={planForm.useDefault}
+                  onChange={(e) => {
+                    const useDefault = e.target.checked;
+                    const p = availablePlans?.find((x) => x.slug === planForm.planSlug);
+                    setPlanForm((f) => ({
+                      ...f,
+                      useDefault,
+                      maxUnits: useDefault && p ? String(p.maxUnits) : f.maxUnits,
+                    }));
+                  }}
+                />
+                Usar limite padrão do plano
+              </label>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Limite de unidades</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={planForm.maxUnits}
+                  disabled={planForm.useDefault}
+                  onChange={(e) => setPlanForm((f) => ({ ...f, maxUnits: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Marque "Usar limite padrão" para herdar o valor do plano. Desmarque para
+                  sobrescrever apenas neste condomínio.
+                </p>
+              </div>
+
+              {planError && (
+                <div className="bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-2 rounded-lg">
+                  {planError}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t bg-gray-50 rounded-b-xl">
+              <button
+                onClick={() => setPlanTarget(null)}
+                className="text-sm px-4 py-2 rounded-lg hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setPlanError('');
+                  if (!planForm.planSlug) {
+                    setPlanError('Selecione um plano.');
+                    return;
+                  }
+                  const payload: { id: string; planSlug: string; maxUnits?: number } = {
+                    id: planTarget.id,
+                    planSlug: planForm.planSlug,
+                  };
+                  if (!planForm.useDefault) {
+                    const mu = parseInt(planForm.maxUnits, 10);
+                    if (!Number.isFinite(mu) || mu <= 0) {
+                      setPlanError('Informe um limite de unidades válido.');
+                      return;
+                    }
+                    payload.maxUnits = mu;
+                  }
+                  assignPlanMutation.mutate(payload);
+                }}
+                disabled={assignPlanMutation.isPending}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {assignPlanMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Atribuir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast atribuição de plano */}
+      {planToast && (
+        <div className="fixed top-4 right-4 z-[80]">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border bg-green-50 border-green-200 text-green-800 text-sm">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            {planToast}
           </div>
         </div>
       )}
