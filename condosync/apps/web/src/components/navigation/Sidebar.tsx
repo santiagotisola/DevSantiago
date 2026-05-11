@@ -178,6 +178,7 @@ const navItems: NavItem[] = [
       { label: "Controle de Acesso", to: "/acesso", roles: MANAGEMENT },
       { label: "Dados do Condomínio", to: "/configuracoes", roles: MANAGEMENT },
       { label: "Convites", to: "/convites", roles: MANAGEMENT },
+      { label: "Auditoria", to: "/auditoria", roles: MANAGEMENT },
     ],
   },
   {

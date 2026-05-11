@@ -143,8 +143,17 @@ export class AuthService {
       data.password,
       user.passwordHash,
     );
-    if (!isValidPassword)
+    if (!isValidPassword) {
+      const { auditService } = await import("../audit/audit.service");
+      await auditService.write({
+        userId: user.id,
+        action: "LOGIN_FAILED",
+        module: "auth",
+        description: `Login falhou para ${user.email}: senha inválida`,
+        ipAddress: ipAddress ?? null,
+      });
       throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
+    }
 
     // 2FA: se habilitado, não emite tokens — emite challengeToken (5min).
     // O cliente precisa POST /auth/2fa-challenge {challengeToken, code}.
@@ -179,6 +188,15 @@ export class AuthService {
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
+    });
+
+    const { auditService } = await import("../audit/audit.service");
+    await auditService.write({
+      userId: user.id,
+      action: "LOGIN",
+      module: "auth",
+      description: `Login bem-sucedido (${user.email})`,
+      ipAddress: ipAddress ?? null,
     });
 
     const { passwordHash: _, ...userWithoutPassword } = user;

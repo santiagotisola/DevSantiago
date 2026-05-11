@@ -97,6 +97,14 @@ export const twoFactorService = {
       },
     });
 
+    const { auditService } = await import('../audit/audit.service');
+    await auditService.write({
+      userId,
+      action: 'ENABLE_2FA',
+      module: 'auth',
+      description: '2FA TOTP habilitado',
+    });
+
     return { backupCodes: plainCodes };
   },
 
@@ -177,6 +185,14 @@ export const twoFactorService = {
         twoFactorSecret: null,
         twoFactorBackupCodes: null as any,
       },
+    });
+
+    const { auditService } = await import('../audit/audit.service');
+    await auditService.write({
+      userId,
+      action: 'DISABLE_2FA',
+      module: 'auth',
+      description: '2FA TOTP desabilitado',
     });
   },
 

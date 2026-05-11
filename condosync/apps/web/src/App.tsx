@@ -120,6 +120,10 @@ const InvitationsPage = lazyNamed(
   () => import("./pages/admin/InvitationsPage") as any,
   "InvitationsPage",
 );
+const AuditPage = lazyNamed(
+  () => import("./pages/admin/AuditPage") as any,
+  "AuditPage",
+);
 const MyVisitorsPage = lazyNamed(
   () => import("./pages/minha-portaria/MyVisitorsPage") as any,
   "MyVisitorsPage",
@@ -477,6 +481,14 @@ export default function App() {
               element={
                 <RoleGuard roles={MANAGEMENT}>
                   <InvitationsPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="auditoria"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <AuditPage />
                 </RoleGuard>
               }
             />
