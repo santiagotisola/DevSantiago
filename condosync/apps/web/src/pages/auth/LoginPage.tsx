@@ -7,8 +7,26 @@ import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
+function isLikelyCpf(value: string): boolean {
+  const digits = value.replace(/\D/g, '');
+  return digits.length > 0 && !value.includes('@') && digits.length <= 11;
+}
+function isCompleteCpf(value: string): boolean {
+  return value.replace(/\D/g, '').length === 11;
+}
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+// Schema permissivo: identifier pode ser email ou CPF (11 dígitos).
 const loginSchema = z.object({
-  email: z.string().email('E-mail inválido'),
+  identifier: z
+    .string()
+    .min(1, 'Informe seu e-mail ou CPF')
+    .refine(
+      (v) => isValidEmail(v) || v.replace(/\D/g, '').length === 11,
+      'Use um e-mail válido ou CPF com 11 dígitos',
+    ),
   password: z.string().min(1, 'Senha obrigatória'),
 });
 
@@ -20,14 +38,43 @@ export function LoginPage() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
+
+  const identifierValue = watch('identifier') ?? '';
+  const looksLikeCpf = isLikelyCpf(identifierValue);
+
+  function handleIdentifierChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+    if (raw.includes('@')) {
+      setValue('identifier', raw.toLowerCase(), { shouldValidate: true });
+      return;
+    }
+    // Máscara de CPF se o usuário começou digitando números
+    const digitsOnly = raw.replace(/\D/g, '');
+    if (digitsOnly.length > 0 && /^[\d.\-\s]+$/.test(raw)) {
+      const d = digitsOnly.slice(0, 11);
+      let masked = d;
+      if (d.length > 3) masked = `${d.slice(0, 3)}.${d.slice(3)}`;
+      if (d.length > 6) masked = `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+      if (d.length > 9) masked = `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+      setValue('identifier', masked, { shouldValidate: true });
+      return;
+    }
+    setValue('identifier', raw, { shouldValidate: true });
+  }
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setError('');
-      const response = await api.post('/auth/login', data);
+      const identifier = data.identifier.includes('@')
+        ? data.identifier.trim().toLowerCase()
+        : data.identifier.replace(/\D/g, '');
+      const response = await api.post('/auth/login', {
+        identifier,
+        password: data.password,
+      });
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
       navigate('/');
@@ -46,19 +93,27 @@ export function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* E-mail */}
+        {/* Identificador (email ou CPF) */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium" htmlFor="email">E-mail</label>
+          <label className="text-sm font-medium" htmlFor="identifier">E-mail ou CPF</label>
           <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="seu@email.com.br"
+            id="identifier"
+            type="text"
+            inputMode={looksLikeCpf ? 'numeric' : 'email'}
+            autoComplete="username"
+            placeholder="seu@email.com.br ou 000.000.000-00"
             className="w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-            {...register('email')}
+            {...register('identifier')}
+            onChange={handleIdentifierChange}
+            value={identifierValue}
           />
-          {errors.email && (
-            <p className="text-destructive text-xs">{errors.email.message}</p>
+          {errors.identifier && (
+            <p className="text-destructive text-xs">{errors.identifier.message}</p>
+          )}
+          {looksLikeCpf && identifierValue && !isCompleteCpf(identifierValue) && (
+            <p className="text-xs text-muted-foreground">
+              Digite os 11 dígitos do CPF
+            </p>
           )}
         </div>
 

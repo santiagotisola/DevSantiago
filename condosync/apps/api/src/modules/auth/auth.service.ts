@@ -22,8 +22,26 @@ export interface RegisterDTO {
 }
 
 export interface LoginDTO {
-  email: string;
+  /** Email ou CPF (apenas dígitos ou com pontuação). */
+  identifier: string;
   password: string;
+}
+
+/**
+ * Resolve um identificador (email ou CPF) para o `where` do Prisma.
+ * Heurística simples: se contém "@", trata como email; caso contrário
+ * sanitiza para 11 dígitos e busca por CPF.
+ */
+export function resolveLoginIdentifier(identifier: string): { email: string } | { cpf: string } | null {
+  const trimmed = identifier.trim();
+  if (trimmed.includes("@")) {
+    return { email: trimmed.toLowerCase() };
+  }
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return { cpf: digits };
+  }
+  return null;
 }
 
 export class AuthService {
@@ -94,12 +112,16 @@ export class AuthService {
   }
 
   async login(data: LoginDTO, ipAddress?: string) {
+    const where = resolveLoginIdentifier(data.identifier);
+    if (!where) throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
+
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where,
       select: {
         id: true,
         name: true,
         email: true,
+        cpf: true,
         role: true,
         passwordHash: true,
         isActive: true,
@@ -113,7 +135,7 @@ export class AuthService {
       },
     });
 
-    if (!user) throw new UnauthorizedError("E-mail ou senha inválidos");
+    if (!user) throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
     if (!user.isActive)
       throw new UnauthorizedError("Conta desativada. Contate o suporte.");
 
@@ -122,7 +144,7 @@ export class AuthService {
       user.passwordHash,
     );
     if (!isValidPassword)
-      throw new UnauthorizedError("E-mail ou senha inválidos");
+      throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
 
     const payload: JwtPayload = {
       userId: user.id,

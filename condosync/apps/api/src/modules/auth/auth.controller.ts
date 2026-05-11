@@ -22,10 +22,22 @@ const registerSchema = z.object({
   cpf: z.string().regex(/^\d{11}$/, 'CPF deve ter 11 dígitos').optional(),
 });
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+// Aceita `identifier` (email ou CPF) ou `email` (compat). Pelo menos um precisa
+// vir preenchido — preferimos `identifier` quando ambos chegam.
+const loginSchema = z
+  .object({
+    identifier: z.string().min(1).max(100).optional(),
+    email: z.string().min(1).max(100).optional(),
+    password: z.string().min(1),
+  })
+  .refine((d) => !!(d.identifier || d.email), {
+    message: "Informe e-mail ou CPF",
+    path: ["identifier"],
+  })
+  .transform((d) => ({
+    identifier: (d.identifier ?? d.email)!.trim(),
+    password: d.password,
+  }));
 
 const refreshSchema = z.object({ refreshToken: z.string() });
 const emailSchema = z.object({ email: z.string().email() });
