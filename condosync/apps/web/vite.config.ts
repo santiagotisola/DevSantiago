@@ -7,6 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // injectManifest: usamos um service worker próprio (src/sw.ts) para
+      // ter handlers de `push` e `notificationclick`. Workbox cuida do
+      // precache via __WB_MANIFEST injetado em build.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
       manifest: {
@@ -33,7 +39,7 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       devOptions: {

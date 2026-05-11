@@ -1,4 +1,4 @@
-import { emailQueue, inappQueue } from './notification.queue';
+import { emailQueue, inappQueue, pushQueue } from './notification.queue';
 import { NotificationPayload } from './types';
 import { logger } from '../config/logger';
 
@@ -34,6 +34,16 @@ export class NotificationService {
           'notification:email',
           { ...payload, channels: ['email'] },
           jobId ? { jobId: `${jobId}:email` } : undefined,
+        ),
+      );
+    }
+
+    if (payload.channels.includes('push')) {
+      promises.push(
+        pushQueue.add(
+          'notification:push',
+          { ...payload, channels: ['push'] },
+          jobId ? { jobId: `${jobId}:push` } : undefined,
         ),
       );
     }

@@ -119,7 +119,7 @@ export const maintenanceAlertsWorker = new Worker(
               condominiumId,
               nextDueDate: schedule.nextDueDate,
             },
-            channels: ["inapp", "email"],
+            channels: ["inapp", "email", "push"],
           }).catch((err) =>
             log.error(`Failed to enqueue alert for user ${u.id}`, err),
           ),

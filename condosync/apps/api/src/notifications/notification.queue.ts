@@ -43,6 +43,18 @@ export const emailQueue = new Queue<NotificationPayload>('notifications-email', 
   },
 });
 
+export const pushQueue = new Queue<NotificationPayload>('notifications-push', {
+  connection: bullConnection(),
+  defaultJobOptions: {
+    attempts: 3,
+    // Web Push é fast-fail: 410/404 são definitivos (pruning), demais
+    // erros raramente se resolvem em retry agressivo.
+    backoff: { type: 'exponential', delay: 5_000 },
+    removeOnComplete: { age: 3600, count: 2000 },
+    removeOnFail: 500,
+  },
+});
+
 // Compat: queue legacy mantida para drainar jobs já enfileirados
 // no momento do deploy. Remover em sprint subsequente após
 // confirmação de que está vazia (BullMQ UI ou queue.getJobCounts).

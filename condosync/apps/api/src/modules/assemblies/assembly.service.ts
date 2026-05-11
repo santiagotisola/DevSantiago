@@ -128,7 +128,7 @@ export class AssemblyService {
           title: "Nova Assembleia Agendada",
           message: `Uma nova assembleia "${data.title}" foi agendada para ${data.scheduledAt.toLocaleString("pt-BR")}.`,
           data: { assemblyId: assembly.id },
-          channels: ["inapp", "email"],
+          channels: ["inapp", "email", "push"],
         }),
       ),
     );

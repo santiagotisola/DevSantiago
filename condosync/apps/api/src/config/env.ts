@@ -45,6 +45,11 @@ const envSchema = z
     APP_ENCRYPTION_KEY: z.string().optional(),
     // Chave anterior — usada apenas em rotação (decrypt fallback).
     APP_ENCRYPTION_KEY_PREVIOUS: z.string().optional(),
+    // VAPID — Web Push (Q1.3). Gerar com `npx web-push generate-vapid-keys`.
+    // Sem essas chaves push silenciosamente desliga (não quebra o app).
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().default('mailto:contato@condosync.com.br'),
   })
   .superRefine((data, ctx) => {
     if (isInsecureSecret(data.JWT_SECRET)) {

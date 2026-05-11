@@ -4,6 +4,7 @@ import { logger } from '../config/logger';
 import { NotificationPayload } from './types';
 import { InAppChannel } from './channels/inapp.channel';
 import { EmailChannel } from './channels/email.channel';
+import { PushChannel } from './channels/push.channel';
 
 const log = logger.child({ module: 'notification.worker' });
 
@@ -67,6 +68,25 @@ emailWorker.on('failed', (job, err) => {
   log.error(
     { jobId: job?.id, userId: job?.data?.userId, attempts: job?.attemptsMade },
     `email falhou: ${err.message}`,
+  );
+});
+
+export const pushWorker = new Worker<NotificationPayload>(
+  'notifications-push',
+  async (job: Job<NotificationPayload>) => {
+    log.debug({ jobId: job.id, userId: job.data.userId }, 'Processing push');
+    await PushChannel.send(job.data);
+  },
+  {
+    connection: bullConnection(),
+    concurrency: Number(process.env.PUSH_CONCURRENCY ?? 25),
+  },
+);
+
+pushWorker.on('failed', (job, err) => {
+  log.error(
+    { jobId: job?.id, userId: job?.data?.userId, attempts: job?.attemptsMade },
+    `push falhou: ${err.message}`,
   );
 });
 

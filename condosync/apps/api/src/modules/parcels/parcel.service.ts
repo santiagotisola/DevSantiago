@@ -126,7 +126,7 @@ export class ParcelService {
             storageLocation: data.storageLocation,
             trackingCode: data.trackingCode,
           },
-          channels: ["inapp", "email"],
+          channels: ["inapp", "email", "push"],
         }),
       ),
     );

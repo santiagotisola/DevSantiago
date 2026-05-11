@@ -78,7 +78,7 @@ export const contractAlertsWorker = new Worker(
             type: "MAINTENANCE",
             title: `${urgencyLabel} Contrato vencendo em ${days} dias`,
             message: `"${contract.title}" com ${contract.vendor} vence em ${days} dias (${contract.endDate.toLocaleDateString("pt-BR")}).`,
-            channels: ["inapp", "email"],
+            channels: ["inapp", "email", "push"],
             data: { contractId: contract.id, condominiumId: contract.condominiumId },
           });
         }

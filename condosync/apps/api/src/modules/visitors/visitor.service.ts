@@ -126,7 +126,7 @@ export class VisitorService {
         title: "Visitante pré-autorizado",
         message: `${data.name} foi pré-autorizado para sua unidade`,
         data: { visitorId: visitor.id },
-        channels: ["inapp", "email"],
+        channels: ["inapp", "email", "push"],
       });
     }
 
@@ -172,7 +172,7 @@ export class VisitorService {
           title: "Visitante chegou",
           message: `${visitor.name} entrou no condomínio`,
           data: { visitorId: visitor.id },
-          channels: ["inapp", "email"],
+          channels: ["inapp", "email", "push"],
         }),
       ),
     );

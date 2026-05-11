@@ -197,7 +197,7 @@ export class FinanceService {
             amount: data.amount,
             dueDate: data.dueDate,
           },
-          channels: ["inapp", "email"],
+          channels: ["inapp", "email", "push"],
         }),
       ),
     );

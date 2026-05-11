@@ -100,7 +100,7 @@ router.post(
         type: "FINANCIAL",
         title: "⚠️ Auto de Infração Registrado",
         message: `Um auto de infração foi registrado para sua unidade. Valor: R$ ${data.amount.toFixed(2)}. Prazo de recurso: ${data.appealDeadlineDays} dias.`,
-        channels: ["inapp", "email"],
+        channels: ["inapp", "email", "push"],
         data: { fineId: fine.id },
       });
     }
@@ -183,7 +183,7 @@ router.patch(
         type: "FINANCIAL",
         title: `Recurso de multa: ${resultLabel}`,
         message: appealResponse,
-        channels: ["inapp", "email"],
+        channels: ["inapp", "email", "push"],
         data: { fineId: fine.id },
       });
     }
