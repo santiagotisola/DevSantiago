@@ -34,6 +34,10 @@ const AcceptInvitePage = lazyNamed(
   () => import("./pages/auth/AcceptInvitePage") as any,
   "AcceptInvitePage",
 );
+const TermsPage = lazyNamed(
+  () => import("./pages/public/TermsPage") as any,
+  "TermsPage",
+);
 
 // ─── Sistema (named exports) ───────────────────────────────────
 const DashboardPage = lazyNamed(
@@ -291,6 +295,7 @@ export default function App() {
               </PublicRoute>
             }
           />
+          <Route path="/termos/:kind" element={<TermsPage />} />
 
           {/* Rotas privadas */}
           <Route

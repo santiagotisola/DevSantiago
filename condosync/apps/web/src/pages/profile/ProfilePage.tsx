@@ -8,6 +8,7 @@ import { PushNotificationCard } from '../../components/push/PushNotificationCard
 import { PasskeysCard } from '../../components/auth/PasskeysCard';
 import { TwoFactorCard } from '../../components/auth/TwoFactorCard';
 import { SessionsCard } from '../../components/auth/SessionsCard';
+import { LgpdCard } from '../../components/auth/LgpdCard';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -59,6 +60,8 @@ export function ProfilePage() {
       <PasskeysCard />
 
       <SessionsCard />
+
+      <LgpdCard />
 
       <div className="bg-white rounded-xl border p-6 space-y-5">
         <div className="flex items-center gap-4">

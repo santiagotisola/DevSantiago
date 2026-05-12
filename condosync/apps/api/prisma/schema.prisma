@@ -171,6 +171,7 @@ model User {
   invitationsAccepted Invitation[]  @relation("InvitationAcceptedBy")
   pushSubscriptions  PushSubscription[]
   webAuthnCredentials WebAuthnCredential[]
+  termsAcceptances   TermsAcceptance[]
   lostAndFoundItems  LostAndFound[] @relation("CreatedLostAndFound")
   ticketsCreated     Ticket[]       @relation("TicketCreator")
   ticketsAssigned    Ticket[]       @relation("TicketAssignee")
@@ -1599,4 +1600,38 @@ model WebAuthnCredential {
 
   @@index([userId])
   @@map("webauthn_credentials")
+}
+
+// ─────────────────────────────────────────────────────────────
+// LGPD — termos versionados + aceite + audit trail
+// ─────────────────────────────────────────────────────────────
+model TermsVersion {
+  id          String   @id @default(uuid())
+  kind        String   // "terms_of_use" | "privacy_policy"
+  version     String   // ex: "1.0.0", "2026-05-12"
+  contentMd   String   // markdown
+  effectiveAt DateTime @default(now())
+  createdBy   String?  // userId
+  createdAt   DateTime @default(now())
+
+  acceptances TermsAcceptance[]
+
+  @@unique([kind, version])
+  @@index([kind, effectiveAt])
+  @@map("terms_versions")
+}
+
+model TermsAcceptance {
+  id              String        @id @default(uuid())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  termsVersion    TermsVersion  @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
+  termsVersionId  String
+  acceptedAt      DateTime      @default(now())
+  ipAddress       String?
+  userAgent       String?
+
+  @@unique([userId, termsVersionId])
+  @@index([userId])
+  @@map("terms_acceptances")
 }
