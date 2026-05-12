@@ -4,6 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
 import { Plus, Trash2, Clock, CalendarCheck, Loader2 } from "lucide-react";
+import { SkeletonTable } from "../../components/ui/Skeleton";
 
 const WEEK_DAYS = [
   { value: "MON", label: "Seg" },
@@ -118,11 +119,7 @@ export function VisitorRecurrencesPage() {
         </button>
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        </div>
-      )}
+      {isLoading && <SkeletonTable rows={4} cols={3} />}
 
       {!isLoading && active.length === 0 && (
         <div className="text-center py-16 text-gray-400">

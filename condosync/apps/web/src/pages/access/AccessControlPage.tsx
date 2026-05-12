@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { validateEmail } from '../../lib/utils';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 // ─── Módulos disponíveis no sistema ─────────────────────────
 const ALL_MODULES = [
@@ -653,9 +654,7 @@ export default function AccessControlPage() {
 
           {/* Tabela de membros */}
           {loadingMembers ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-            </div>
+            <SkeletonTable rows={5} cols={4} />
           ) : members.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
               <Users className="w-10 h-10" />

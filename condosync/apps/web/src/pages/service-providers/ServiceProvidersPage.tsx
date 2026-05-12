@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { Briefcase, PlusCircle, Search, Loader2, CheckCircle2, Mail, Phone } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail, validateName, maskCPF, maskCNPJ } from '../../lib/utils';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 export function ServiceProvidersPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -87,7 +88,9 @@ export function ServiceProvidersPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (<SkeletonCard key={i} />))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><Briefcase className="w-10 h-10" /><p>Nenhum prestador cadastrado</p></div>
       ) : (

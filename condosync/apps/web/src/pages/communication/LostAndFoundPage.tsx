@@ -7,6 +7,7 @@ import {
   CheckCircle2, AlertCircle, MapPin, Tag, 
   Trash2, Filter, X
 } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 const emptyItemForm = {
   title: '',
@@ -115,8 +116,8 @@ export default function LostAndFoundPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (<SkeletonCard key={i} />))}
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="bg-white rounded-2xl border-2 border-dashed p-12 text-center text-slate-400">

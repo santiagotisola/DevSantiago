@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, Tag, ArrowUpCircle, ArrowDownCircle, Loader2 } from "lucide-react";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
+import { SkeletonTable } from "../../components/ui/Skeleton";
 
 interface FinancialCategory {
   id: string;
@@ -93,11 +94,7 @@ export function FinanceCategoriesPage() {
         </button>
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        </div>
-      )}
+      {isLoading && <SkeletonTable rows={4} cols={3} />}
 
       {/* Receitas */}
       {!isLoading && (

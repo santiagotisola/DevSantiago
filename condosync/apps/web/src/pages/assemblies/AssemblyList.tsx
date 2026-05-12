@@ -3,6 +3,7 @@ import { api } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { Link } from 'react-router-dom';
 import { Video, Calendar, Eye, Loader2 } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 interface Assembly {
   id: string;
@@ -27,8 +28,8 @@ export default function AssemblyList() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (<SkeletonCard key={i} />))}
       </div>
     );
   }

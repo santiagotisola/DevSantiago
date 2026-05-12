@@ -13,6 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   PENDING: { label: 'Pendente', icon: Clock, className: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
@@ -114,8 +115,8 @@ export default function MyChargesPage() {
 
       {/* Lista de cobranças */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (<SkeletonCard key={i} />))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">

@@ -16,6 +16,7 @@ import {
   Loader2,
   CalendarClock,
 } from "lucide-react";
+import { SkeletonTable } from "../../components/ui/Skeleton";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendente", color: "bg-yellow-100 text-yellow-700" },
@@ -144,10 +145,7 @@ export function MyVisitorsPage() {
       {/* Lista */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center h-48 text-slate-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Carregando...
-          </div>
+          <div className="p-3"><SkeletonTable rows={5} cols={4} /></div>
         ) : visitors.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-slate-400">
             <CalendarClock className="w-10 h-10 mb-2 text-slate-300" />
