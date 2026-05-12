@@ -111,7 +111,7 @@ export class AuthService {
     return { user };
   }
 
-  async login(data: LoginDTO, ipAddress?: string) {
+  async login(data: LoginDTO, ipAddress?: string, userAgent?: string) {
     const where = resolveLoginIdentifier(data.identifier);
     if (!where) throw new UnauthorizedError("E-mail/CPF ou senha inválidos");
 
@@ -177,11 +177,18 @@ export class AuthService {
     };
     const { accessToken, refreshToken } = this.generateTokens(payload);
 
-    // Salvar refresh token
+    // Salvar refresh token com metadata
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await prisma.refreshToken.create({
-      data: { token: refreshToken, userId: user.id, expiresAt },
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt,
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
+        lastUsedAt: new Date(),
+      },
     });
 
     // Atualizar último login

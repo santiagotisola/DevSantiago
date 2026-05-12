@@ -65,6 +65,7 @@ export class AuthController {
     const result = await authService.login(
       { identifier, password: raw.password },
       req.ip,
+      req.get('user-agent') ?? undefined,
     );
     res.json({ success: true, data: result });
   }

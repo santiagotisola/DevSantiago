@@ -181,13 +181,19 @@ model User {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  // Metadata pra tela "Meus dispositivos" (Q2.4). Opcionais pra não
+  // quebrar tokens antigos.
+  ipAddress  String?
+  userAgent  String?
+  lastUsedAt DateTime?
+  createdAt  DateTime @default(now())
 
+  @@index([userId])
   @@map("refresh_tokens")
 }
 

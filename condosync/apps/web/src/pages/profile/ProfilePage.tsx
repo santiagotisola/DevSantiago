@@ -7,6 +7,7 @@ import { maskPhone, validatePhone, validateName } from '../../lib/utils';
 import { PushNotificationCard } from '../../components/push/PushNotificationCard';
 import { PasskeysCard } from '../../components/auth/PasskeysCard';
 import { TwoFactorCard } from '../../components/auth/TwoFactorCard';
+import { SessionsCard } from '../../components/auth/SessionsCard';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -56,6 +57,8 @@ export function ProfilePage() {
       <TwoFactorCard />
 
       <PasskeysCard />
+
+      <SessionsCard />
 
       <div className="bg-white rounded-xl border p-6 space-y-5">
         <div className="flex items-center gap-4">
