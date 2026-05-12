@@ -183,6 +183,12 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Painel SaaS",
+    to: "/admin/saas",
+    icon: BarChart3,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
     label: "Condomínios",
     to: "/admin/condominios",
     icon: Building2,

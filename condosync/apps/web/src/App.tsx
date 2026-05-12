@@ -132,6 +132,10 @@ const SyndicDashboardPage = lazyNamed(
   () => import("./pages/dashboard/SyndicDashboardPage") as any,
   "SyndicDashboardPage",
 );
+const SaasDashboardPage = lazyNamed(
+  () => import("./pages/admin/SaasDashboardPage") as any,
+  "SaasDashboardPage",
+);
 const MyVisitorsPage = lazyNamed(
   () => import("./pages/minha-portaria/MyVisitorsPage") as any,
   "MyVisitorsPage",
@@ -497,6 +501,14 @@ export default function App() {
               element={
                 <RoleGuard roles={MANAGEMENT}>
                   <SyndicDashboardPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/saas"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <SaasDashboardPage />
                 </RoleGuard>
               }
             />
