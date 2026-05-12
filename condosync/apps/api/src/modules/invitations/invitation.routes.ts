@@ -6,6 +6,7 @@ import { validateRequest } from '../../utils/validateRequest';
 import { invitationService } from './invitation.service';
 import { ForbiddenError } from '../../middleware/errorHandler';
 import { prisma } from '../../config/prisma';
+import { auditService } from '../audit/audit.service';
 
 const router = Router();
 
@@ -114,6 +115,18 @@ router.post(
       invitedById: req.user!.userId,
       ttlHours: data.ttlHours,
     });
+    await auditService.write({
+      userId: req.user!.userId,
+      condominiumId: data.condominiumId,
+      action: "CREATE",
+      module: "invitations",
+      entityType: "Invitation",
+      entityId: (result as any)?.invitation?.id ?? (result as any)?.id,
+      description: `Convite criado para ${data.email} (${data.role})`,
+      metadata: { email: data.email, role: data.role, unitId: data.unitId },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
     res.status(201).json({ success: true, data: result });
   },
 );
@@ -182,6 +195,17 @@ router.delete(
       inv.condominiumId,
     );
     await invitationService.revoke(id, inv.condominiumId);
+    await auditService.write({
+      userId: req.user!.userId,
+      condominiumId: inv.condominiumId,
+      action: "REVOKE",
+      module: "invitations",
+      entityType: "Invitation",
+      entityId: id,
+      description: "Convite revogado",
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
     res.json({ success: true });
   },
 );

@@ -24,7 +24,7 @@ server {
     # CSP minimamente restritiva para SPA Vite + assets do próprio
     # domínio + API/WS no mesmo host. Ajustar se forem adicionadas
     # CDNs externas (fontes Google, imagens S3, etc).
-    add_header Content-Security-Policy      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss: ws:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     # Compressão gzip
     gzip on;

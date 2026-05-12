@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AiCollectionSuggestion } from '../../components/ai/AiCollectionSuggestion';
+import { Sparkles } from 'lucide-react';
 
 // ─── Status ───────────────────────────────────────────────────────────
 const STATUS: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -293,8 +295,22 @@ export function ChargesPage() {
                       {isAdmin && (
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {(c.status === 'PENDING' || c.status === 'OVERDUE') && (
+                              <AiCollectionSuggestion
+                                chargeId={c.id}
+                                trigger={(open) => (
+                                  <button
+                                    onClick={open}
+                                    className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors"
+                                    title="IA de cobrança"
+                                  >
+                                    <Sparkles className="w-4 h-4" />
+                                  </button>
+                                )}
+                              />
+                            )}
                             {c.status === 'PENDING' && (
-                              <button 
+                              <button
                                 onClick={() => { setShowPay(c); setPayAmount(String(c.amount)); }}
                                 className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
                                 title="Pagar"

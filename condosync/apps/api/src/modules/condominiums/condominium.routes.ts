@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { residentService } from "../residents/resident.service";
 import bcrypt from "bcrypt";
+import { auditService } from "../audit/audit.service";
 
 const router = Router();
 router.use(authenticate);
@@ -178,6 +179,16 @@ router.delete(
 
     try {
       await prisma.condominium.delete({ where: { id } });
+      await auditService.write({
+        userId: req.user!.userId,
+        action: "DELETE",
+        module: "condominiums",
+        entityType: "Condominium",
+        entityId: id,
+        description: `Condomínio excluído por SUPER_ADMIN`,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] ?? null,
+      });
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -221,6 +232,18 @@ router.patch(
         plan: plan.slug,
         maxUnits: maxUnits ?? plan.maxUnits,
       },
+    });
+    await auditService.write({
+      userId: req.user!.userId,
+      condominiumId: condominium.id,
+      action: "ASSIGN_PLAN",
+      module: "condominiums",
+      entityType: "Condominium",
+      entityId: condominium.id,
+      description: `Plano atribuído: ${plan.slug}`,
+      metadata: { planSlug: plan.slug, maxUnits: condominium.maxUnits },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
     });
     res.json({ success: true, data: { condominium } });
   },

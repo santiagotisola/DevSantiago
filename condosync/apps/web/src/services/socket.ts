@@ -5,8 +5,12 @@ let socket: Socket | null = null;
 function resolveSocketUrl(): string {
   if (typeof window === "undefined") return "http://localhost:3333";
 
-  const { protocol, hostname, port } = window.location;
-  if (hostname === "localhost" && port === "5173") {
+  // Em Vite dev (import.meta.env.DEV) o frontend roda em 5173 sem proxy
+  // para /socket.io/, então aponta direto para a API em 3333.
+  // Em qualquer outro caso (nginx servindo build, prod) usa same-origin
+  // — o nginx já proxia /socket.io/ — evitando CSP connect-src cross-origin.
+  if (import.meta.env.DEV) {
+    const { protocol, hostname } = window.location;
     return `${protocol}//${hostname}:3333`;
   }
 

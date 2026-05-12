@@ -5,6 +5,7 @@ import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { BadRequestError, NotFoundError } from "../../middleware/errorHandler";
+import { auditService } from "../audit/audit.service";
 
 const router = Router();
 router.use(authenticate);
@@ -63,6 +64,17 @@ router.post(
           isActive: data.isActive ?? true,
         },
       });
+      await auditService.write({
+        userId: req.user!.userId,
+        action: "CREATE",
+        module: "plans",
+        entityType: "Plan",
+        entityId: plan.id,
+        description: `Plano criado: ${plan.slug}`,
+        metadata: { slug: plan.slug, price: plan.price?.toString() },
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] ?? null,
+      });
       res.status(201).json({ success: true, data: { plan } });
     } catch (err) {
       if (
@@ -100,6 +112,17 @@ router.put(
         isActive: data.isActive,
       },
     });
+    await auditService.write({
+      userId: req.user!.userId,
+      action: "UPDATE",
+      module: "plans",
+      entityType: "Plan",
+      entityId: updated.id,
+      description: `Plano atualizado: ${updated.slug}`,
+      metadata: { changes: data as Record<string, unknown> },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
     res.json({ success: true, data: { plan: updated } });
   },
 );
@@ -121,6 +144,16 @@ router.delete(
     }
 
     await prisma.plan.delete({ where: { id: req.params.id } });
+    await auditService.write({
+      userId: req.user!.userId,
+      action: "DELETE",
+      module: "plans",
+      entityType: "Plan",
+      entityId: plan.id,
+      description: `Plano excluído: ${plan.slug}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
     res.json({ success: true });
   },
 );

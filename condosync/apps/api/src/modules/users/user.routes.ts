@@ -8,6 +8,7 @@ import { env } from "../../config/env";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcrypt";
+import { auditService } from "../audit/audit.service";
 
 const router = Router();
 router.use(authenticate);
@@ -158,6 +159,16 @@ router.patch(
       }),
       prisma.refreshToken.deleteMany({ where: { userId: req.params.id } }),
     ]);
+    await auditService.write({
+      userId: actor.userId,
+      action: "RESET_PASSWORD",
+      module: "users",
+      entityType: "User",
+      entityId: req.params.id,
+      description: `Senha redefinida administrativamente por ${actor.role}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
     res.json({ success: true, message: "Senha redefinida com sucesso" });
   },
 );
@@ -205,6 +216,17 @@ router.patch(
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: { isActive: !target.isActive },
+    });
+    await auditService.write({
+      userId: actor.userId,
+      action: updated.isActive ? "ACTIVATE_USER" : "DEACTIVATE_USER",
+      module: "users",
+      entityType: "User",
+      entityId: req.params.id,
+      description: `Usuário ${updated.isActive ? "ativado" : "desativado"} por ${actor.role}`,
+      metadata: { targetRole: target.role },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
     });
     res.json({ success: true, data: { isActive: updated.isActive } });
   },
