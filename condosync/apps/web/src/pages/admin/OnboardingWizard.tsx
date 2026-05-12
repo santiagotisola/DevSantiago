@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -207,6 +207,52 @@ export function OnboardingWizard() {
     setError('');
     if (step > 1) setStep((s) => s - 1);
   }
+
+  // Rollback: enquanto o condomínio existe mas o wizard ainda não acabou
+  // (passou pelo passo 5 com sucesso), oferece desfazer. Apaga o condo;
+  // o backend recusa se já houver vínculos significativos, então caímos
+  // numa mensagem informando que precisa inativar manualmente.
+  const abortMut = useMutation({
+    mutationFn: async () => {
+      if (!condoId) return;
+      await api.delete(`/condominiums/${condoId}`);
+    },
+    onSuccess: () => {
+      setCondoId(null);
+      navigate('/admin/condominios');
+    },
+    onError: (e: any) => {
+      setError(
+        e?.response?.data?.message ??
+          'Não foi possível desfazer; abra Condomínios e finalize manualmente.',
+      );
+    },
+  });
+
+  function abort() {
+    if (!condoId) {
+      navigate('/admin/condominios');
+      return;
+    }
+    if (
+      !window.confirm(
+        'Cancelar o assistente apagará o condomínio recém-criado e todos os dados inseridos. Continuar?',
+      )
+    )
+      return;
+    abortMut.mutate();
+  }
+
+  // Avisa antes do reload/fechar aba enquanto há rascunho pendente.
+  useEffect(() => {
+    if (!condoId) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [condoId]);
 
   const loading =
     createCondo.isPending ||
@@ -534,13 +580,25 @@ export function OnboardingWizard() {
         )}
 
         <div className="flex justify-between pt-4 border-t">
-          <button
-            onClick={back}
-            disabled={step === 1 || loading}
-            className="flex items-center gap-1 text-sm px-4 py-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
-          >
-            <ChevronLeft className="w-4 h-4" /> Voltar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={back}
+              disabled={step === 1 || loading}
+              className="flex items-center gap-1 text-sm px-4 py-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
+            >
+              <ChevronLeft className="w-4 h-4" /> Voltar
+            </button>
+            {condoId && (
+              <button
+                onClick={abort}
+                disabled={loading || abortMut.isPending}
+                className="text-xs px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 disabled:opacity-40"
+                title="Apaga o condomínio criado e cancela o wizard"
+              >
+                {abortMut.isPending ? 'Desfazendo…' : 'Cancelar e desfazer'}
+              </button>
+            )}
+          </div>
           <button
             onClick={next}
             disabled={loading}

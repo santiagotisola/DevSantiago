@@ -7,6 +7,7 @@ import {
   ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react';
 import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
 
@@ -226,9 +227,7 @@ export function ResidentsPage() {
 
       {/* Tabela */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-        </div>
+        <SkeletonTable rows={6} cols={5} />
       ) : residents.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
           <UsersRound className="w-10 h-10" />

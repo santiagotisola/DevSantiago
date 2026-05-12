@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { HardHat, PlusCircle, Search, Loader2, Mail, Phone, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail, validateName } from '../../lib/utils';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 export function EmployeesPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -116,7 +117,7 @@ export function EmployeesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+        <SkeletonTable rows={5} cols={4} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><HardHat className="w-10 h-10" /><p>Nenhum funcionário cadastrado</p></div>
       ) : (

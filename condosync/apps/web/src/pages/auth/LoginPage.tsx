@@ -86,8 +86,8 @@ export function LoginPage() {
         setChallengeToken(response.data.data.challengeToken);
         return;
       }
-      const { user, accessToken, refreshToken } = response.data.data;
-      setAuth(user, accessToken, refreshToken);
+      const { user, accessToken, refreshToken, mustEnable2FA } = response.data.data;
+      setAuth(user, accessToken, refreshToken, !!mustEnable2FA);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Erro ao fazer login. Tente novamente.');

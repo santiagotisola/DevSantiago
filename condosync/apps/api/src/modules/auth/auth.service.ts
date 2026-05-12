@@ -207,12 +207,50 @@ export class AuthService {
     });
 
     const { passwordHash: _, ...userWithoutPassword } = user;
+    const mustEnable2FA = await this.shouldForce2FA(user.id, user.role);
 
     return {
       user: userWithoutPassword,
       accessToken,
       refreshToken,
+      mustEnable2FA,
     };
+  }
+
+  /**
+   * Política: SYNDIC / CONDOMINIUM_ADMIN / SUPER_ADMIN em condomínios com
+   * plano `professional` ou `enterprise` precisam ter 2FA habilitado.
+   * Retorna true se o usuário ainda precisa configurar (ele já passou na
+   * senha, então o login não é negado — o frontend usa essa flag para
+   * forçar setup antes de liberar áreas sensíveis).
+   */
+  private async shouldForce2FA(
+    userId: string,
+    role: UserRole,
+  ): Promise<boolean> {
+    if (role !== "SYNDIC" && role !== "CONDOMINIUM_ADMIN" && role !== "SUPER_ADMIN") {
+      return false;
+    }
+    const userExt = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorEnabled: true },
+    });
+    if (userExt?.twoFactorEnabled) return false;
+
+    if (role === "SUPER_ADMIN") return true;
+
+    // Para admins de condomínio: forçar se algum dos seus condomínios
+    // estiver em plano >= professional.
+    const REQUIRES_2FA_PLANS = ["professional", "enterprise"];
+    const member = await prisma.condominiumUser.findFirst({
+      where: {
+        userId,
+        isActive: true,
+        condominium: { plan: { in: REQUIRES_2FA_PLANS } },
+      },
+      select: { id: true },
+    });
+    return !!member;
   }
 
   /**

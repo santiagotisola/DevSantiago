@@ -23,8 +23,10 @@ interface AuthState {
   refreshToken: string | null;
   selectedCondominiumId: string | null;
   isAuthenticated: boolean;
+  mustEnable2FA: boolean;
 
-  setAuth: (user: UserInfo, accessToken: string, refreshToken: string) => void;
+  setAuth: (user: UserInfo, accessToken: string, refreshToken: string, mustEnable2FA?: boolean) => void;
+  setMustEnable2FA: (v: boolean) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: UserInfo) => void;
   setSelectedCondominium: (id: string) => void;
@@ -39,16 +41,20 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       selectedCondominiumId: null,
       isAuthenticated: false,
+      mustEnable2FA: false,
 
-      setAuth: (user, accessToken, refreshToken) =>
+      setAuth: (user, accessToken, refreshToken, mustEnable2FA = false) =>
         set({
           user,
           accessToken,
           refreshToken,
           isAuthenticated: true,
+          mustEnable2FA,
           selectedCondominiumId:
             user.condominiumUsers?.[0]?.condominium.id ?? null,
         }),
+
+      setMustEnable2FA: (v) => set({ mustEnable2FA: v }),
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
@@ -64,6 +70,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           isAuthenticated: false,
           selectedCondominiumId: null,
+          mustEnable2FA: false,
         }),
     }),
     {

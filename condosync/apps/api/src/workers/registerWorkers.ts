@@ -65,6 +65,9 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   const { webhookWorker } = await import(
     "../modules/webhooks/webhook.processor"
   );
+  const { registerCleanupSchedule, cleanupWorker } = await import(
+    "./cleanup.worker"
+  );
 
   type WorkerLike = {
     close(): Promise<void>;
@@ -84,6 +87,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     collectionWorker,
     balanceteWorker,
     webhookWorker,
+    cleanupWorker,
   ].filter(Boolean) as WorkerLike[];
 
   // Pluga métricas Prometheus + Sentry em cada worker.
@@ -157,6 +161,10 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     const wh = await import("../modules/webhooks/webhook.processor");
     queues.push(wh.webhookQueue as unknown as Queue);
   } catch {}
+  try {
+    const cu = await import("./cleanup.worker");
+    queues.push(cu.cleanupQueue);
+  } catch {}
 
   const depthCollector = setInterval(async () => {
     for (const q of queues) {
@@ -197,6 +205,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
       registerContractAlertsSchedule(),
       registerCollectionSchedule(),
       registerBalanceteSchedule(),
+      registerCleanupSchedule(),
     ]);
 
     // Renovação a cada 1min, TTL 4min — 3 tentativas antes do TTL

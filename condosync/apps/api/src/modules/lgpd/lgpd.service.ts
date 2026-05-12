@@ -4,6 +4,8 @@ import {
   BadRequestError,
   NotFoundError,
 } from '../../middleware/errorHandler';
+import bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 export const lgpdService = {
   /**
@@ -233,6 +235,10 @@ export const lgpdService = {
 
     const stamp = Date.now();
     const anonId = `anon-${userId.slice(0, 8)}-${stamp}`;
+    // Hash bcrypt válido de um segredo aleatório descartado: garante que
+    // ninguém consegue logar (segredo não é armazenado) mas mantém o
+    // formato esperado pelo bcrypt.compare em qualquer fluxo legado.
+    const anonPasswordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
@@ -243,7 +249,7 @@ export const lgpdService = {
           cpf: null,
           phone: null,
           avatarUrl: null,
-          passwordHash: '$2b$12$invalid_invalid_invalid_invalid_invalid_invalid',
+          passwordHash: anonPasswordHash,
           isActive: false,
           twoFactorEnabled: false,
           twoFactorSecret: null,

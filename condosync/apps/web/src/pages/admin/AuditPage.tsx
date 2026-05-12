@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ScrollText, Search, Loader2, Filter, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 interface AuditItem {
   id: string;
@@ -186,9 +187,7 @@ export function AuditPage() {
 
       <div className="bg-white rounded-xl border overflow-hidden">
         {list.isLoading ? (
-          <div className="p-10 text-center">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
-          </div>
+          <SkeletonTable rows={8} cols={5} />
         ) : !list.data || list.data.items.length === 0 ? (
           <div className="p-10 text-center text-muted-foreground">
             <Filter className="w-10 h-10 mx-auto mb-3 text-gray-300" />
