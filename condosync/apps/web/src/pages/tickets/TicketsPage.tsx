@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 const CATEGORIES = ['manutencao', 'financeiro', 'barulho', 'seguranca', 'outro'] as const;
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const;
@@ -311,7 +312,9 @@ export default function TicketsPage() {
 
       {/* Lista */}
       {isLoading ? (
-        <div className="text-center py-16 text-gray-400">Carregando...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (<SkeletonCard key={i} />))}
+        </div>
       ) : tickets.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />

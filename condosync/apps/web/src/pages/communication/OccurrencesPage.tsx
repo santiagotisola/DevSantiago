@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { AlertOctagon, PlusCircle, Loader2, Search } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 const occurrenceStatusLabels: Record<string, { label: string; className: string }> = {
   OPEN: { label: 'Aberta', className: 'bg-red-100 text-red-700' },
@@ -60,7 +61,9 @@ export function OccurrencesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (<SkeletonCard key={i} />))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><AlertOctagon className="w-10 h-10" /><p>Nenhuma ocorrência encontrada</p></div>
       ) : (

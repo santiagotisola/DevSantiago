@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
+import { SkeletonTable } from "../../components/ui/Skeleton";
 import { formatDate } from "../../lib/utils";
 
 const statusLabels: Record<
@@ -314,9 +315,7 @@ export function MaintenancePage() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-            </div>
+            <SkeletonTable rows={5} cols={4} />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border">
               <Wrench className="w-10 h-10" />

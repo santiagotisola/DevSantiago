@@ -1,6 +1,7 @@
 import { emailQueue, inappQueue, pushQueue } from './notification.queue';
 import { NotificationPayload } from './types';
 import { logger } from '../config/logger';
+import { preferenceService } from '../modules/notification-preferences/preference.service';
 
 const log = logger.child({ module: 'notification.service' });
 
@@ -18,7 +19,32 @@ export class NotificationService {
   static async enqueue(payload: NotificationPayload, jobId?: string) {
     const promises: Promise<unknown>[] = [];
 
-    if (payload.channels.includes('inapp')) {
+    // Aplica preferências do usuário (opt-out por tipo×canal).
+    // Falha em ler preferências não bloqueia a notificação — assume
+    // default opt-in (canais originais).
+    let allowedChannels = payload.channels;
+    try {
+      allowedChannels = await preferenceService.filterChannels(
+        payload.userId,
+        payload.type,
+        payload.channels,
+      );
+    } catch (err) {
+      log.warn(
+        { err: err instanceof Error ? err.message : err, userId: payload.userId },
+        'Falha lendo preferências; usando canais originais',
+      );
+    }
+
+    if (allowedChannels.length === 0) {
+      log.debug(
+        { userId: payload.userId, type: payload.type },
+        'Usuário optou por não receber este tipo em nenhum canal',
+      );
+      return;
+    }
+
+    if (allowedChannels.includes('inapp')) {
       promises.push(
         inappQueue.add(
           'notification:inapp',
@@ -28,7 +54,7 @@ export class NotificationService {
       );
     }
 
-    if (payload.channels.includes('email')) {
+    if (allowedChannels.includes('email')) {
       promises.push(
         emailQueue.add(
           'notification:email',
@@ -38,7 +64,7 @@ export class NotificationService {
       );
     }
 
-    if (payload.channels.includes('push')) {
+    if (allowedChannels.includes('push')) {
       promises.push(
         pushQueue.add(
           'notification:push',

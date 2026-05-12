@@ -9,6 +9,7 @@ import { PasskeysCard } from '../../components/auth/PasskeysCard';
 import { TwoFactorCard } from '../../components/auth/TwoFactorCard';
 import { SessionsCard } from '../../components/auth/SessionsCard';
 import { LgpdCard } from '../../components/auth/LgpdCard';
+import { NotificationPreferencesCard } from '../../components/notifications/NotificationPreferencesCard';
 
 export function ProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -54,6 +55,8 @@ export function ProfilePage() {
       </div>
 
       <PushNotificationCard />
+
+      <NotificationPreferencesCard />
 
       <TwoFactorCard />
 

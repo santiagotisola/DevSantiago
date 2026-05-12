@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { Car, Plus, Search, LogOut, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 const VEHICLE_TYPE_LABELS: Record<string, string> = {
   CAR: 'Carro',
@@ -275,7 +276,7 @@ export function VehiclesPage() {
       {tab === 'acessos' && (
         <div className="bg-white rounded-xl border overflow-hidden">
           {isLoadingLogs ? (
-            <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+            <SkeletonTable rows={5} cols={4} />
           ) : filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground">
               <Car className="w-10 h-10" />
@@ -334,7 +335,7 @@ export function VehiclesPage() {
       {tab === 'cadastrados' && (
         <div className="bg-white rounded-xl border overflow-hidden">
           {isLoadingVehicles ? (
-            <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+            <SkeletonTable rows={5} cols={4} />
           ) : filteredVehicles.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground">
               <Car className="w-10 h-10" />

@@ -163,6 +163,7 @@ model User {
   // Relações
   condominiumUsers   CondominiumUser[]
   notifications      Notification[]
+  notificationPrefs  NotificationPreference[]
   sentMessages       ChatMessage[]    @relation("SentMessages")
   auditLogs          AuditLog[]
   refreshTokens      RefreshToken[]
@@ -539,6 +540,22 @@ model Notification {
 
   @@index([userId, isRead, createdAt])
   @@map("notifications")
+}
+
+model NotificationPreference {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      NotificationType
+  inapp     Boolean          @default(true)
+  email     Boolean          @default(true)
+  push      Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("notification_preferences")
 }
 
 model ChatConversation {

@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
-import { 
-  Plus, Search, Loader2, Pencil, Trash2, 
+import {
+  Plus, Search, Loader2, Pencil, Trash2,
   Dog, Cat, Heart, Calendar, Info, X
 } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 const emptyPetForm = {
   name: '',
@@ -119,8 +120,8 @@ export default function PetPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (<SkeletonCard key={i} />))}
         </div>
       ) : filteredPets.length === 0 ? (
         <div className="bg-white rounded-2xl border-2 border-dashed p-12 text-center text-slate-400">

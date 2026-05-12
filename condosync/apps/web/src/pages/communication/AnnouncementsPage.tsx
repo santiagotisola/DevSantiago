@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import { Megaphone, PlusCircle, Loader2, Pin } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
+import { SkeletonCard } from '../../components/ui/Skeleton';
 
 export function AnnouncementsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -43,7 +44,9 @@ export function AnnouncementsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (<SkeletonCard key={i} />))}
+        </div>
       ) : ((announcements || []) as any[]).length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-muted-foreground bg-white rounded-xl border"><Megaphone className="w-10 h-10" /><p>Nenhum aviso publicado</p></div>
       ) : (
