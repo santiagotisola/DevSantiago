@@ -109,6 +109,7 @@ import auditRoutes from "./modules/audit/audit.routes";
 import sessionsRoutes from "./modules/sessions/sessions.routes";
 import dashboardSyndicRoutes from "./modules/dashboard/dashboard.syndic";
 import dashboardSaasRoutes from "./modules/dashboard/dashboard.saas";
+import docsRoutes from "./openapi/docs.routes";
 import unitRoutes from "./modules/units/unit.routes";
 import residentRoutes from "./modules/residents/resident.routes";
 import visitorRoutes from "./modules/visitors/visitor.routes";
@@ -411,6 +412,8 @@ app.use(`${API}/reports`, reportRoutes);
 app.use(`${API}/dashboard`, dashboardRoutes);
 app.use(`${API}/dashboard`, dashboardSyndicRoutes);
 app.use(`${API}/dashboard`, dashboardSaasRoutes);
+// Docs / OpenAPI — fora do auth chain. /api/docs UI, /api/openapi.json schema.
+app.use("/api", docsRoutes);
 app.use(`${API}/employees`, employeeRoutes);
 app.use(`${API}/service-providers`, serviceProviderRoutes);
 app.use(`${API}/webhooks`, webhookRoutes);
