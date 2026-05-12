@@ -226,6 +226,7 @@ export default function MinhasObrasPage() {
                       type: e.target.value as (typeof TIPOS)[number],
                     }))
                   }
+                  aria-label="Tipo de obra"
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 >
                   {TIPOS.map((t) => (
@@ -260,6 +261,7 @@ export default function MinhasObrasPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, startDate: e.target.value }))
                     }
+                    aria-label="Data de início previsto"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -273,6 +275,7 @@ export default function MinhasObrasPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, endDate: e.target.value }))
                     }
+                    aria-label="Data de fim previsto"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -336,6 +339,7 @@ export default function MinhasObrasPage() {
                     onChange={(e) =>
                       setProviderForm((f) => ({ ...f, [key]: e.target.value }))
                     }
+                    aria-label={label}
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -456,6 +460,7 @@ export default function MinhasObrasPage() {
                   {canDelete && (
                     <button
                       onClick={() => deleteMutation.mutate(r.id)}
+                      aria-label="Excluir solicitação"
                       className="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -520,6 +525,7 @@ export default function MinhasObrasPage() {
                               providerId: p.id,
                             })
                           }
+                          aria-label="Remover prestador"
                           className="text-gray-300 hover:text-red-500 p-1 rounded"
                         >
                           <UserMinus className="w-4 h-4" />

@@ -1,6 +1,6 @@
 ﻿import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError, ConflictError } from "../../middleware/errorHandler";
 import { z } from "zod";
@@ -47,6 +47,7 @@ const employeeSchema = z.object({
 
 router.get(
   "/condominium/:condominiumId",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     await ensureCondominiumMembership(
       req.user!.userId,

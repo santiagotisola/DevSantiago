@@ -55,7 +55,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       >
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-black text-gray-800 tracking-tight">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400" /></button>
+          <button onClick={onClose} aria-label="Fechar" className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400" /></button>
         </div>
         {children}
       </motion.div>
@@ -228,10 +228,21 @@ export function ChargesPage() {
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all font-medium text-gray-600"
               />
             </div>
-            <input 
-              type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+            <select
+              value={monthFilter} onChange={e => setMonthFilter(e.target.value)}
+              aria-label="Filtro por mês"
               className="px-4 py-2 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-500 focus:ring-2 focus:ring-blue-500"
-            />
+            >
+              <option value="">Todos os meses</option>
+              {Array.from({ length: 24 }, (_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - 12 + i);
+                const y = d.getFullYear();
+                const m = d.getMonth();
+                const val = `${y}-${String(m + 1).padStart(2, '0')}`;
+                return <option key={val} value={val}>{new Date(y, m).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</option>;
+              })}
+            </select>
           </div>
         </div>
 
@@ -348,6 +359,7 @@ export function ChargesPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Valor (R$)</label>
                   <input 
                     type="number" value={createForm.amount} onChange={v => setCreateForm({ ...createForm, amount: v.target.value })}
+                    aria-label="Valor em reais"
                     className="w-full mt-2 px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-600 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -355,6 +367,7 @@ export function ChargesPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Data de Vencimento</label>
                   <input 
                     type="date" value={createForm.dueDate} onChange={v => setCreateForm({ ...createForm, dueDate: v.target.value })}
+                    aria-label="Data de vencimento"
                     className="w-full mt-2 px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-600 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -364,6 +377,7 @@ export function ChargesPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Unidade</label>
                   <select 
                     value={createForm.unitId} onChange={e => setCreateForm({ ...createForm, unitId: e.target.value })}
+                    aria-label="Unidade"
                     className="w-full mt-2 px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-600 focus:ring-2 focus:ring-blue-500 appearance-none"
                   >
                     <option value="">Selecionar...</option>
@@ -374,6 +388,7 @@ export function ChargesPage() {
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Conta de Destino</label>
                   <select 
                     value={createForm.accountId} onChange={e => setCreateForm({ ...createForm, accountId: e.target.value })}
+                    aria-label="Conta de destino"
                     className="w-full mt-2 px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-600 focus:ring-2 focus:ring-blue-500 appearance-none"
                   >
                     <option value="">Selecionar...</option>
@@ -416,6 +431,7 @@ export function ChargesPage() {
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Confirmar Valor Pago (R$)</label>
               <input 
                 autoFocus type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)}
+                aria-label="Valor pago em reais"
                 className="w-full mt-2 px-5 py-4 bg-gray-50 border-none rounded-2xl text-lg font-black text-emerald-600 focus:ring-2 focus:ring-emerald-500"
               />
             </div>

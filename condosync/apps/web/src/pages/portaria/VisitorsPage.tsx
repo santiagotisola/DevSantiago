@@ -52,6 +52,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   LEFT: { label: "Já Saiu", color: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
+// Função para ordenar unidades numericamente
+function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: string }[]) {
+  return [...units].sort((a, b) => {
+    const numA = parseInt(a.identifier.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.identifier.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+}
+
 export function VisitorsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -544,6 +553,7 @@ export function VisitorsPage() {
                   onChange={(e) =>
                     setForm({ ...form, documentType: e.target.value })
                   }
+                  aria-label="Tipo de documento"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="RG">RG</option>
@@ -587,10 +597,11 @@ export function VisitorsPage() {
                 <select
                   value={form.unitId}
                   onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                  aria-label="Unidade"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione a unidade...</option>
-                  {(unitsData || []).map((u) => (
+                  {sortUnitsByIdentifier(unitsData || []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.block ? `Bloco ${u.block} — ` : ""}
                       {u.identifier}
@@ -804,6 +815,7 @@ export function VisitorsPage() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, documentType: e.target.value })
                   }
+                  aria-label="Tipo de documento"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="RG">RG</option>
@@ -854,6 +866,7 @@ export function VisitorsPage() {
                     setEditForm({ ...editForm, notes: e.target.value })
                   }
                   rows={2}
+                  aria-label="Observações"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>

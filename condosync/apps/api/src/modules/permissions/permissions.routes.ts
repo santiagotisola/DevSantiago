@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { z } from "zod";
@@ -19,7 +19,7 @@ async function ensureMembership(actorId: string, role: string, condominiumId: st
 
 // GET /permissions/condominium/:id/members
 // Lista todos os membros do condomínio com perfil, e-mail, unidade
-router.get("/condominium/:id/members", async (req: Request, res: Response) => {
+router.get("/condominium/:id/members", authorizeCondominium, async (req: Request, res: Response) => {
   await ensureMembership(req.user!.userId, req.user!.role, req.params.id);
 
   const members = await prisma.condominiumUser.findMany({
@@ -39,7 +39,7 @@ const changRoleSchema = z.object({
   role: z.enum(["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "RESIDENT", "SERVICE_PROVIDER", "COUNCIL_MEMBER"]),
 });
 
-router.patch("/condominium/:condominiumId/members/:userId", async (req: Request, res: Response) => {
+router.patch("/condominium/:condominiumId/members/:userId", authorizeCondominium, async (req: Request, res: Response) => {
   await ensureMembership(req.user!.userId, req.user!.role, req.params.condominiumId);
 
   const { role } = validateRequest(changRoleSchema, req.body);
@@ -71,7 +71,7 @@ router.patch("/condominium/:condominiumId/members/:userId", async (req: Request,
 });
 
 // PATCH /permissions/condominium/:condominiumId/members/:userId/toggle — ativa/desativa membro
-router.patch("/condominium/:condominiumId/members/:userId/toggle", async (req: Request, res: Response) => {
+router.patch("/condominium/:condominiumId/members/:userId/toggle", authorizeCondominium, async (req: Request, res: Response) => {
   await ensureMembership(req.user!.userId, req.user!.role, req.params.condominiumId);
 
   const target = await prisma.condominiumUser.findUniqueOrThrow({
@@ -99,7 +99,7 @@ const updateMemberSchema = z.object({
   unitId: z.string().nullable().optional(),
 });
 
-router.patch("/condominium/:condominiumId/members/:userId/update", async (req: Request, res: Response) => {
+router.patch("/condominium/:condominiumId/members/:userId/update", authorizeCondominium, async (req: Request, res: Response) => {
   await ensureMembership(req.user!.userId, req.user!.role, req.params.condominiumId);
 
   const data = validateRequest(updateMemberSchema, req.body);

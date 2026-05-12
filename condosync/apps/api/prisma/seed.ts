@@ -23,24 +23,53 @@ async function main() {
   console.log('✅ Super admin criado:', superAdmin.email);
 
   // ─── Condomínio Demo ────────────────────────────────────────
-  const condominium = await prisma.condominium.upsert({
-    where: { cnpj: '12345678000195' },
-    update: {},
-    create: {
-      name: 'Residencial Veredas do Bosque',
-      cnpj: '12345678000195',
-      address: 'Rua das Palmeiras, 500',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01310100',
-      phone: '(11) 3000-0000',
-      email: 'admin@parqueverde.com.br',
-      plan: 'professional',
-      maxUnits: 50,
+  // Prioriza condomínio já existente pelo nome para não duplicar base real.
+  const existingCondominium = await prisma.condominium.findFirst({
+    where: {
+      OR: [
+        { cnpj: '12345678000195' },
+        { name: 'Residencial Veredas do Bosque' },
+      ],
     },
+    orderBy: { createdAt: 'asc' },
   });
 
+  const condominium = existingCondominium
+    ? existingCondominium
+    : await prisma.condominium.create({
+        data: {
+          name: 'Residencial Veredas do Bosque',
+          cnpj: '12345678000195',
+          address: 'Rua das Palmeiras, 500',
+          city: 'São Paulo',
+          state: 'SP',
+          zipCode: '01310100',
+          phone: '(11) 3000-0000',
+          email: 'admin@parqueverde.com.br',
+          plan: 'professional',
+          maxUnits: 50,
+        },
+      });
+
   console.log('✅ Condomínio criado:', condominium.name);
+
+  const existingUnitCount = await prisma.unit.count({
+    where: { condominiumId: condominium.id },
+  });
+
+  const existingMembershipCount = await prisma.condominiumUser.count({
+    where: { condominiumId: condominium.id },
+  });
+
+  const forceDemoSeed = process.env.FORCE_DEMO_SEED === 'true';
+  const shouldSeedDemoData = forceDemoSeed || (existingUnitCount === 0 && existingMembershipCount === 0);
+
+  if (!shouldSeedDemoData) {
+    console.log('⚠️  Base já populada detectada. Pulando dados demo para evitar poluição de dados reais.');
+    console.log('ℹ️  Use FORCE_DEMO_SEED=true apenas em base nova de demonstração.');
+    console.log('✅ Seed concluído com segurança (sem inserir dados demo).');
+    return;
+  }
 
   // ─── Síndico ────────────────────────────────────────────────
   const syndicPassword = await bcrypt.hash('Sindico@2026', 12);
@@ -74,6 +103,22 @@ async function main() {
     },
   });
 
+  // ─── Atendimento ────────────────────────────────────────────
+  const attendancePassword = await bcrypt.hash('Atendimento@2026', 12);
+  const attendance = await prisma.user.upsert({
+    where: { email: 'atendimento@parqueverde.com.br' },
+    update: {},
+    create: {
+      name: 'Maria Atendimento',
+      email: 'atendimento@parqueverde.com.br',
+      passwordHash: attendancePassword,
+      phone: '(11) 99999-0003',
+      cpf: '33344455600',
+      role: UserRole.CONDOMINIUM_ADMIN,
+      emailVerified: true,
+    },
+  });
+
   // ─── Moradores ──────────────────────────────────────────────
   const residentPassword = await bcrypt.hash('Morador@2026', 12);
   const residents = await Promise.all(
@@ -86,7 +131,7 @@ async function main() {
             name,
             email: `morador${i + 1}@parqueverde.com.br`,
             passwordHash: residentPassword,
-            cpf: `${String(33344455566 + i).padStart(11, '0')}`,
+            cpf: `${String(44455566700 + i).padStart(11, '0')}`,
             role: UserRole.RESIDENT,
             emailVerified: true,
           },
@@ -130,6 +175,13 @@ async function main() {
     where: { userId_condominiumId: { userId: doorman.id, condominiumId: condominium.id } },
     update: {},
     create: { userId: doorman.id, condominiumId: condominium.id, role: UserRole.DOORMAN },
+  });
+
+  // ─── Vincular Atendimento ao condomínio ───────────────────
+  await prisma.condominiumUser.upsert({
+    where: { userId_condominiumId: { userId: attendance.id, condominiumId: condominium.id } },
+    update: {},
+    create: { userId: attendance.id, condominiumId: condominium.id, role: UserRole.CONDOMINIUM_ADMIN },
   });
 
   for (let i = 0; i < 5; i++) {
@@ -223,10 +275,11 @@ async function main() {
 
   console.log('✅ Seed concluído com sucesso!');
   console.log('\n📋 Credenciais de acesso:');
-  console.log('  Super Admin:  admin@condosync.com.br  / Admin@2026');
-  console.log('  Síndico:      sindico@parqueverde.com.br / Sindico@2026');
-  console.log('  Porteiro:     porteiro@parqueverde.com.br / Porteiro@2026');
-  console.log('  Morador:      morador1@parqueverde.com.br / Morador@2026');
+  console.log('  Super Admin:   admin@condosync.com.br  / Admin@2026');
+  console.log('  Síndico:       sindico@parqueverde.com.br / Sindico@2026');
+  console.log('  Porteiro:      porteiro@parqueverde.com.br / Porteiro@2026');
+  console.log('  Atendimento:   atendimento@parqueverde.com.br / Atendimento@2026');
+  console.log('  Morador:       morador1@parqueverde.com.br / Morador@2026');
 }
 
 main()

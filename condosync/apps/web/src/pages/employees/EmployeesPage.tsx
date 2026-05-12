@@ -215,6 +215,8 @@ export function EmployeesPage() {
                 <input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  aria-label="Nome"
+                  placeholder="Nome completo"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.name ? 'border-red-400' : ''}`}
                 />
                 {createErrors.name && <p className="text-xs text-red-500 mt-0.5">{createErrors.name}</p>}
@@ -224,6 +226,8 @@ export function EmployeesPage() {
                 <input
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  aria-label="Cargo"
+                  placeholder="Ex: Porteiro"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -233,6 +237,8 @@ export function EmployeesPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.email ? 'border-red-400' : ''}`}
                 />
                 {createErrors.email && <p className="text-xs text-red-500 mt-0.5">{createErrors.email}</p>}
@@ -250,7 +256,7 @@ export function EmployeesPage() {
               </div>
               <div className="space-y-1 col-span-2">
                 <label className="text-sm font-medium">Turno</label>
-                <select value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} aria-label="Turno" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="MORNING">Manhã</option>
                   <option value="AFTERNOON">Tarde</option>
                   <option value="NIGHT">Noite</option>
@@ -291,6 +297,8 @@ export function EmployeesPage() {
                 <input
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  aria-label="Nome"
+                  placeholder="Nome completo"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
                 />
                 {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
@@ -300,6 +308,8 @@ export function EmployeesPage() {
                 <input
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  aria-label="Cargo"
+                  placeholder="Ex: Porteiro"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -309,6 +319,8 @@ export function EmployeesPage() {
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.email ? 'border-red-400' : ''}`}
                 />
                 {editErrors.email && <p className="text-xs text-red-500 mt-0.5">{editErrors.email}</p>}
@@ -389,6 +401,7 @@ export function EmployeesPage() {
                 <select
                   value={accessForm.systemRole}
                   onChange={(e) => setAccessForm({ ...accessForm, systemRole: e.target.value })}
+                  aria-label="Perfil de acesso"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="DOORMAN">Porteiro</option>

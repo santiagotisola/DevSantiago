@@ -125,6 +125,8 @@ export default function FinesPage() {
               <textarea
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 rows={3}
+                aria-label="Descrição da infração"
+                placeholder="Descreva a infração cometida"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -133,6 +135,7 @@ export default function FinesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Artigo do Regimento</label>
               <input
                 className="w-full border rounded-lg px-3 py-2 text-sm"
+                aria-label="Artigo do Regimento"
                 placeholder="Ex: Art. 15 do Regulamento Interno"
                 value={form.regulation}
                 onChange={(e) => setForm({ ...form, regulation: e.target.value })}
@@ -143,6 +146,7 @@ export default function FinesPage() {
               <input
                 type="number"
                 step="0.01"
+                aria-label="Valor da multa em reais"
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
@@ -154,6 +158,7 @@ export default function FinesPage() {
                 type="number"
                 min={1}
                 max={30}
+                aria-label="Prazo de recurso em dias"
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={form.appealDeadlineDays}
                 onChange={(e) => setForm({ ...form, appealDeadlineDays: Number(e.target.value) })}

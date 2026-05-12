@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { randomBytes } from "crypto";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { ForbiddenError, ValidationError } from "../../middleware/errorHandler";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
@@ -65,6 +65,7 @@ router.delete("/dependents/:id", async (req: Request, res: Response) => {
 // Residentes de um condomínio
 router.get(
   "/condominium/:condominiumId",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const residents = await prisma.condominiumUser.findMany({
       where: {
@@ -110,6 +111,7 @@ const createResidentSchema = z.object({
 router.post(
   "/",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const data = validateRequest(createResidentSchema, req.body);
     residentService.assertResidentRoleRequiresUnit("RESIDENT", data.unitId);

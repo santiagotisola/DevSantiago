@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { assemblyController } from "./assembly.controller";
-import { authenticate, authorize } from "../../middleware/auth";
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from "../../middleware/auth";
 
 const router = Router();
 
@@ -8,7 +12,11 @@ const router = Router();
 router.use(authenticate);
 
 // Listar assembleias de um condomínio
-router.get("/condominium/:condominiumId", assemblyController.list);
+router.get(
+  "/condominium/:condominiumId",
+  authorizeCondominium,
+  assemblyController.list,
+);
 
 // Pegar detalhes da assembleia (incluindo pauta e opções)
 router.get("/:id", assemblyController.getById);
@@ -20,6 +28,7 @@ router.get("/:id/results", assemblyController.getResults);
 router.post(
   "/condominium/:condominiumId",
   authorize("SYNDIC", "CONDOMINIUM_ADMIN", "SUPER_ADMIN"),
+  authorizeCondominium,
   assemblyController.create,
 );
 

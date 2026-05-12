@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Request, Response } from "express";
 import { z } from "zod";
 import { financeService } from "./finance.service";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import {
   createChargeSchema,
@@ -27,7 +27,7 @@ router.use(
 );
 
 // ─── Contas
-router.get("/accounts/:condominiumId", async (req: Request, res: Response) => {
+router.get("/accounts/:condominiumId", authorizeCondominium, async (req: Request, res: Response) => {
   const accounts = await financeService.listAccounts(req.params.condominiumId);
   res.json({ success: true, data: { accounts } });
 });
@@ -44,7 +44,7 @@ router.get(
 );
 
 // Cobranças
-router.get("/charges/:condominiumId", async (req: Request, res: Response) => {
+router.get("/charges/:condominiumId", authorizeCondominium, async (req: Request, res: Response) => {
   const data = await financeService.listCharges(req.params.condominiumId, {
     unitId: req.query.unitId as string,
     referenceMonth: req.query.referenceMonth as string,
@@ -137,6 +137,7 @@ router.post(
 router.get(
   "/charges/ratio/preview",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const { condominiumId, totalAmount, method } = req.query as {
       condominiumId: string;
@@ -171,6 +172,7 @@ router.get("/charges/unit/:unitId", async (req: Request, res: Response) => {
 
 router.get(
   "/defaulters/:condominiumId",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const defaulters = await financeService.getDefaulters(
       req.params.condominiumId,
@@ -254,6 +256,7 @@ router.patch(
 // Relatórios
 router.get(
   "/balance/:condominiumId/yearly/:year",
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const data = await financeService.getMonthlyBalance(
       req.params.condominiumId,
@@ -266,6 +269,7 @@ router.get(
 router.get(
   "/forecast/:condominiumId",
   authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const data = await financeService.getFinancialForecast(
       req.params.condominiumId,

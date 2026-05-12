@@ -1,4 +1,8 @@
 import { Router, Request, Response } from "express";
+import multer, { FileFilterCallback } from "multer";
+import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
 import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
@@ -6,6 +10,7 @@ import { ForbiddenError } from "../../middleware/errorHandler";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { env } from "../../config/env";
 
 const router = Router();
 router.use(authenticate);
@@ -196,5 +201,121 @@ router.patch(
     res.json({ success: true, data: { isActive: updated.isActive } });
   },
 );
+
+// ── AVATAR UPLOAD ──────────────────────────────────────────────────────────────
+const ALLOWED_AVATAR_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5 MB
+const UPLOAD_ROOT = path.resolve(env.UPLOAD_PATH);
+
+const avatarStorage = multer.diskStorage({
+  destination: (req: Request, _file, cb) => {
+    const userId = req.params.id;
+    const dir = path.join(UPLOAD_ROOT, "avatars", userId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+function avatarFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback,
+) {
+  ALLOWED_AVATAR_MIMES.has(file.mimetype)
+    ? cb(null, true)
+    : cb(new Error("Apenas imagens (JPG, PNG, WebP) são permitidas."));
+}
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: avatarFilter,
+  limits: { fileSize: MAX_AVATAR_SIZE },
+});
+
+// POST /:id/avatar — Upload avatar
+router.post(
+  "/:id/avatar",
+  avatarUpload.single("file"),
+  async (req: Request, res: Response) => {
+    if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Acesso negado" });
+    }
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Nenhuma imagem enviada." });
+    }
+
+    const photoPath = `avatars/${req.params.id}/${path.basename(req.file.filename!)}`;
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { avatarUrl: photoPath },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+      },
+    });
+
+    res.status(201).json({ success: true, data: { user } });
+  },
+);
+
+// GET /:id/avatar/file — Serve avatar image
+router.get("/:id/avatar/file", async (req: Request, res: Response) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { avatarUrl: true },
+  });
+
+  if (!user.avatarUrl) {
+    return res.status(404).json({ success: false, message: "Avatar não encontrado." });
+  }
+
+  const filePath = path.join(UPLOAD_ROOT, user.avatarUrl);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: "Arquivo não encontrado." });
+  }
+
+  res.set("Content-Type", "image/jpeg");
+  res.set("Cache-Control", "private, max-age=3600");
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// DELETE /:id/avatar — Remove avatar
+router.delete("/:id/avatar", async (req: Request, res: Response) => {
+  if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
+    return res
+      .status(403)
+      .json({ success: false, message: "Acesso negado" });
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { avatarUrl: true },
+  });
+
+  if (user.avatarUrl) {
+    const filePath = path.join(UPLOAD_ROOT, user.avatarUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: req.params.id },
+    data: { avatarUrl: null },
+  });
+
+  res.json({ success: true });
+});
 
 export default router;

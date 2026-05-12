@@ -1,9 +1,14 @@
 import { Router, Request, Response } from "express";
+import multer, { FileFilterCallback } from "multer";
+import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
+import { env } from "../../config/env";
 
 const router = Router();
 router.use(authenticate);
@@ -141,6 +146,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
 router.get(
   "/access-logs/:condominiumId",
   authorize("DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     // Busca IDs de todas as unidades do condomínio para filtrar logs sem vehicleId
     const unitIds = (
@@ -248,5 +254,143 @@ router.patch(
     res.json({ success: true, data: { log } });
   },
 );
+
+// ── PHOTO UPLOAD ───────────────────────────────────────────────────────────────
+const ALLOWED_PHOTO_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
+const UPLOAD_ROOT = path.resolve(env.UPLOAD_PATH);
+
+const photoStorage = multer.diskStorage({
+  destination: (req: Request, _file, cb) => {
+    const vehicleId = req.params.id;
+    const dir = path.join(UPLOAD_ROOT, "vehicles", vehicleId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+function photoFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback,
+) {
+  ALLOWED_PHOTO_MIMES.has(file.mimetype)
+    ? cb(null, true)
+    : cb(new Error("Apenas imagens (JPG, PNG, WebP) são permitidas."));
+}
+
+const photoUpload = multer({
+  storage: photoStorage,
+  fileFilter: photoFilter,
+  limits: { fileSize: MAX_PHOTO_SIZE },
+});
+
+// POST /:id/photo — Upload photo
+router.post(
+  "/:id/photo",
+  photoUpload.single("file"),
+  async (req: Request, res: Response) => {
+    const vehicle = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { unitId: true },
+    });
+
+    // Residents can only upload photos for their own vehicles
+    const user = req.user!;
+    if (user.role === "RESIDENT") {
+      const membership = await prisma.condominiumUser.findFirst({
+        where: { userId: user.userId, unitId: vehicle.unitId },
+        select: { id: true },
+      });
+      if (!membership) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Acesso negado" });
+      }
+    }
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Nenhuma imagem enviada." });
+    }
+
+    const photoPath = `vehicles/${req.params.id}/${path.basename(req.file.filename!)}`;
+    const updated = await prisma.vehicle.update({
+      where: { id: req.params.id },
+      data: { photoUrl: photoPath },
+      select: {
+        id: true,
+        plate: true,
+        brand: true,
+        model: true,
+        photoUrl: true,
+      },
+    });
+
+    res.status(201).json({ success: true, data: { vehicle: updated } });
+  },
+);
+
+// GET /:id/photo/file — Serve photo image
+router.get("/:id/photo/file", async (req: Request, res: Response) => {
+  const vehicle = await prisma.vehicle.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { photoUrl: true },
+  });
+
+  if (!vehicle.photoUrl) {
+    return res.status(404).json({ success: false, message: "Foto não encontrada." });
+  }
+
+  const filePath = path.join(UPLOAD_ROOT, vehicle.photoUrl);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: "Arquivo não encontrado." });
+  }
+
+  res.set("Content-Type", "image/jpeg");
+  res.set("Cache-Control", "private, max-age=3600");
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// DELETE /:id/photo — Remove photo
+router.delete("/:id/photo", async (req: Request, res: Response) => {
+  const vehicle = await prisma.vehicle.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { unitId: true, photoUrl: true },
+  });
+
+  // Residents can only delete photos for their own vehicles
+  const user = req.user!;
+  if (user.role === "RESIDENT") {
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, unitId: vehicle.unitId },
+      select: { id: true },
+    });
+    if (!membership) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Acesso negado" });
+    }
+  }
+
+  if (vehicle.photoUrl) {
+    const filePath = path.join(UPLOAD_ROOT, vehicle.photoUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
+  await prisma.vehicle.update({
+    where: { id: req.params.id },
+    data: { photoUrl: null },
+  });
+
+  res.json({ success: true });
+});
 
 export default router;

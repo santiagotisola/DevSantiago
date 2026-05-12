@@ -139,7 +139,7 @@ export default function MarketplaceAdminPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => openEditPartner(p)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded"><Edit2 size={14} /></button>
+                  <button onClick={() => openEditPartner(p)} aria-label="Editar parceiro" className="p-1.5 text-gray-400 hover:text-gray-600 rounded"><Edit2 size={14} /></button>
                   <button onClick={() => togglePartner.mutate(p.id)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded">
                     {p.isActive ? <ToggleRight size={16} className="text-green-500" /> : <ToggleLeft size={16} />}
                   </button>
@@ -172,7 +172,7 @@ export default function MarketplaceAdminPage() {
                   <td className="px-4 py-3"><span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{o.couponCode ?? '—'}</span></td>
                   <td className="px-4 py-3"><span className={['text-xs px-2 py-0.5 rounded-full', o.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'].join(' ')}>{o.status}</span></td>
                   <td className="px-4 py-3">
-                    <button onClick={() => { if (confirm('Remover oferta?')) deleteOffer.mutate(o.id); }} className="p-1.5 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                    <button onClick={() => { if (confirm('Remover oferta?')) deleteOffer.mutate(o.id); }} aria-label="Remover oferta" className="p-1.5 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
                   </td>
                 </tr>
               ))}
@@ -187,7 +187,7 @@ export default function MarketplaceAdminPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">{editPartner ? 'Editar Parceiro' : 'Novo Parceiro'}</h3>
-              <button onClick={() => { setShowPartnerForm(false); setEditPartner(null); }}><X size={18} className="text-gray-400" /></button>
+              <button onClick={() => { setShowPartnerForm(false); setEditPartner(null); }} aria-label="Fechar"><X size={18} className="text-gray-400" /></button>
             </div>
             <div className="space-y-3">
               {([
@@ -205,7 +205,7 @@ export default function MarketplaceAdminPage() {
               ))}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Categoria *</label>
-                <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} aria-label="Categoria" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                   {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
@@ -223,12 +223,12 @@ export default function MarketplaceAdminPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Nova Oferta</h3>
-              <button onClick={() => setShowOfferForm(false)}><X size={18} className="text-gray-400" /></button>
+              <button onClick={() => setShowOfferForm(false)} aria-label="Fechar"><X size={18} className="text-gray-400" /></button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Parceiro *</label>
-                <select value={offerForm.partnerId} onChange={(e) => setOfferForm((f) => ({ ...f, partnerId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <select value={offerForm.partnerId} onChange={(e) => setOfferForm((f) => ({ ...f, partnerId: e.target.value }))} aria-label="Parceiro" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                   <option value="">Selecione...</option>
                   {(partners ?? []).filter((p) => p.isActive).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -246,7 +246,7 @@ export default function MarketplaceAdminPage() {
               ))}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Válido até</label>
-                <input type="datetime-local" value={offerForm.validUntil} onChange={(e) => setOfferForm((f) => ({ ...f, validUntil: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                <input type="datetime-local" value={offerForm.validUntil} onChange={(e) => setOfferForm((f) => ({ ...f, validUntil: e.target.value }))} aria-label="Válido até" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
               </div>
             </div>
             <button onClick={() => createOffer.mutate()} disabled={!offerForm.partnerId || !offerForm.title.trim() || !offerForm.description.trim()} className="mt-5 w-full bg-primary-600 text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2">

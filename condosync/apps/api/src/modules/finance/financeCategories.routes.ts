@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
-import { authenticate, authorize } from '../../middleware/auth';
+import { authenticate, authorize, authorizeCondominium } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
 import { z } from 'zod';
 
@@ -18,6 +18,7 @@ const categorySchema = z.object({
 router.get(
   '/:condominiumId',
   authorize('RESIDENT', 'DOORMAN', 'COUNCIL_MEMBER', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const categories = await prisma.financialCategory.findMany({
       where: { condominiumId: req.params.condominiumId, isActive: true },

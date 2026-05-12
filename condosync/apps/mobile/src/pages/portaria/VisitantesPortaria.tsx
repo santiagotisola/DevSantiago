@@ -37,7 +37,7 @@ export default function VisitantesPortaria() {
     queryKey: ['visitors-portaria', selectedCondominiumId, today],
     queryFn: async () => {
       const res = await api.get(`/visitors/condominium/${selectedCondominiumId}?date=${today}&limit=100`);
-      return res.data.data as Visitor[];
+      return res.data.data.visitors as Visitor[];
     },
     enabled: !!selectedCondominiumId,
     refetchInterval: 30000,

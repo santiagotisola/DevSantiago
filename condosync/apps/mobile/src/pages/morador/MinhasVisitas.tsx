@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Shield, X, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ type Visitor = {
 export default function MinhasVisitas() {
   const { selectedCondominiumId, user } = useAuthStore();
   const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState<boolean>(false);
   const [nameError, setNameError] = useState('');
   const [name, setName] = useState('');
   const [document, setDocument] = useState('');
@@ -32,11 +32,16 @@ export default function MinhasVisitas() {
     (cu) => cu.condominiumId === selectedCondominiumId
   )?.unitId;
 
+  // Garante que o modal começa fechado
+  useEffect(() => {
+    setShowForm(false);
+  }, []);
+
   const { data, isLoading } = useQuery({
     queryKey: ['my-visitors', selectedCondominiumId, unitId],
     queryFn: async () => {
       const res = await api.get(`/visitors/condominium/${selectedCondominiumId}?unitId=${unitId}&limit=50`);
-      return res.data.data as Visitor[];
+      return res.data.data.visitors as Visitor[];
     },
     enabled: !!selectedCondominiumId && !!unitId,
   });
@@ -48,9 +53,7 @@ export default function MinhasVisitas() {
         document: document || undefined,
         reason: reason || undefined,
         scheduledAt: scheduledAt || undefined,
-        condominiumId: selectedCondominiumId,
         unitId,
-        preAuthorized: true,
       }),
     onSuccess: () => {
       toast.success('Visitante pré-autorizado!');
@@ -71,7 +74,7 @@ export default function MinhasVisitas() {
     <div className="p-4 space-y-4">
       <button
         onClick={() => setShowForm(true)}
-        className="btn-press w-full bg-primary-600 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
+        className="w-full bg-blue-600 text-white rounded-xl py-3 px-4 font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
         <Plus size={18} />
         Pré-autorizar visitante
@@ -83,7 +86,7 @@ export default function MinhasVisitas() {
           <div className="bg-white rounded-t-3xl w-full p-6 pb-safe-bottom space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold">Novo visitante</h3>
-              <button onClick={() => { setShowForm(false); setNameError(''); }}>
+              <button onClick={() => { setShowForm(false); setNameError(''); }} aria-label="Fechar">
                 <X size={20} className="text-gray-400" />
               </button>
             </div>
@@ -94,7 +97,7 @@ export default function MinhasVisitas() {
                 value={name}
                 onChange={(e) => { setName(e.target.value); if (nameError) setNameError(''); }}
                 placeholder="Nome completo"
-                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${nameError ? 'border-red-400' : 'border-gray-300'}`}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${nameError ? 'border-red-400' : 'border-gray-300'}`}
               />
               {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
             </div>
@@ -108,7 +111,7 @@ export default function MinhasVisitas() {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={placeholder}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             ))}
@@ -121,6 +124,7 @@ export default function MinhasVisitas() {
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
+                aria-label="Data e hora agendada"
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
@@ -135,7 +139,7 @@ export default function MinhasVisitas() {
                 createMutation.mutate();
               }}
               disabled={!name.trim() || createMutation.isPending}
-              className="btn-press w-full bg-primary-600 text-white rounded-xl py-3 font-semibold disabled:opacity-60"
+              className="w-full bg-blue-600 text-white rounded-xl py-3 px-4 font-semibold disabled:opacity-60 hover:bg-blue-700 transition-colors"
             >
               {createMutation.isPending ? 'Salvando...' : 'Salvar'}
             </button>

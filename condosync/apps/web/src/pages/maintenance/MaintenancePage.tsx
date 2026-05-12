@@ -302,6 +302,7 @@ export function MaintenancePage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filtro por status"
               className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Todos</option>
@@ -568,6 +569,7 @@ export function MaintenancePage() {
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  aria-label="Título da ordem de serviço"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -579,6 +581,7 @@ export function MaintenancePage() {
                     setForm({ ...form, description: e.target.value })
                   }
                   rows={3}
+                  aria-label="Descrição"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
@@ -590,6 +593,7 @@ export function MaintenancePage() {
                     onChange={(e) =>
                       setForm({ ...form, priority: e.target.value })
                     }
+                    aria-label="Prioridade"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Object.entries(priorityLabels).map(([k, v]) => (
@@ -606,6 +610,7 @@ export function MaintenancePage() {
                     onChange={(e) =>
                       setForm({ ...form, category: e.target.value })
                     }
+                    aria-label="Categoria"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {["Geral","Elétrico","Hidráulico","Limpeza","Segurança","Elevador","Estrutural","TI","Outro"].map((c) => (
@@ -647,6 +652,7 @@ export function MaintenancePage() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, title: e.target.value })
                   }
+                  aria-label="Título da ordem de serviço"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -658,6 +664,7 @@ export function MaintenancePage() {
                     setEditForm({ ...editForm, description: e.target.value })
                   }
                   rows={3}
+                  aria-label="Descrição"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
@@ -669,6 +676,7 @@ export function MaintenancePage() {
                     onChange={(e) =>
                       setEditForm({ ...editForm, priority: e.target.value })
                     }
+                    aria-label="Prioridade"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Object.entries(priorityLabels).map(([k, v]) => (
@@ -685,6 +693,7 @@ export function MaintenancePage() {
                     onChange={(e) =>
                       setEditForm({ ...editForm, category: e.target.value })
                     }
+                    aria-label="Categoria"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {["Geral","Elétrico","Hidráulico","Limpeza","Segurança","Elevador","Estrutural","TI","Outro"].map((c) => (
@@ -826,6 +835,7 @@ function ScheduleForm({
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={2}
+          aria-label="Descrição"
           className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
       </div>
@@ -855,6 +865,7 @@ function ScheduleForm({
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+            aria-label="Frequência"
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
           >
             {FREQUENCIES.map((f) => (
@@ -870,6 +881,7 @@ function ScheduleForm({
             type="datetime-local"
             value={form.nextDueDate}
             onChange={(e) => setForm({ ...form, nextDueDate: e.target.value })}
+            aria-label="Próxima data"
             className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Briefcase, PlusCircle, Search, Loader2, CheckCircle2, Mail, Phone } from 'lucide-react';
+import { Briefcase, PlusCircle, Search, Loader2, CheckCircle2, Mail, Phone, Camera } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail, validateName, maskCPF, maskCNPJ } from '../../lib/utils';
+import { ServiceProviderPhotoUploadModal } from '../../components/ServiceProviderPhotoUploadModal';
+import { normalizePhotoPath } from '../../hooks/useImageUpload';
 
 export function ServiceProvidersPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -16,6 +18,7 @@ export function ServiceProvidersPage() {
   const [editForm, setEditForm] = useState({ name: '', serviceType: '', email: '', phone: '', cnpj: '' });
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [photoTarget, setPhotoTarget] = useState<any | null>(null);
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: providers, isLoading } = useQuery({
@@ -95,9 +98,23 @@ export function ServiceProvidersPage() {
           {filtered.map((p: any) => (
             <div key={p.id} className="bg-white rounded-xl border p-4">
               <div className="flex items-start justify-between gap-2 mb-3">
-                <div>
-                  <p className="font-medium text-sm">{p.name}</p>
-                  {p.serviceType && <p className="text-xs text-muted-foreground">{p.serviceType}</p>}
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0"
+                    onClick={() => isAdmin && setPhotoTarget(p)}
+                    title={isAdmin ? 'Alterar foto' : undefined}
+                    style={isAdmin ? { cursor: 'pointer' } : {}}
+                  >
+                    {p.photoUrl ? (
+                      <img src={normalizePhotoPath(p.photoUrl)} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Briefcase className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{p.name}</p>
+                    {p.serviceType && <p className="text-xs text-muted-foreground">{p.serviceType}</p>}
+                  </div>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isApproved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                   {p.isApproved ? 'Aprovado' : 'Pendente'}
@@ -125,6 +142,12 @@ export function ServiceProvidersPage() {
                     className="w-full border rounded-lg py-1 hover:bg-gray-50 text-gray-700"
                   >
                     Editar
+                  </button>
+                  <button
+                    onClick={() => setPhotoTarget(p)}
+                    className="w-full flex items-center justify-center gap-1.5 border rounded-lg py-1 hover:bg-gray-50 text-gray-700"
+                  >
+                    <Camera className="w-3 h-3" /> Foto
                   </button>
                   <button
                     onClick={() => deleteMutation.mutate(p.id)}
@@ -157,6 +180,8 @@ export function ServiceProvidersPage() {
                 <input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  aria-label="Nome ou empresa"
+                  placeholder="Nome ou empresa"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.name ? 'border-red-400' : ''}`}
                 />
                 {createErrors.name && <p className="text-xs text-red-500 mt-0.5">{createErrors.name}</p>}
@@ -166,6 +191,8 @@ export function ServiceProvidersPage() {
                 <input
                   value={form.serviceType}
                   onChange={(e) => setForm({ ...form, serviceType: e.target.value })}
+                  aria-label="Tipo de servico"
+                  placeholder="Ex: Eletrica, Hidraulica"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.serviceType ? 'border-red-400' : ''}`}
                 />
                 {createErrors.serviceType && <p className="text-xs text-red-500 mt-0.5">{createErrors.serviceType}</p>}
@@ -176,6 +203,8 @@ export function ServiceProvidersPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.email ? 'border-red-400' : ''}`}
                 />
                 {createErrors.email && <p className="text-xs text-red-500 mt-0.5">{createErrors.email}</p>}
@@ -234,6 +263,8 @@ export function ServiceProvidersPage() {
                 <input
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  aria-label="Nome ou empresa"
+                  placeholder="Nome ou empresa"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
                 />
                 {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
@@ -243,6 +274,8 @@ export function ServiceProvidersPage() {
                 <input
                   value={editForm.serviceType}
                   onChange={(e) => setEditForm({ ...editForm, serviceType: e.target.value })}
+                  aria-label="Tipo de servico"
+                  placeholder="Ex: Eletrica, Hidraulica"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.serviceType ? 'border-red-400' : ''}`}
                 />
                 {editErrors.serviceType && <p className="text-xs text-red-500 mt-0.5">{editErrors.serviceType}</p>}
@@ -253,6 +286,8 @@ export function ServiceProvidersPage() {
                   type="email"
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.email ? 'border-red-400' : ''}`}
                 />
                 {editErrors.email && <p className="text-xs text-red-500 mt-0.5">{editErrors.email}</p>}
@@ -301,6 +336,14 @@ export function ServiceProvidersPage() {
             </div>
           </div>
         </div>
+      )}
+      {photoTarget && (
+        <ServiceProviderPhotoUploadModal
+          providerId={photoTarget.id}
+          currentPhotoPath={photoTarget.photoUrl}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['service-providers'] })}
+          onClose={() => setPhotoTarget(null)}
+        />
       )}
     </div>
   );

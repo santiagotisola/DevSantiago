@@ -2,10 +2,21 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X } from 'lucide-react';
+import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X, Camera } from 'lucide-react';
 import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
+import { AvatarUploadModal } from '../../components/AvatarUploadModal';
+import { normalizePhotoPath } from '../../hooks/useImageUpload';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
+
+// Função para ordenar unidades numericamente
+function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: string }[]) {
+  return [...units].sort((a, b) => {
+    const numA = parseInt(a.identifier.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.identifier.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+}
 
 export function ResidentsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
@@ -21,6 +32,7 @@ export function ResidentsPage() {
   const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '', birthDate: '' });
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [photoTarget, setPhotoTarget] = useState<any>(null);
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: residents, isLoading } = useQuery({
@@ -117,8 +129,17 @@ export function ResidentsPage() {
                 onClick={() => setExpanded(expanded === r.id ? null : r.id)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
-                    {r.user?.name?.charAt(0).toUpperCase()}
+                  <div
+                    className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm overflow-hidden"
+                    onClick={(e) => { e.stopPropagation(); if (isAdmin) setPhotoTarget(r); }}
+                    title={isAdmin ? 'Alterar foto' : undefined}
+                    style={isAdmin ? { cursor: 'pointer' } : {}}
+                  >
+                    {r.user?.avatarUrl ? (
+                      <img src={normalizePhotoPath(r.user.avatarUrl)} alt={r.user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      r.user?.name?.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-sm">{r.user?.name}</p>
@@ -155,7 +176,7 @@ export function ResidentsPage() {
                           <li key={d.id} className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>{d.name} <span className="text-gray-400">({d.relationship})</span></span>
                             {isAdmin && (
-                              <button onClick={() => removeDepMutation.mutate(d.id)} className="text-red-400 hover:text-red-600 ml-2"><X className="w-3 h-3" /></button>
+                              <button onClick={() => removeDepMutation.mutate(d.id)} aria-label="Remover dependente" className="text-red-400 hover:text-red-600 ml-2"><X className="w-3 h-3" /></button>
                             )}
                           </li>
                         ))}
@@ -168,6 +189,9 @@ export function ResidentsPage() {
                     <div className="flex gap-2 pt-1">
                       <button onClick={() => openEdit(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white border rounded-lg hover:bg-gray-100 text-gray-700">
                         <Pencil className="w-3 h-3" /> Editar
+                      </button>
+                      <button onClick={() => setPhotoTarget(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white border rounded-lg hover:bg-gray-100 text-gray-700">
+                        <Camera className="w-3 h-3" /> Foto
                       </button>
                       <button onClick={() => setDeleteTarget(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 text-red-600">
                         <Trash2 className="w-3 h-3" /> Remover do condomínio
@@ -193,6 +217,8 @@ export function ResidentsPage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  aria-label="Nome completo"
+                  placeholder="Nome completo"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.name ? 'border-red-400' : ''}`}
                 />
                 {createErrors.name && <p className="text-xs text-red-500 mt-0.5">{createErrors.name}</p>}
@@ -203,6 +229,8 @@ export function ResidentsPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${createErrors.email ? 'border-red-400' : ''}`}
                 />
                 {createErrors.email && <p className="text-xs text-red-500 mt-0.5">{createErrors.email}</p>}
@@ -231,9 +259,9 @@ export function ResidentsPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Unidade *</label>
-                <select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} aria-label="Unidade" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">Selecione uma unidade...</option>
-                  {((units || []) as any[]).map((u: any) => (
+                  {sortUnitsByIdentifier((units || []) as any[]).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.identifier}{u.block ? ' / Bloco ' + u.block : ''}</option>
                   ))}
                 </select>
@@ -275,6 +303,8 @@ export function ResidentsPage() {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  aria-label="Nome completo"
+                  placeholder="Nome completo"
                   className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.name ? 'border-red-400' : ''}`}
                 />
                 {editErrors.name && <p className="text-xs text-red-500 mt-0.5">{editErrors.name}</p>}
@@ -303,9 +333,9 @@ export function ResidentsPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Unidade *</label>
-                <select value={editForm.unitId} onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <select value={editForm.unitId} onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })} aria-label="Unidade" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">Selecione uma unidade...</option>
-                  {((units || []) as any[]).map((u: any) => (
+                  {sortUnitsByIdentifier((units || []) as any[]).map((u: any) => (
                     <option key={u.id} value={u.id}>{u.identifier}{u.block ? ' / Bloco ' + u.block : ''}</option>
                   ))}
                 </select>
@@ -375,6 +405,7 @@ export function ResidentsPage() {
                 <select
                   value={depForm.relationship}
                   onChange={(e) => setDepForm({ ...depForm, relationship: e.target.value })}
+                  aria-label="Parentesco"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Selecionar...</option>
@@ -406,6 +437,7 @@ export function ResidentsPage() {
                     type="date"
                     value={depForm.birthDate}
                     onChange={(e) => setDepForm({ ...depForm, birthDate: e.target.value })}
+                    aria-label="Data de nascimento"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -420,6 +452,14 @@ export function ResidentsPage() {
             </div>
           </div>
         </div>
+      )}
+      {photoTarget && (
+        <AvatarUploadModal
+          userId={photoTarget.user?.id}
+          currentAvatarPath={photoTarget.user?.avatarUrl}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['residents'] })}
+          onClose={() => setPhotoTarget(null)}
+        />
       )}
     </div>
   );

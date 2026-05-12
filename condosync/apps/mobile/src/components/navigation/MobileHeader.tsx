@@ -36,6 +36,7 @@ export default function MobileHeader({
       {showBack && (
         <button
           onClick={handleBack}
+          aria-label="Voltar"
           className="p-1 -ml-1 rounded-full text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform"
         >
           <ArrowLeft size={22} />
@@ -47,7 +48,7 @@ export default function MobileHeader({
       </h1>
 
       {rightNode ?? (
-        <button className="relative p-1 rounded-full text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform">
+        <button aria-label="Notificações" className="relative p-1 rounded-full text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform">
           <Bell size={20} />
         </button>
       )}

@@ -158,12 +158,14 @@ export default function TicketsPage() {
                     <select
                       value={t.status}
                       onChange={(e) => updateMut.mutate({ id: t.id, data: { status: e.target.value } })}
+                      aria-label="Status do ticket"
                       className="text-xs border rounded-lg px-2 py-1.5"
                     >
                       {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                     </select>
                     {isMgmt && (
                       <button onClick={() => { if (confirm('Excluir ticket?')) deleteMut.mutate(t.id); }}
+                        aria-label="Excluir ticket"
                         className="p-1.5 text-gray-400 hover:text-red-500 border rounded-lg hover:bg-red-50">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -278,6 +280,7 @@ export default function TicketsPage() {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Categoria</label>
                   <select value={newForm.category} onChange={(e) => setNewForm((f) => ({ ...f, category: e.target.value }))}
+                    aria-label="Categoria"
                     className="w-full border rounded-lg px-3 py-2 text-sm">
                     {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
                   </select>
@@ -285,6 +288,7 @@ export default function TicketsPage() {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Prioridade</label>
                   <select value={newForm.priority} onChange={(e) => setNewForm((f) => ({ ...f, priority: e.target.value }))}
+                    aria-label="Prioridade"
                     className="w-full border rounded-lg px-3 py-2 text-sm">
                     {PRIORITIES.map((p) => <option key={p} value={p}>{PRIO_LABEL[p]}</option>)}
                   </select>

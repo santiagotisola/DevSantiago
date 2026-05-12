@@ -195,8 +195,8 @@ export default function AssemblyDetail() {
                         {(assembly.status === 'IN_PROGRESS' || assembly.status === 'FINISHED') && (
                           <div className="absolute inset-0 z-0 p-0.5 pointer-events-none">
                             <div 
-                              className="h-full bg-slate-100/50 rounded-lg transition-all duration-1000" 
-                              style={{ width: `${percentage}%` }}
+                              className="h-full bg-slate-100/50 rounded-lg transition-all duration-1000 absolute inset-0"
+                              aria-hidden="true"
                             />
                           </div>
                         )}

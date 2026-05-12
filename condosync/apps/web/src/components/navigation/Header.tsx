@@ -21,6 +21,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       {/* Menu toggle */}
       <button
         onClick={onMenuClick}
+        aria-label="Abrir menu"
         className="text-gray-500 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
       >
         <Menu className="w-5 h-5" />
@@ -67,6 +68,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       {/* Notificações */}
       <button
         className="relative p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        aria-label="Notificacoes"
         onClick={() => navigate('/comunicacao/avisos')}
       >
         <BellRing className="w-5 h-5" />

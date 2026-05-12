@@ -280,6 +280,7 @@ export function CondominiumsPage() {
                             : value;
                           setForm({ ...form, [key]: nextValue });
                         }}
+                        aria-label={label as string}
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[key] ? 'border-red-400' : ''}`}
                       />
                       {key === 'cnpj' && form.cnpj && !isCnpjComplete(form.cnpj) && (
@@ -437,6 +438,7 @@ export function CondominiumsPage() {
                         : value;
                       setEditForm({ ...editForm, [key]: nextValue });
                     }}
+                    aria-label={label as string}
                     className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors[key] ? 'border-red-400' : ''}`}
                   />
                   {editErrors[key] && <p className="text-xs text-red-500 mt-0.5">{editErrors[key]}</p>}

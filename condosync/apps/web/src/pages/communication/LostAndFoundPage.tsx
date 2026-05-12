@@ -104,6 +104,7 @@ export default function LostAndFoundPage() {
           <select 
             value={statusFilter} 
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filtro por status"
             className="border-slate-200 rounded-xl text-sm py-2 px-3 focus:ring-2 focus:ring-indigo-500 bg-white"
           >
             <option value="ALL">Todos os status</option>
@@ -185,6 +186,7 @@ export default function LostAndFoundPage() {
                 {isAdmin && (
                   <button 
                     onClick={() => window.confirm('Deletar este registro?') && deleteMutation.mutate(item.id)}
+                    aria-label="Excluir registro"
                     className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -202,7 +204,7 @@ export default function LostAndFoundPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
               <h2 className="text-lg font-bold text-slate-800">Novo Registro</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowModal(false)} aria-label="Fechar" className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -243,6 +245,7 @@ export default function LostAndFoundPage() {
                   <select 
                     value={form.category} 
                     onChange={(e) => setForm({ ...form, category: e.target.value })} 
+                    aria-label="Categoria"
                     className="w-full px-3 py-2 border rounded-xl text-sm"
                   >
                     <option value="Geral">Geral</option>
@@ -270,6 +273,7 @@ export default function LostAndFoundPage() {
                   value={form.description} 
                   onChange={(e) => setForm({ ...form, description: e.target.value })} 
                   rows={4}
+                  aria-label="Descrição detalhada"
                   className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" 
                 />
               </div>

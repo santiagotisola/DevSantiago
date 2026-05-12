@@ -1,0 +1,204 @@
+{
+  "generatedAt": "2026-05-12T00:38:43.132Z",
+  "range": {
+    "start": "2026-05-06",
+    "end": "2026-05-11"
+  },
+  "days": [
+    {
+      "day": "2026-05-06",
+      "totals": {
+        "created": 9,
+        "updated": 0,
+        "touched": 9
+      },
+      "affectedTables": [
+        {
+          "table": "refresh_tokens",
+          "created": 5,
+          "updated": 0,
+          "touched": 5
+        },
+        {
+          "table": "users",
+          "created": 3,
+          "updated": 0,
+          "touched": 3
+        },
+        {
+          "table": "condominiums",
+          "created": 1,
+          "updated": 0,
+          "touched": 1
+        }
+      ]
+    },
+    {
+      "day": "2026-05-07",
+      "totals": {
+        "created": 141,
+        "updated": 57,
+        "touched": 198
+      },
+      "affectedTables": [
+        {
+          "table": "units",
+          "created": 70,
+          "updated": 26,
+          "touched": 96
+        },
+        {
+          "table": "users",
+          "created": 39,
+          "updated": 28,
+          "touched": 67
+        },
+        {
+          "table": "dependents",
+          "created": 17,
+          "updated": 0,
+          "touched": 17
+        },
+        {
+          "table": "refresh_tokens",
+          "created": 13,
+          "updated": 0,
+          "touched": 13
+        },
+        {
+          "table": "employees",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "visitors",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "condominiums",
+          "created": 0,
+          "updated": 1,
+          "touched": 1
+        }
+      ]
+    },
+    {
+      "day": "2026-05-08",
+      "totals": {
+        "created": 73,
+        "updated": 117,
+        "touched": 190
+      },
+      "affectedTables": [
+        {
+          "table": "users",
+          "created": 61,
+          "updated": 73,
+          "touched": 134
+        },
+        {
+          "table": "units",
+          "created": 0,
+          "updated": 44,
+          "touched": 44
+        },
+        {
+          "table": "dependents",
+          "created": 9,
+          "updated": 0,
+          "touched": 9
+        },
+        {
+          "table": "refresh_tokens",
+          "created": 3,
+          "updated": 0,
+          "touched": 3
+        }
+      ]
+    },
+    {
+      "day": "2026-05-09",
+      "totals": {
+        "created": 0,
+        "updated": 0,
+        "touched": 0
+      },
+      "affectedTables": []
+    },
+    {
+      "day": "2026-05-10",
+      "totals": {
+        "created": 0,
+        "updated": 0,
+        "touched": 0
+      },
+      "affectedTables": []
+    },
+    {
+      "day": "2026-05-11",
+      "totals": {
+        "created": 36,
+        "updated": 15,
+        "touched": 51
+      },
+      "affectedTables": [
+        {
+          "table": "refresh_tokens",
+          "created": 21,
+          "updated": 0,
+          "touched": 21
+        },
+        {
+          "table": "users",
+          "created": 8,
+          "updated": 9,
+          "touched": 17
+        },
+        {
+          "table": "common_areas",
+          "created": 2,
+          "updated": 2,
+          "touched": 4
+        },
+        {
+          "table": "announcements",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "employees",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "financial_accounts",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "visitors",
+          "created": 1,
+          "updated": 1,
+          "touched": 2
+        },
+        {
+          "table": "notifications",
+          "created": 1,
+          "updated": 0,
+          "touched": 1
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "created": 259,
+    "updated": 189,
+    "touched": 448
+  }
+}

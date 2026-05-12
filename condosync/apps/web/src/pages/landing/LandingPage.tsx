@@ -144,9 +144,7 @@ export default function LandingPage() {
       {/* ── Hero ───────────────────────────────────────────────────────── */}
       <section className="relative bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white overflow-hidden">
         {/* background pattern */}
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}
-        />
+        <div className="absolute inset-0 opacity-10 bg-gradient-radial" />
         <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 text-center">
           <span className="inline-block bg-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-6 backdrop-blur">
             Plataforma SaaS para gestão condominial

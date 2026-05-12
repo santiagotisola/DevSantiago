@@ -96,8 +96,9 @@ export default function MarketplacePage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(selectedOffer.couponCode!);
-                    toast.success('Código copiado!');
+                    toast.success('Codigo copiado!');
                   }}
+                  aria-label="Copiar codigo de desconto"
                   className="btn-press p-3 bg-primary-600 text-white rounded-xl"
                 >
                   <Copy size={18} />

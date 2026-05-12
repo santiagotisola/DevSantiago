@@ -10,4 +10,6 @@ dist/
 uploads/
 coverage/
 dump.rdb
+*.dump
+dumps/
 

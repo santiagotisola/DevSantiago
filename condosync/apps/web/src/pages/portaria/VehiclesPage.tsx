@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { Car, Plus, Search, LogOut, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Car, Plus, Search, LogOut, Loader2, Pencil, Trash2, Camera } from 'lucide-react';
 import { formatDateTime } from '../../lib/utils';
+import { VehiclePhotoUploadModal } from '../../components/VehiclePhotoUploadModal';
+import { normalizePhotoPath } from '../../hooks/useImageUpload';
 
 const VEHICLE_TYPE_LABELS: Record<string, string> = {
   CAR: 'Carro',
@@ -29,6 +31,15 @@ const CORES = [
 const emptyLogForm = { plate: '', unitId: '', isResident: false, notes: '' };
 const emptyVehicleForm = { unitId: '', plate: '', brand: '', model: '', color: '', year: '', type: 'CAR' };
 
+// Função para ordenar unidades numericamente
+function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: string }[]) {
+  return [...units].sort((a, b) => {
+    const numA = parseInt(a.identifier.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.identifier.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+}
+
 export function VehiclesPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -41,6 +52,7 @@ export function VehiclesPage() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [editForm, setEditForm] = useState(emptyVehicleForm);
   const [editModal, setEditModal] = useState(false);
+  const [photoTarget, setPhotoTarget] = useState<any>(null);
 
   // Estado FIPE — cadastro
   const [fipeBrandCode, setFipeBrandCode] = useState('');
@@ -356,7 +368,23 @@ export function VehiclesPage() {
                 <tbody className="divide-y">
                   {filteredVehicles.map((v: any) => (
                     <tr key={v.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono font-bold">{v.plate}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0"
+                            onClick={() => setPhotoTarget(v)}
+                            title="Ver/alterar foto"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {v.photoUrl ? (
+                              <img src={normalizePhotoPath(v.photoUrl)} alt={v.plate} className="w-full h-full object-cover" />
+                            ) : (
+                              <Car className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                          <span className="font-mono font-bold">{v.plate}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">{v.brand} {v.model}{v.year ? ` (${v.year})` : ''}</td>
                       <td className="px-4 py-3 text-muted-foreground">{v.color}</td>
                       <td className="px-4 py-3">
@@ -378,6 +406,13 @@ export function VehiclesPage() {
                               Editar
                             </button>
                             <button
+                              onClick={() => setPhotoTarget(v)}
+                              className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+                            >
+                              <Camera className="w-3 h-3" />
+                              Foto
+                            </button>
+                            <button
                               onClick={() => { if (confirm('Remover este veículo?')) deleteVehicleMutation.mutate(v.id); }}
                               className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
                             >
@@ -394,6 +429,16 @@ export function VehiclesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal — Foto Veículo */}
+      {photoTarget && (
+        <VehiclePhotoUploadModal
+          vehicleId={photoTarget.id}
+          currentPhotoPath={photoTarget.photoUrl}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['vehicles'] })}
+          onClose={() => setPhotoTarget(null)}
+        />
       )}
 
       {/* Modal — Registrar Acesso */}
@@ -417,10 +462,11 @@ export function VehiclesPage() {
                 <select
                   value={logForm.unitId}
                   onChange={(e) => setLogForm({ ...logForm, unitId: e.target.value })}
+                  aria-label="Unidade do veículo"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Não identificada</option>
-                  {(units || []).map((u) => (
+                  {sortUnitsByIdentifier(units || []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.block ? `${u.block} - ` : ''}{u.identifier}
                     </option>
@@ -471,10 +517,11 @@ export function VehiclesPage() {
                 <select
                   value={vehicleForm.unitId}
                   onChange={(e) => setVehicleForm({ ...vehicleForm, unitId: e.target.value })}
+                  aria-label="Unidade"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione a unidade...</option>
-                  {(units || []).map((u) => (
+                  {sortUnitsByIdentifier(units || []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.block ? `${u.block} - ` : ''}{u.identifier}
                     </option>
@@ -491,6 +538,7 @@ export function VehiclesPage() {
                     setFipeBrandCode('');
                     setFipeModelCode('');
                   }}
+                  aria-label="Tipo de veículo"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(VEHICLE_TYPE_LABELS).map(([k, v]) => (
@@ -511,6 +559,7 @@ export function VehiclesPage() {
                       setVehicleForm({ ...vehicleForm, brand: b?.nome || '', model: '', year: '' });
                     }}
                     disabled={loadingBrands}
+                    aria-label="Marca do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">{loadingBrands ? 'Carregando marcas...' : 'Selecione a marca...'}</option>
@@ -539,6 +588,7 @@ export function VehiclesPage() {
                       setVehicleForm({ ...vehicleForm, model: m?.nome || '', year: '' });
                     }}
                     disabled={!fipeBrandCode || loadingModels}
+                    aria-label="Modelo do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">
@@ -565,6 +615,7 @@ export function VehiclesPage() {
                     value={vehicleForm.year}
                     onChange={(e) => setVehicleForm({ ...vehicleForm, year: e.target.value })}
                     disabled={!fipeModelCode || loadingYears}
+                    aria-label="Ano do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">
@@ -592,6 +643,7 @@ export function VehiclesPage() {
                 <select
                   value={vehicleForm.color}
                   onChange={(e) => setVehicleForm({ ...vehicleForm, color: e.target.value })}
+                  aria-label="Cor do veículo"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione a cor...</option>
@@ -637,10 +689,11 @@ export function VehiclesPage() {
                 <select
                   value={editForm.unitId}
                   onChange={(e) => setEditForm({ ...editForm, unitId: e.target.value })}
+                  aria-label="Unidade"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione a unidade...</option>
-                  {(units || []).map((u) => (
+                  {sortUnitsByIdentifier(units || []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.block ? `${u.block} - ` : ''}{u.identifier}
                     </option>
@@ -656,6 +709,7 @@ export function VehiclesPage() {
                     setEditFipeBrandCode('');
                     setEditFipeModelCode('');
                   }}
+                  aria-label="Tipo de veículo"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(VEHICLE_TYPE_LABELS).map(([k, v]) => (
@@ -675,6 +729,7 @@ export function VehiclesPage() {
                       setEditForm({ ...editForm, brand: b?.nome || '', model: '', year: '' });
                     }}
                     disabled={loadingEditBrands}
+                    aria-label="Marca do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">{loadingEditBrands ? 'Carregando marcas...' : editForm.brand || 'Selecione a marca...'}</option>
@@ -683,7 +738,7 @@ export function VehiclesPage() {
                     ))}
                   </select>
                 ) : (
-                  <input value={editForm.brand} onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input value={editForm.brand} onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })} aria-label="Marca" placeholder="Marca do veículo" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 )}
               </div>
               <div className="space-y-1">
@@ -697,6 +752,7 @@ export function VehiclesPage() {
                       setEditForm({ ...editForm, model: m?.nome || '', year: '' });
                     }}
                     disabled={!editFipeBrandCode || loadingEditModels}
+                    aria-label="Modelo do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">{!editFipeBrandCode ? 'Selecione a marca primeiro' : loadingEditModels ? 'Carregando...' : editForm.model || 'Selecione o modelo...'}</option>
@@ -705,7 +761,7 @@ export function VehiclesPage() {
                     ))}
                   </select>
                 ) : (
-                  <input value={editForm.model} onChange={(e) => setEditForm({ ...editForm, model: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input value={editForm.model} onChange={(e) => setEditForm({ ...editForm, model: e.target.value })} aria-label="Modelo" placeholder="Modelo do veículo" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 )}
               </div>
               <div className="space-y-1">
@@ -715,6 +771,7 @@ export function VehiclesPage() {
                     value={editForm.year}
                     onChange={(e) => setEditForm({ ...editForm, year: e.target.value })}
                     disabled={!editFipeModelCode || loadingEditYears}
+                    aria-label="Ano do veículo"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                   >
                     <option value="">{!editFipeModelCode ? 'Selecione o modelo primeiro' : loadingEditYears ? 'Carregando...' : editForm.year || 'Selecione o ano...'}</option>
@@ -723,7 +780,7 @@ export function VehiclesPage() {
                     ))}
                   </select>
                 ) : (
-                  <input type="number" value={editForm.year} onChange={(e) => setEditForm({ ...editForm, year: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" min={1980} max={new Date().getFullYear() + 1} />
+                  <input type="number" value={editForm.year} onChange={(e) => setEditForm({ ...editForm, year: e.target.value })} aria-label="Ano" placeholder="2023" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" min={1980} max={new Date().getFullYear() + 1} />
                 )}
               </div>
               <div className="space-y-1">
@@ -731,6 +788,7 @@ export function VehiclesPage() {
                 <select
                   value={editForm.color}
                   onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                  aria-label="Cor do veículo"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">{editForm.color || 'Selecione a cor...'}</option>
@@ -744,6 +802,8 @@ export function VehiclesPage() {
                 <input
                   value={editForm.plate}
                   onChange={(e) => setEditForm({ ...editForm, plate: e.target.value.toUpperCase() })}
+                  aria-label="Placa do veículo"
+                  placeholder="ABC-1234"
                   className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                   maxLength={8}
                 />

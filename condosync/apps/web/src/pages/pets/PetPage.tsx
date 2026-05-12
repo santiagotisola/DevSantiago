@@ -169,12 +169,14 @@ export default function PetPage() {
               <div className="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
                 <button 
                   onClick={() => openEdit(pet)}
+                  aria-label="Editar pet"
                   className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setDeleteTarget(pet)}
+                  aria-label="Excluir pet"
                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -193,7 +195,7 @@ export default function PetPage() {
               <h2 className="text-lg font-bold text-slate-800">
                 {editTarget ? 'Editar Pet' : 'Registrar Novo Pet'}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditTarget(null); setForm({...emptyPetForm}); }} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => { setShowModal(false); setEditTarget(null); setForm({...emptyPetForm}); }} aria-label="Fechar" className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -205,6 +207,8 @@ export default function PetPage() {
                   <input 
                     value={form.name} 
                     onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                    aria-label="Nome do pet"
+                    placeholder="Ex: Rex"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" 
                   />
                 </div>
@@ -213,6 +217,7 @@ export default function PetPage() {
                   <select 
                     value={form.type} 
                     onChange={(e) => setForm({ ...form, type: e.target.value })} 
+                    aria-label="Tipo de animal"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="Cachorro">Cachorro</option>
@@ -227,11 +232,11 @@ export default function PetPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Raça</label>
-                  <input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} className="w-full px-3 py-2 border rounded-xl text-sm" />
+                  <input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} aria-label="Raça" placeholder="Ex: Labrador" className="w-full px-3 py-2 border rounded-xl text-sm" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Porte</label>
-                  <select value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} className="w-full px-3 py-2 border rounded-xl text-sm">
+                  <select value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} aria-label="Porte" className="w-full px-3 py-2 border rounded-xl text-sm">
                     <option value="Pequeno">Pequeno</option>
                     <option value="Médio">Médio</option>
                     <option value="Grande">Grande</option>
@@ -259,7 +264,7 @@ export default function PetPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cor Predominante</label>
-                  <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full px-3 py-2 border rounded-xl text-sm" />
+                  <input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} aria-label="Cor predominante" placeholder="Ex: Marrom" className="w-full px-3 py-2 border rounded-xl text-sm" />
                 </div>
               </div>
 
@@ -268,6 +273,7 @@ export default function PetPage() {
                 <select 
                   value={form.unitId} 
                   onChange={(e) => setForm({ ...form, unitId: e.target.value })} 
+                  aria-label="Unidade"
                   className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Selecione a unidade...</option>
@@ -283,6 +289,7 @@ export default function PetPage() {
                   value={form.notes} 
                   onChange={(e) => setForm({ ...form, notes: e.target.value })} 
                   rows={3}
+                  aria-label="Observações"
                   className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" 
                 />
               </div>

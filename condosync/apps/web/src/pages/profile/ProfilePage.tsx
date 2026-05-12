@@ -70,13 +70,15 @@ export function ProfilePage() {
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                aria-label="Nome completo"
+                placeholder="Seu nome completo"
                 className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-400' : ''}`}
               />
               {formErrors.name && <p className="text-xs text-red-500 mt-0.5">{formErrors.name}</p>}
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">E-mail</label>
-              <input value={user?.email || ''} disabled className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50 text-muted-foreground cursor-not-allowed" />
+              <input value={user?.email || ''} disabled aria-label="E-mail" placeholder="E-mail" className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50 text-muted-foreground cursor-not-allowed" />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Telefone</label>
@@ -119,7 +121,7 @@ export function ProfilePage() {
           {[['Senha atual', 'currentPassword'], ['Nova senha', 'newPassword'], ['Confirmar nova senha', 'confirmPassword']].map(([label, key]) => (
             <div key={key} className="space-y-1">
               <label className="text-sm font-medium">{label}</label>
-              <input type="password" value={(pwForm as any)[key]} onChange={(e) => setPwForm({ ...pwForm, [key]: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="password" value={(pwForm as any)[key]} onChange={(e) => setPwForm({ ...pwForm, [key]: e.target.value })} aria-label={label} placeholder={label} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           ))}
           {pwError && <p className="text-sm text-red-600">{pwError}</p>}

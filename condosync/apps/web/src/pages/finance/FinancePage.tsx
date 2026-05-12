@@ -133,7 +133,7 @@ export function FinancePage() {
           >
             <PlusCircle className="w-4 h-4" /> Nova Cobrança
           </Link>
-          <button className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">
+          <button aria-label="Filtrar" className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">
             <Filter className="w-5 h-5" />
           </button>
         </div>
