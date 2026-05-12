@@ -124,6 +124,14 @@ const AuditPage = lazyNamed(
   () => import("./pages/admin/AuditPage") as any,
   "AuditPage",
 );
+const OnboardingWizard = lazyNamed(
+  () => import("./pages/admin/OnboardingWizard") as any,
+  "OnboardingWizard",
+);
+const SyndicDashboardPage = lazyNamed(
+  () => import("./pages/dashboard/SyndicDashboardPage") as any,
+  "SyndicDashboardPage",
+);
 const MyVisitorsPage = lazyNamed(
   () => import("./pages/minha-portaria/MyVisitorsPage") as any,
   "MyVisitorsPage",
@@ -473,6 +481,22 @@ export default function App() {
               element={
                 <RoleGuard roles={["SUPER_ADMIN"]}>
                   <PlansPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/onboarding"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <OnboardingWizard />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="painel-sindico"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <SyndicDashboardPage />
                 </RoleGuard>
               }
             />

@@ -179,11 +179,18 @@ const navItems: NavItem[] = [
       { label: "Dados do Condomínio", to: "/configuracoes", roles: MANAGEMENT },
       { label: "Convites", to: "/convites", roles: MANAGEMENT },
       { label: "Auditoria", to: "/auditoria", roles: MANAGEMENT },
+      { label: "Painel do Síndico", to: "/painel-sindico", roles: MANAGEMENT },
     ],
   },
   {
     label: "Condomínios",
     to: "/admin/condominios",
+    icon: Building2,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    label: "Novo Condomínio (Wizard)",
+    to: "/admin/onboarding",
     icon: Building2,
     roles: ["SUPER_ADMIN"],
   },
