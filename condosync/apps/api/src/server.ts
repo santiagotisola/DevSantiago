@@ -410,9 +410,11 @@ app.use(`${API}/finance`, financeRoutes);
 app.use(`${API}/maintenance`, maintenanceRoutes);
 app.use(`${API}/common-areas`, commonAreaRoutes);
 app.use(`${API}/reports`, reportRoutes);
-app.use(`${API}/dashboard`, dashboardRoutes);
-app.use(`${API}/dashboard`, dashboardSyndicRoutes);
+// Ordem importa: rotas específicas (/saas, /:id/syndic) precisam vir ANTES
+// da catch-all /:condominiumId, senão "saas" é tratado como condominiumId.
 app.use(`${API}/dashboard`, dashboardSaasRoutes);
+app.use(`${API}/dashboard`, dashboardSyndicRoutes);
+app.use(`${API}/dashboard`, dashboardRoutes);
 // Docs / OpenAPI — fora do auth chain. /api/docs UI, /api/openapi.json schema.
 app.use("/api", docsRoutes);
 app.use(`${API}/lgpd`, lgpdRoutes);
