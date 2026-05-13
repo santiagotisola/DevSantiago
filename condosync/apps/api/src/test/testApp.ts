@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express, { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { errorHandler } from '../middleware/errorHandler';

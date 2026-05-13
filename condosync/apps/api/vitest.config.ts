@@ -6,17 +6,18 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['node_modules', '**/dist/**', '**/*.js'],
+    exclude: ['node_modules', '**/dist/**', '**/*.js', 'src/test/it/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: [
-        'src/modules/auth/auth.service.ts',
-        'src/modules/finance/finance.service.ts',
-        'src/modules/visitors/visitor.service.ts',
-        'src/modules/parcels/parcel.service.ts',
+      include: ['src/modules/**/*.service.ts'],
+      exclude: [
+        'node_modules',
+        '**/dist/**',
+        'src/test/**',
+        '**/*.test.ts',
+        '**/*.routes.ts',
       ],
-      exclude: ['node_modules', '**/dist/**', 'src/test/**'],
       thresholds: {
         lines: 30,
         functions: 30,

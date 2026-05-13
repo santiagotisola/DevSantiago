@@ -55,7 +55,7 @@ describe('Rotas públicas (sem auth)', () => {
     const r = await request(app)
       .post('/invitations/public/abc/accept')
       .send({ password: 'short' });
-    expect(r.status).toBe(400);
+    expect(r.status).toBe(422);
   });
 });
 
