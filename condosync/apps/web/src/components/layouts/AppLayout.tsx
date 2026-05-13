@@ -2,22 +2,50 @@ import { Link, Outlet } from 'react-router-dom';
 import { Sidebar } from '../navigation/Sidebar';
 import { Header } from '../navigation/Header';
 import { AiAssistantChat } from '../ai/AiAssistantChat';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { ShieldAlert } from 'lucide-react';
 
+const COLLAPSED_KEY = 'condosync-sidebar-collapsed';
+
 export function AppLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Mobile: drawer aberto por padrão a partir de lg+; em telas pequenas começa fechado.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  // Desktop: mini-rail persistido no localStorage.
+  const [desktopCollapsed, setDesktopCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(COLLAPSED_KEY) === '1';
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(COLLAPSED_KEY, desktopCollapsed ? '1' : '0');
+    } catch {
+      // ignore quota / disabled storage
+    }
+  }, [desktopCollapsed]);
+
   const mustEnable2FA = useAuthStore((s) => s.mustEnable2FA);
+
+  function handleMenuClick() {
+    // lg+ alterna mini-rail; abaixo de lg alterna drawer mobile.
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+      setDesktopCollapsed((v) => !v);
+    } else {
+      setMobileOpen((v) => !v);
+    }
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        collapsed={desktopCollapsed}
+      />
 
-      {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <Header onMenuClick={handleMenuClick} />
 
         {mustEnable2FA && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between gap-4">
@@ -44,7 +72,6 @@ export function AppLayout() {
         </main>
       </div>
 
-      {/* Assistente IA flutuante (visível apenas para MGMT) */}
       <AiAssistantChat />
     </div>
   );

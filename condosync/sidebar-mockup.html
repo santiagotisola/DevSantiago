@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>CondoSync — Mockup do Sidebar novo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  body { background:#f1f5f9; font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .sidebar { background:#0f172a; color:#e2e8f0; }
+  .nav-item { padding:.55rem .75rem; border-radius:.5rem; display:flex; align-items:center; gap:.75rem; font-size:.875rem; cursor:pointer; }
+  .nav-item:hover { background:#1e293b; }
+  .nav-item.active { background:#1d4ed8; color:white; }
+  .nav-child { padding:.4rem .75rem .4rem 2.5rem; font-size:.8rem; color:#cbd5e1; cursor:pointer; border-radius:.5rem; }
+  .nav-child:hover { background:#1e293b; color:white; }
+  .group-header { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#64748b; padding:.5rem .75rem .25rem; }
+  .rail-item { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:.5rem; cursor:pointer; margin:2px auto; position:relative; }
+  .rail-item:hover { background:#1e293b; }
+  .rail-item.active { background:#1d4ed8; }
+  .tooltip { position:absolute; left:54px; top:50%; transform:translateY(-50%); background:#0f172a; color:white; padding:.25rem .5rem; border-radius:.25rem; font-size:.75rem; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.3); pointer-events:none; }
+  .popover { position:absolute; left:54px; top:0; background:#0f172a; color:white; border:1px solid #1e293b; border-radius:.5rem; min-width:200px; padding:.4rem; box-shadow:0 12px 32px rgba(0,0,0,.4); z-index:50; }
+  .popover-title { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#94a3b8; padding:.25rem .5rem .5rem; border-bottom:1px solid #1e293b; margin-bottom:.25rem; }
+  .popover-item { padding:.4rem .5rem; font-size:.8rem; border-radius:.25rem; cursor:pointer; color:#cbd5e1; }
+  .popover-item:hover { background:#1e293b; color:white; }
+  .chev { margin-left:auto; transition:transform .2s; }
+  .chev.open { transform:rotate(180deg); }
+</style>
+</head>
+<body class="p-8">
+
+<h1 class="text-2xl font-bold mb-2 text-slate-800">CondoSync — Sidebar redesign</h1>
+<p class="text-sm text-slate-500 mb-8">10 entradas de nível 1, agrupadas. 3 estados lado a lado: <strong>expandido</strong>, <strong>mini-rail</strong>, <strong>mini-rail + popover no hover</strong>.</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+
+  <!-- ────────────── ESTADO 1: EXPANDIDO ────────────── -->
+  <div>
+    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">1) Expandido (w-64 / 256px)</div>
+    <div class="sidebar rounded-xl flex flex-col w-64 h-[760px] overflow-y-auto">
+      <!-- Brand -->
+      <div class="p-4 flex items-center gap-2 border-b border-slate-800">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">C</div>
+        <span class="font-semibold">CondoSync</span>
+        <i data-lucide="menu" class="w-4 h-4 ml-auto text-slate-400"></i>
+      </div>
+      <!-- Condomínio ativo -->
+      <div class="px-4 py-3 border-b border-slate-800">
+        <div class="text-[10px] uppercase tracking-widest text-slate-500">Condomínio ativo</div>
+        <div class="mt-1 flex items-center justify-between bg-slate-800 rounded-md px-2 py-1.5 text-xs">
+          <span>Vereda do Bosque</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+        </div>
+      </div>
+
+      <div class="p-2 space-y-0.5 flex-1">
+        <div class="nav-item active"><i data-lucide="layout-grid" class="w-4 h-4"></i><span>Dashboard</span></div>
+
+        <div class="nav-item"><i data-lucide="shield-check" class="w-4 h-4"></i><span>Portaria</span><i data-lucide="chevron-down" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="contact" class="w-4 h-4"></i><span>Cadastros</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="banknote" class="w-4 h-4"></i><span>Financeiro</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="palette" class="w-4 h-4"></i><span>Espaços & Recursos</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="wrench" class="w-4 h-4"></i><span>Operacional</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>Relatórios</span></div>
+
+        <div class="nav-item"><i data-lucide="megaphone" class="w-4 h-4"></i><span>Comunicação</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="nav-item"><i data-lucide="settings" class="w-4 h-4"></i><span>Configurações</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+
+        <div class="group-header pt-3">Super Admin</div>
+        <div class="nav-item"><i data-lucide="crown" class="w-4 h-4"></i><span>Admin SaaS</span><i data-lucide="chevron-right" class="chev w-4 h-4"></i></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-3 border-t border-slate-800 flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">SA</div>
+        <div class="text-xs flex-1 min-w-0">
+          <div class="font-medium truncate">Super Admin</div>
+          <div class="text-slate-400 text-[10px] truncate">admin@condosync.com.br</div>
+        </div>
+        <i data-lucide="log-out" class="w-4 h-4 text-slate-400 cursor-pointer"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────── ESTADO 2: MINI-RAIL ────────────── -->
+  <div>
+    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">2) Mini-rail (w-16 / 64px)</div>
+    <div class="sidebar rounded-xl flex flex-col w-16 h-[760px]">
+      <div class="p-3 border-b border-slate-800 flex justify-center">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">C</div>
+      </div>
+      <div class="py-2 flex-1">
+        <div class="rail-item"><i data-lucide="menu" class="w-5 h-5 text-slate-400"></i></div>
+        <div class="rail-item active"><i data-lucide="layout-grid" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="contact" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="banknote" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="palette" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="wrench" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="bar-chart-3" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="megaphone" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="settings" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="crown" class="w-5 h-5"></i></div>
+      </div>
+      <div class="p-2 border-t border-slate-800 flex justify-center">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">SA</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 mt-3">Tooltip aparece ao passar o mouse em qualquer ícone (ver →).</p>
+  </div>
+
+  <!-- ────────────── ESTADO 3: MINI-RAIL + POPOVER ────────────── -->
+  <div>
+    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">3) Hover em "Financeiro" (popover lateral)</div>
+    <div class="sidebar rounded-xl flex flex-col w-16 h-[760px] relative">
+      <div class="p-3 border-b border-slate-800 flex justify-center">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">C</div>
+      </div>
+      <div class="py-2 flex-1">
+        <div class="rail-item"><i data-lucide="menu" class="w-5 h-5 text-slate-400"></i></div>
+        <div class="rail-item"><i data-lucide="layout-grid" class="w-5 h-5"></i></div>
+        <div class="rail-item">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+          <span class="tooltip">Portaria</span>
+        </div>
+        <div class="rail-item"><i data-lucide="contact" class="w-5 h-5"></i></div>
+        <div class="rail-item active">
+          <i data-lucide="banknote" class="w-5 h-5"></i>
+          <div class="popover">
+            <div class="popover-title">Financeiro</div>
+            <div class="popover-item">Visão Geral</div>
+            <div class="popover-item">Cobranças</div>
+            <div class="popover-item">Categorias</div>
+            <div class="popover-item">Multas</div>
+            <div class="popover-item">Contratos</div>
+          </div>
+        </div>
+        <div class="rail-item"><i data-lucide="palette" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="wrench" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="bar-chart-3" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="megaphone" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="settings" class="w-5 h-5"></i></div>
+        <div class="rail-item"><i data-lucide="crown" class="w-5 h-5"></i></div>
+      </div>
+      <div class="p-2 border-t border-slate-800 flex justify-center">
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">SA</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-500 mt-3">Popover flutua sem empurrar layout (z-50, position absolute).</p>
+  </div>
+
+</div>
+
+<!-- ────────────── CONTEÚDO DOS GRUPOS ────────────── -->
+<div class="max-w-6xl mx-auto mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i>Portaria</div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Visitantes</li><li>Encomendas</li><li>Veículos</li><li>Prestadores</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="contact" class="w-4 h-4 text-blue-600"></i>Cadastros <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded">NOVO</span></div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Unidades</li><li>Moradores</li><li>Pets</li><li>Funcionários</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="banknote" class="w-4 h-4 text-blue-600"></i>Financeiro</div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Visão Geral</li><li>Cobranças</li><li>Categorias</li>
+      <li>Multas <span class="text-[10px] text-emerald-600">← movido pra cá</span></li>
+      <li>Contratos <span class="text-[10px] text-emerald-600">← movido pra cá</span></li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="palette" class="w-4 h-4 text-blue-600"></i>Espaços & Recursos <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded">NOVO</span></div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Áreas Comuns</li><li>Estoque</li><li>Obras</li><li>Galeria</li><li>TV Elevador</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="wrench" class="w-4 h-4 text-blue-600"></i>Operacional <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded">NOVO</span></div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Manutenção</li><li>Chamados</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="megaphone" class="w-4 h-4 text-blue-600"></i>Comunicação</div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Avisos</li><li>Ocorrências</li><li>Achados e Perdidos</li><li>Assembleias</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="settings" class="w-4 h-4 text-blue-600"></i>Configurações</div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Controle de Acesso</li>
+      <li>Dados do Condomínio</li>
+      <li>Documentos <span class="text-[10px] text-emerald-600">← movido pra cá</span></li>
+      <li>Convites</li>
+      <li>Auditoria</li>
+      <li>Painel do Síndico</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="crown" class="w-4 h-4 text-blue-600"></i>Admin SaaS <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded">NOVO</span></div>
+    <ul class="text-slate-600 space-y-1 pl-6 list-disc">
+      <li>Painel SaaS</li><li>Condomínios</li><li>Novo Condomínio (Wizard)</li><li>Planos</li><li>Marketplace</li>
+    </ul>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="font-bold flex items-center gap-2 mb-2"><i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i>Relatórios <span class="text-[10px] text-slate-500">(link solto)</span></div>
+    <div class="text-xs text-slate-500 pl-6">Fica fora de grupo, como link único.</div>
+  </div>
+</div>
+
+<div class="max-w-6xl mx-auto mt-8 text-xs text-slate-500 text-center">
+  <p>Resumo: <strong>10 entradas de nível 1</strong> (de 22+). Toggle do hamburguer encolhe pra ~64px sem sumir.</p>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
