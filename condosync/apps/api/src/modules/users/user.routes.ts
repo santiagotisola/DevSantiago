@@ -1,171 +1,48 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
-import { ForbiddenError } from "../../middleware/errorHandler";
 import { passwordSchema } from "../auth/auth.controller";
-import { env } from "../../config/env";
-import { UserRole } from "@prisma/client";
 import { z } from "zod";
-import bcrypt from "bcrypt";
-import { auditService } from "../audit/audit.service";
+import { userService } from "./user.service";
 
 const router = Router();
 router.use(authenticate);
 
-// Listar usuÃ¡rios do sistema (super admin)
 router.get(
   "/",
   authorize("SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        lastLoginAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: Number(req.query.limit) || 50,
-      skip:
-        ((Number(req.query.page) || 1) - 1) * (Number(req.query.limit) || 50),
+    const users = await userService.list({
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 50,
     });
     res.json({ success: true, data: { users } });
   },
 );
 
-// M1 â€” GET /:id: SUPER_ADMIN vÃª tudo; outros sÃ³ podem ver perfil do mesmo condomÃ­nio
 router.get("/:id", async (req: Request, res: Response) => {
-  const actor = req.user!;
-
-  if (actor.role !== UserRole.SUPER_ADMIN && actor.userId !== req.params.id) {
-    // Verifica que ator e alvo compartilham um condomÃ­nio ativo
-    const sharedCondominium = await prisma.condominiumUser.findFirst({
-      where: {
-        userId: actor.userId,
-        isActive: true,
-        condominium: {
-          condominiumUsers: { some: { userId: req.params.id, isActive: true } },
-        },
-      },
-      select: { id: true },
-    });
-    if (!sharedCondominium) throw new ForbiddenError("Acesso negado");
-  }
-
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: req.params.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      avatarUrl: true,
-      role: true,
-      createdAt: true,
-      lastLoginAt: true,
-      condominiumUsers: {
-        include: {
-          condominium: { select: { id: true, name: true } },
-          unit: { select: { identifier: true, block: true } },
-        },
-      },
-    },
-  });
+  const user = await userService.findById(req.params.id, req.user!);
   res.json({ success: true, data: { user } });
 });
 
-// Atualizar perfil
 router.put("/:id", async (req: Request, res: Response) => {
-  if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
-    return res
-      .status(403)
-      .json({ success: false, error: { message: "Acesso negado" } });
-  }
-
   const schema = z.object({
     name: z.string().min(2).optional(),
     phone: z.string().optional(),
     avatarUrl: z.string().url().optional(),
   });
   const data = validateRequest(schema, req.body);
-  const user = await prisma.user.update({
-    where: { id: req.params.id },
-    data,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      avatarUrl: true,
-      role: true,
-    },
-  });
+  const user = await userService.updateProfile(req.params.id, data, req.user!);
   res.json({ success: true, data: { user } });
 });
 
-// M3 — reset-password: SUPER_ADMIN pode redefinir senha de qualquer usuário;
-//       CONDOMINIUM_ADMIN pode redefinir senha de membros do seu condomínio
 router.patch(
   "/:id/reset-password",
   authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN"),
   async (req: Request, res: Response) => {
-    const actor = req.user!;
-    // Mesma política de senha do register (8+, 1 maiúscula, 1 número).
-    // Antes era min(6), permitindo "abc123" para qualquer morador.
     const schema = z.object({ newPassword: passwordSchema });
     const { newPassword } = validateRequest(schema, req.body);
-
-    const target = await prisma.user.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { role: true },
-    });
-
-    if (actor.role === UserRole.CONDOMINIUM_ADMIN) {
-      if (
-        target.role === UserRole.SUPER_ADMIN ||
-        target.role === UserRole.CONDOMINIUM_ADMIN
-      ) {
-        throw new ForbiddenError(
-          "Você não tem permissão para redefinir a senha deste usuário",
-        );
-      }
-      const shared = await prisma.condominiumUser.findFirst({
-        where: {
-          userId: actor.userId,
-          isActive: true,
-          condominium: {
-            condominiumUsers: { some: { userId: req.params.id, isActive: true } },
-          },
-        },
-        select: { id: true },
-      });
-      if (!shared)
-        throw new ForbiddenError("Usuário não pertence ao seu condomínio");
-    }
-
-    const rounds = Number(env.BCRYPT_ROUNDS) || 12;
-    const passwordHash = await bcrypt.hash(newPassword, rounds);
-    // Reset administrativo invalida sessões da vítima — antes elas
-    // permaneciam válidas e o usuário continuava logado com a senha
-    // antiga até o access token expirar.
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: req.params.id },
-        data: { passwordHash },
-      }),
-      prisma.refreshToken.deleteMany({ where: { userId: req.params.id } }),
-    ]);
-    await auditService.write({
-      userId: actor.userId,
-      action: "RESET_PASSWORD",
-      module: "users",
-      entityType: "User",
-      entityId: req.params.id,
-      description: `Senha redefinida administrativamente por ${actor.role}`,
+    await userService.resetPassword(req.params.id, newPassword, req.user!, {
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"] ?? null,
     });
@@ -173,62 +50,15 @@ router.patch(
   },
 );
 
-// M2 — toggle-active: CONDOMINIUM_ADMIN só pode desativar membros do seu condomínio;
-//       não pode desativar SUPER_ADMIN nem outros admins
-//       nÃ£o pode desativar SUPER_ADMIN nem outros admins
 router.patch(
   "/:id/toggle-active",
   authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN"),
   async (req: Request, res: Response) => {
-    const actor = req.user!;
-    const target = await prisma.user.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { isActive: true, role: true },
-    });
-
-    if (actor.role === UserRole.CONDOMINIUM_ADMIN) {
-      // Impede desativar SUPER_ADMIN ou outro CONDOMINIUM_ADMIN
-      if (
-        target.role === UserRole.SUPER_ADMIN ||
-        target.role === UserRole.CONDOMINIUM_ADMIN
-      ) {
-        throw new ForbiddenError(
-          "VocÃª nÃ£o tem permissÃ£o para ativar/desativar este usuÃ¡rio",
-        );
-      }
-      // Verifica que o alvo pertence ao mesmo condomÃ­nio
-      const sharedCondominium = await prisma.condominiumUser.findFirst({
-        where: {
-          userId: actor.userId,
-          isActive: true,
-          condominium: {
-            condominiumUsers: {
-              some: { userId: req.params.id, isActive: true },
-            },
-          },
-        },
-        select: { id: true },
-      });
-      if (!sharedCondominium)
-        throw new ForbiddenError("UsuÃ¡rio nÃ£o pertence ao seu condomÃ­nio");
-    }
-
-    const updated = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { isActive: !target.isActive },
-    });
-    await auditService.write({
-      userId: actor.userId,
-      action: updated.isActive ? "ACTIVATE_USER" : "DEACTIVATE_USER",
-      module: "users",
-      entityType: "User",
-      entityId: req.params.id,
-      description: `Usuário ${updated.isActive ? "ativado" : "desativado"} por ${actor.role}`,
-      metadata: { targetRole: target.role },
+    const result = await userService.toggleActive(req.params.id, req.user!, {
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"] ?? null,
     });
-    res.json({ success: true, data: { isActive: updated.isActive } });
+    res.json({ success: true, data: result });
   },
 );
 
