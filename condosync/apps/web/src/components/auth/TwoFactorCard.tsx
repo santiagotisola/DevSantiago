@@ -86,7 +86,7 @@ export function TwoFactorCard() {
   const s = status.data!;
 
   return (
-    <div className="bg-white rounded-xl border p-5 space-y-4">
+    <div id="two-factor" className="bg-white rounded-xl border p-5 space-y-4 scroll-mt-20">
       <div className="flex items-start gap-3">
         {s.enabled ? (
           <ShieldCheck className="w-5 h-5 text-green-600 mt-0.5" />

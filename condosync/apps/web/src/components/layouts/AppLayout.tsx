@@ -69,7 +69,7 @@ export function AppLayout() {
               </span>
             </div>
             <Link
-              to="/configuracoes/seguranca"
+              to="/perfil#two-factor"
               className="text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg whitespace-nowrap"
             >
               Configurar 2FA
