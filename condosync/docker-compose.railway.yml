@@ -56,6 +56,16 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-CondoSync <noreply@condosync.com.br>}
+      # Resend — email transacional em prod (obrigatorio por env.ts)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # Web Push (Q1.3) — gerar com `npx web-push generate-vapid-keys`
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:contato@condosync.app}
+      # WebAuthn / Passkeys (Q1.5) — RP_ID fixo no dominio definitivo
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-CondoSync}
     ports:
       - "3333:3333"
     volumes:
