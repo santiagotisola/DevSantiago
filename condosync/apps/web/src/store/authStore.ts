@@ -81,6 +81,7 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         selectedCondominiumId: state.selectedCondominiumId,
         isAuthenticated: state.isAuthenticated,
+        mustEnable2FA: state.mustEnable2FA,
       }),
     }
   )
