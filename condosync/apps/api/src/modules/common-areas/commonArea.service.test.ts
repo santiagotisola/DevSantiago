@@ -99,7 +99,15 @@ describe('CommonAreaService', () => {
 
   describe('createReservation — regras de negócio', () => {
     const baseUnit = { id: 'unit-1', condominiumId: 'condo-1' };
-    const baseArea = {
+    type AreaShape = {
+      id: string;
+      condominiumId: string;
+      requiresApproval: boolean;
+      maxDaysAdvance: number | null;
+      openTime: string | null;
+      closeTime: string | null;
+    };
+    const baseArea: AreaShape = {
       id: 'area-1',
       condominiumId: 'condo-1',
       requiresApproval: false,
@@ -109,7 +117,7 @@ describe('CommonAreaService', () => {
     };
 
     function setupAccessOK(
-      areaOverrides: Partial<typeof baseArea> = {},
+      areaOverrides: Partial<AreaShape> = {},
       unit = baseUnit,
     ) {
       prismaMock.unit.findUniqueOrThrow.mockResolvedValue(unit as any);
