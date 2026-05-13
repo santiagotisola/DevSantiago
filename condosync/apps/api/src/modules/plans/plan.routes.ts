@@ -1,11 +1,8 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
-import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
-import { BadRequestError, NotFoundError } from "../../middleware/errorHandler";
-import { auditService } from "../audit/audit.service";
+import { planService } from "./plan.service";
 
 const router = Router();
 router.use(authenticate);
@@ -17,7 +14,10 @@ const createSchema = z.object({
     .string()
     .min(2)
     .max(40)
-    .regex(slugRegex, "slug deve conter apenas letras minúsculas, números e hífens"),
+    .regex(
+      slugRegex,
+      "slug deve conter apenas letras minúsculas, números e hífens",
+    ),
   name: z.string().min(2).max(80),
   description: z.string().max(500).optional().nullable(),
   price: z.number().nonnegative().optional(),
@@ -27,23 +27,18 @@ const createSchema = z.object({
 });
 
 const updateSchema = createSchema.partial().extend({
-  // slug não é editável após criação para não quebrar Condominium.plan existente
   slug: z.undefined().optional(),
 });
 
-// GET /plans — qualquer autenticado pode listar (UI de settings também usa)
 router.get("/", async (req: Request, res: Response) => {
-  const onlyActive = req.query.active === "true";
-  const plans = await prisma.plan.findMany({
-    where: onlyActive ? { isActive: true } : {},
-    orderBy: [{ isActive: "desc" }, { price: "asc" }],
+  const plans = await planService.list({
+    onlyActive: req.query.active === "true",
   });
   res.json({ success: true, data: { plans } });
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
-  const plan = await prisma.plan.findUnique({ where: { id: req.params.id } });
-  if (!plan) throw new NotFoundError("Plan", req.params.id);
+  const plan = await planService.findById(req.params.id);
   res.json({ success: true, data: { plan } });
 });
 
@@ -52,39 +47,11 @@ router.post(
   authorize("SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(createSchema, req.body);
-    try {
-      const plan = await prisma.plan.create({
-        data: {
-          slug: data.slug,
-          name: data.name,
-          description: data.description ?? null,
-          price: data.price !== undefined ? new Prisma.Decimal(data.price) : undefined,
-          maxUnits: data.maxUnits,
-          features: data.features ?? Prisma.JsonNull,
-          isActive: data.isActive ?? true,
-        },
-      });
-      await auditService.write({
-        userId: req.user!.userId,
-        action: "CREATE",
-        module: "plans",
-        entityType: "Plan",
-        entityId: plan.id,
-        description: `Plano criado: ${plan.slug}`,
-        metadata: { slug: plan.slug, price: plan.price?.toString() },
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"] ?? null,
-      });
-      res.status(201).json({ success: true, data: { plan } });
-    } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
-        throw new BadRequestError("Já existe um plano com este slug");
-      }
-      throw err;
-    }
+    const plan = await planService.create(data, req.user!, {
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
+    res.status(201).json({ success: true, data: { plan } });
   },
 );
 
@@ -93,37 +60,11 @@ router.put(
   authorize("SUPER_ADMIN"),
   async (req: Request, res: Response) => {
     const data = validateRequest(updateSchema, req.body);
-    const plan = await prisma.plan.findUnique({ where: { id: req.params.id } });
-    if (!plan) throw new NotFoundError("Plan", req.params.id);
-
-    const updated = await prisma.plan.update({
-      where: { id: req.params.id },
-      data: {
-        name: data.name,
-        description: data.description === undefined ? undefined : data.description,
-        price: data.price !== undefined ? new Prisma.Decimal(data.price) : undefined,
-        maxUnits: data.maxUnits,
-        features:
-          data.features === undefined
-            ? undefined
-            : data.features === null
-              ? Prisma.JsonNull
-              : data.features,
-        isActive: data.isActive,
-      },
-    });
-    await auditService.write({
-      userId: req.user!.userId,
-      action: "UPDATE",
-      module: "plans",
-      entityType: "Plan",
-      entityId: updated.id,
-      description: `Plano atualizado: ${updated.slug}`,
-      metadata: { changes: data as Record<string, unknown> },
+    const plan = await planService.update(req.params.id, data, req.user!, {
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"] ?? null,
     });
-    res.json({ success: true, data: { plan: updated } });
+    res.json({ success: true, data: { plan } });
   },
 );
 
@@ -131,29 +72,17 @@ router.delete(
   "/:id",
   authorize("SUPER_ADMIN"),
   async (req: Request, res: Response) => {
-    const plan = await prisma.plan.findUnique({ where: { id: req.params.id } });
-    if (!plan) throw new NotFoundError("Plan", req.params.id);
-
-    const inUse = await prisma.condominium.count({ where: { plan: plan.slug } });
-    if (inUse > 0) {
-      return res.status(409).json({
-        success: false,
-        message: `Plano em uso por ${inUse} condomínio(s). Reatribua antes de excluir.`,
-        data: { condominiumsUsing: inUse },
-      });
-    }
-
-    await prisma.plan.delete({ where: { id: req.params.id } });
-    await auditService.write({
-      userId: req.user!.userId,
-      action: "DELETE",
-      module: "plans",
-      entityType: "Plan",
-      entityId: plan.id,
-      description: `Plano excluído: ${plan.slug}`,
+    const result = await planService.delete(req.params.id, req.user!, {
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"] ?? null,
     });
+    if (!result.deleted) {
+      return res.status(409).json({
+        success: false,
+        message: `Plano em uso por ${result.inUse} condomínio(s). Reatribua antes de excluir.`,
+        data: { condominiumsUsing: result.inUse },
+      });
+    }
     res.json({ success: true });
   },
 );
