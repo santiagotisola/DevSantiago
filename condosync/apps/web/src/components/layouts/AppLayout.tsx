@@ -25,6 +25,18 @@ export function AppLayout() {
     }
   }, [desktopCollapsed]);
 
+  // Resize mobile→desktop com drawer aberto deixava o aside "preso" em
+  // translate-x-0 sobreposto ao layout (sem overlay porque overlay é
+  // lg:hidden). Zerar mobileOpen ao cruzar 1024px resolve.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches) setMobileOpen(false);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const mustEnable2FA = useAuthStore((s) => s.mustEnable2FA);
 
   function handleMenuClick() {

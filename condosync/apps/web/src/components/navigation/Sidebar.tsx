@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -182,12 +182,35 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
   const { user, logout, selectedCondominiumId, setSelectedCondominium } =
     useAuthStore();
   const navigate = useNavigate();
-  const [expandedItems, setExpandedItems] = useState<string[]>([
-    "Portaria",
-    "Financeiro",
-    "Comunicação",
-    "Configurações",
-  ]);
+  const location = useLocation();
+
+  /** Retorna true se o pathname atual bate com a rota de algum child. */
+  const isChildActive = (children?: NavChild[]) =>
+    !!children?.some(
+      (c) =>
+        location.pathname === c.to ||
+        location.pathname.startsWith(c.to + "/"),
+    );
+
+  /** Grupos com filho ativo abrem automaticamente; o resto fica colapsado. */
+  const [expandedItems, setExpandedItems] = useState<string[]>(() =>
+    navItems
+      .filter((i) => isChildActive(i.children))
+      .map((i) => i.label),
+  );
+  // Quando a rota muda, garante que o grupo da rota ativa está aberto
+  // (sem fechar os outros que o usuário já abriu manualmente).
+  useEffect(() => {
+    setExpandedItems((prev) => {
+      const need = navItems
+        .filter((i) => isChildActive(i.children))
+        .map((i) => i.label)
+        .filter((l) => !prev.includes(l));
+      return need.length ? [...prev, ...need] : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
@@ -304,17 +327,32 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
             if (item.children && item.children.length > 0) {
               const isExpanded = expandedItems.includes(item.label);
 
-              // Modo collapsed: ícone com popover ao hover
+              const hasActiveChild = isChildActive(item.children);
+              const panelId = `nav-panel-${item.label.replace(/\s+/g, '-').toLowerCase()}`;
+
+              // Modo collapsed: ícone com popover ao hover/focus
               if (collapsed) {
                 return (
                   <div key={item.label} className="relative group">
                     <button
                       title={item.label}
-                      className="w-full flex items-center justify-center p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                      aria-label={item.label}
+                      aria-haspopup="menu"
+                      aria-expanded="false"
+                      className={cn(
+                        "w-full flex items-center justify-center p-2 rounded-lg transition-colors",
+                        hasActiveChild
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                      )}
                     >
                       <item.icon className="w-5 h-5" />
                     </button>
-                    <div className="hidden group-hover:block absolute left-full top-0 ml-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 min-w-[200px] z-50">
+                    <div
+                      role="menu"
+                      aria-label={item.label}
+                      className="hidden group-hover:block group-focus-within:block absolute left-full top-0 ml-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 min-w-[200px] max-w-[260px] z-50"
+                    >
                       <div className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-slate-400 border-b border-slate-700 mb-1">
                         {item.label}
                       </div>
@@ -322,9 +360,10 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
                         <NavLink
                           key={child.to}
                           to={child.to}
+                          role="menuitem"
                           className={({ isActive }) =>
                             cn(
-                              "block px-3 py-1.5 text-sm rounded mx-1",
+                              "block px-3 py-1.5 text-sm rounded mx-1 whitespace-nowrap",
                               isActive
                                 ? "bg-blue-600 text-white"
                                 : "text-slate-300 hover:bg-slate-800 hover:text-white",
@@ -344,7 +383,14 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
                 <div key={item.label}>
                   <button
                     onClick={() => toggleExpanded(item.label)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm"
+                    aria-expanded={isExpanded}
+                    aria-controls={panelId}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-sm",
+                      hasActiveChild && !isExpanded
+                        ? "bg-blue-600/20 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <item.icon className="w-4 h-4" />
@@ -359,7 +405,7 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
                   </button>
 
                   {isExpanded && (
-                    <div className="ml-7 mt-1 space-y-1">
+                    <div id={panelId} className="ml-7 mt-1 space-y-1">
                       {item.children.map((child) => (
                         <NavLink
                           key={child.to}
