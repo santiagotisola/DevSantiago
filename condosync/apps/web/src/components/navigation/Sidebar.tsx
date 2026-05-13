@@ -69,14 +69,15 @@ const navItems: NavItem[] = [
   },
 
   {
+    // pai = união dos filhos (DOORMAN vê só Moradores).
     label: "Cadastros",
     icon: Contact,
-    roles: MANAGEMENT,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
     children: [
-      { label: "Unidades", to: "/unidades" },
-      { label: "Moradores", to: "/moradores", roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"] },
-      { label: "Pets", to: "/pets" },
-      { label: "Funcionários", to: "/funcionarios" },
+      { label: "Unidades", to: "/unidades", roles: MANAGEMENT },
+      { label: "Moradores", to: "/moradores" },
+      { label: "Pets", to: "/pets", roles: MANAGEMENT },
+      { label: "Funcionários", to: "/funcionarios", roles: MANAGEMENT },
     ],
   },
 
@@ -94,25 +95,27 @@ const navItems: NavItem[] = [
   },
 
   {
+    // pai = COUNCIL_COMMUNITY (residente vê Áreas/Galeria).
     label: "Espaços & Recursos",
     icon: Palette,
-    roles: MANAGEMENT,
+    roles: COUNCIL_COMMUNITY,
     children: [
-      { label: "Áreas Comuns", to: "/areas-comuns", roles: COUNCIL_COMMUNITY },
-      { label: "Estoque", to: "/estoque" },
-      { label: "Obras", to: "/obras" },
-      { label: "Galeria", to: "/galeria", roles: COUNCIL_COMMUNITY },
-      { label: "TV Elevador", to: "/digital-signage" },
+      { label: "Áreas Comuns", to: "/areas-comuns" },
+      { label: "Estoque", to: "/estoque", roles: MANAGEMENT },
+      { label: "Obras", to: "/obras", roles: MANAGEMENT },
+      { label: "Galeria", to: "/galeria" },
+      { label: "TV Elevador", to: "/digital-signage", roles: MANAGEMENT },
     ],
   },
 
   {
+    // pai = ALL_AUTH (todos veem Chamados).
     label: "Operacional",
     icon: Wrench,
-    roles: MANAGEMENT,
+    roles: ALL_AUTH,
     children: [
-      { label: "Manutenção", to: "/manutencao" },
-      { label: "Chamados", to: "/chamados", roles: ALL_AUTH },
+      { label: "Manutenção", to: "/manutencao", roles: MANAGEMENT },
+      { label: "Chamados", to: "/chamados" },
     ],
   },
 
@@ -131,16 +134,18 @@ const navItems: NavItem[] = [
   },
 
   {
+    // pai = COUNCIL_COMMUNITY (residente vê Documentos; outros itens
+    // ficam visíveis só para MANAGEMENT).
     label: "Configurações",
     icon: Settings,
-    roles: MANAGEMENT,
+    roles: COUNCIL_COMMUNITY,
     children: [
-      { label: "Controle de Acesso", to: "/acesso" },
-      { label: "Dados do Condomínio", to: "/configuracoes" },
-      { label: "Documentos", to: "/documentos", roles: COUNCIL_COMMUNITY },
-      { label: "Convites", to: "/convites" },
-      { label: "Auditoria", to: "/auditoria" },
-      { label: "Painel do Síndico", to: "/painel-sindico" },
+      { label: "Controle de Acesso", to: "/acesso", roles: MANAGEMENT },
+      { label: "Dados do Condomínio", to: "/configuracoes", roles: MANAGEMENT },
+      { label: "Documentos", to: "/documentos" },
+      { label: "Convites", to: "/convites", roles: MANAGEMENT },
+      { label: "Auditoria", to: "/auditoria", roles: MANAGEMENT },
+      { label: "Painel do Síndico", to: "/painel-sindico", roles: MANAGEMENT },
     ],
   },
 
@@ -214,6 +219,10 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
   const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
+  // Carrega lista de condomínios uma vez (SUPER_ADMIN) ou seleciona o
+  // primeiro vínculo (demais roles). selectedCondominiumId fica fora
+  // das deps porque a leitura é via setter funcional para evitar loop
+  // quando o setState dispara re-render.
   useEffect(() => {
     if (isSuperAdmin) {
       api
@@ -221,16 +230,21 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
         .then((res) => {
           const list = res.data?.data?.condominiums ?? [];
           setCondominiums(list);
-          if (!selectedCondominiumId && list.length > 0) {
-            setSelectedCondominium(list[0].id);
+          if (list.length > 0) {
+            // Só atribui se ainda não há selecionado — checagem via store
+            // atual (useAuthStore.getState) para não depender do closure.
+            const current = useAuthStore.getState().selectedCondominiumId;
+            if (!current) setSelectedCondominium(list[0].id);
           }
         })
         .catch(() => {});
-    } else if (!selectedCondominiumId && user?.condominiumUsers?.[0]) {
-      setSelectedCondominium(user.condominiumUsers[0].condominium.id);
+    } else {
+      const current = useAuthStore.getState().selectedCondominiumId;
+      if (!current && user?.condominiumUsers?.[0]) {
+        setSelectedCondominium(user.condominiumUsers[0].condominium.id);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin, user?.condominiumUsers]);
+  }, [isSuperAdmin, user?.condominiumUsers, setSelectedCondominium]);
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>
