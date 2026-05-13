@@ -22,8 +22,7 @@ let fix: TenantFixture;
 beforeAll(async () => {
   prisma = new PrismaClient();
   // App é importado depois do globalSetup que injeta DATABASE_URL.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  app = require("../../server").default;
+  ({ default: app } = await import("../../server"));
 });
 
 beforeEach(async () => {
@@ -99,6 +98,7 @@ describe("Multi-tenant cross-tenant — webhook idempotência", () => {
         amount: 350,
         dueDate: new Date(),
         gatewayId: "pay-it-1",
+        createdBy: "test-user",
       },
     });
 

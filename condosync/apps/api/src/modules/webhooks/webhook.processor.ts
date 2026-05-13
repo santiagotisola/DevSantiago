@@ -84,7 +84,7 @@ async function processAsaasPayment(eventId: string) {
     return;
   }
 
-  const payload = wh.payload as { event: string; payment: AsaasPayment };
+  const payload = wh.payload as unknown as { event: string; payment: AsaasPayment };
   const { event, payment } = payload;
 
   // Incrementa attempts ANTES do trabalho (mesmo que falhe, conta).

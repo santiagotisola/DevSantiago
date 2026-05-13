@@ -158,7 +158,7 @@ export class FinanceService {
       total: result.total,
       page: result.page,
       limit: result.limit,
-      totalPages: Math.ceil(result.total / result.limit),
+      totalPages: Math.ceil((result.total ?? 0) / result.limit),
     };
   }
 

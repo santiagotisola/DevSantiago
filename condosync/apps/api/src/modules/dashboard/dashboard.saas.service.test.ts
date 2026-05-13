@@ -28,7 +28,7 @@ describe('dashboardSaasService.snapshot', () => {
       return undefined;
     }) as any);
 
-    prismaMock.condominium.groupBy.mockResolvedValue([
+    (prismaMock.condominium.groupBy as any).mockResolvedValue([
       { plan: 'basic', _count: { plan: 5 } },
       { plan: 'professional', _count: { plan: 3 } },
     ] as any);
@@ -38,7 +38,7 @@ describe('dashboardSaasService.snapshot', () => {
     ] as any);
 
     prismaMock.condominium.count.mockResolvedValue(0);
-    prismaMock.condominiumUser.groupBy.mockResolvedValue([] as any);
+    (prismaMock.condominiumUser.groupBy as any).mockResolvedValue([] as any);
     prismaMock.condominium.findMany.mockResolvedValue([] as any);
   }
 
@@ -92,7 +92,7 @@ describe('dashboardSaasService.snapshot', () => {
 
   it('planBreakdown não inclui planos órfãos (slug sem Plan row) com price 0', async () => {
     setupCommonMocks();
-    prismaMock.condominium.groupBy.mockResolvedValue([
+    (prismaMock.condominium.groupBy as any).mockResolvedValue([
       { plan: 'orfao', _count: { plan: 2 } },
     ] as any);
 

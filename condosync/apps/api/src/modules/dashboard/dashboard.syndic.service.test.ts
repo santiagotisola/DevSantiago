@@ -13,8 +13,8 @@ describe('dashboardSyndicService.snapshot', () => {
       return undefined;
     }) as any);
     prismaMock.charge.count.mockResolvedValue(0);
-    prismaMock.occurrence.groupBy.mockResolvedValue([] as any);
-    prismaMock.charge.groupBy.mockResolvedValue([] as any);
+    (prismaMock.occurrence.groupBy as any).mockResolvedValue([] as any);
+    (prismaMock.charge.groupBy as any).mockResolvedValue([] as any);
     prismaMock.unit.findMany.mockResolvedValue([] as any);
   }
 
@@ -42,7 +42,7 @@ describe('dashboardSyndicService.snapshot', () => {
 
   it('enriquece topInadimplentes com identifier+block da Unit', async () => {
     setupMocks([10, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    prismaMock.charge.groupBy.mockResolvedValue([
+    (prismaMock.charge.groupBy as any).mockResolvedValue([
       { unitId: 'u1', _count: { unitId: 3 }, _sum: { amount: 1500 } },
     ] as any);
     prismaMock.unit.findMany.mockResolvedValue([
@@ -58,7 +58,7 @@ describe('dashboardSyndicService.snapshot', () => {
 
   it('fallback para unitId quando a Unit não é encontrada', async () => {
     setupMocks([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    prismaMock.charge.groupBy.mockResolvedValue([
+    (prismaMock.charge.groupBy as any).mockResolvedValue([
       { unitId: 'orfã', _count: { unitId: 1 }, _sum: { amount: 100 } },
     ] as any);
     prismaMock.unit.findMany.mockResolvedValue([] as any);

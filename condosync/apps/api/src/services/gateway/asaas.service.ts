@@ -21,7 +21,7 @@ const log = logger.child({ module: 'asaas.service' });
 export class AsaasService implements IGatewayService {
   private readonly baseUrl = 'https://sandbox.asaas.com/api/v3'; // TODO: prod via env
   private readonly http: AxiosInstance;
-  private readonly breaker: CircuitBreaker<[AsaasRequest], unknown>;
+  private readonly breaker: InstanceType<typeof CircuitBreaker>;
 
   constructor() {
     this.http = axios.create({
