@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   ShoppingBag,
   LogOut,
+  MessageCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
@@ -61,6 +62,7 @@ export default function HomeGrid() {
     { to: '/portaria/visitantes', icon: Shield, label: 'Visitantes', color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { to: '/portaria/encomendas', icon: Package, label: 'Encomendas', color: 'text-amber-600', bg: 'bg-amber-50' },
     { to: '/portaria/veiculos', icon: Car, label: 'Veículos', color: 'text-gray-600', bg: 'bg-gray-100' },
+    { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', color: 'text-green-600', bg: 'bg-green-50' },
     { to: '/avisos', icon: Bell, label: 'Avisos', color: 'text-purple-600', bg: 'bg-purple-50' },
     {
       to: '/panico',

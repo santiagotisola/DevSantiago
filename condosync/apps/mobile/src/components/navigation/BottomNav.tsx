@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Shield, Package, Bell, User, AlertTriangle, Ticket, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Shield, Package, Bell, User, AlertTriangle, Ticket, Car, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 const DOORMAN_ROLES = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'];
@@ -27,6 +27,7 @@ export default function BottomNav() {
     { to: '/', icon: LayoutDashboard, label: 'Início' },
     { to: '/portaria/visitantes', icon: Shield, label: 'Visitantes' },
     { to: '/portaria/encomendas', icon: Package, label: 'Entregas' },
+    { to: '/portaria/veiculos', icon: Car, label: 'Veículos' },
     { to: '/panico', icon: AlertTriangle, label: 'PÂNICO', danger: true },
     { to: '/perfil', icon: User, label: 'Perfil' },
   ];

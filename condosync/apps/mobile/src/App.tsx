@@ -17,6 +17,9 @@ import VisitantesPortaria from './pages/portaria/VisitantesPortaria';
 import EncomendasPortaria from './pages/portaria/EncomendasPortaria';
 import VeiculosPortaria from './pages/portaria/VeiculosPortaria';
 
+// Messaging
+import WhatsAppMessaging from './pages/messaging/WhatsAppMessaging';
+
 // Morador
 import MinhasVisitas from './pages/morador/MinhasVisitas';
 import MinhasCobrancas from './pages/morador/MinhasCobrancas';
@@ -85,6 +88,9 @@ export default function App() {
             </Route>
             <Route element={<MobileLayout title="Veículos" showBack />}>
               <Route path="/portaria/veiculos" element={<VeiculosPortaria />} />
+            </Route>
+            <Route element={<MobileLayout title="WhatsApp Messaging" showBack />}>
+              <Route path="/whatsapp" element={<WhatsAppMessaging />} />
             </Route>
           </Route>
 
