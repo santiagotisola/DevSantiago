@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ImageUpload } from './ImageUpload';
-import { useUploadUserAvatar, useDeleteUserAvatar, normalizePhotoPath } from '../hooks/useImageUpload';
+import { useUploadUserAvatar, useDeleteUserAvatar, getUserAvatarUrl } from '../hooks/useImageUpload';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface AvatarUploadModalProps {
@@ -36,6 +36,7 @@ export function AvatarUploadModal({
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
         onSuccess?.();
+        onClose();
       },
     });
   };
@@ -56,7 +57,7 @@ export function AvatarUploadModal({
 
         <ImageUpload
           onImageSelected={setSelectedFile}
-          currentImage={normalizePhotoPath(currentAvatarPath)}
+          currentImage={getUserAvatarUrl(currentAvatarPath)}
           label="Escolha uma imagem"
           disabled={uploadMutation.isPending || deleteMutation.isPending}
         />

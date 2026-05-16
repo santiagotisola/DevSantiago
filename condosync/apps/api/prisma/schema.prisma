@@ -235,6 +235,7 @@ model Condominium {
   phone        String?
   email        String?
   logoUrl      String?
+  heroImageUrl String?
   timezone     String   @default("America/Sao_Paulo")
   isActive     Boolean  @default(true)
   plan         String   @default("basic") // basic, professional, enterprise

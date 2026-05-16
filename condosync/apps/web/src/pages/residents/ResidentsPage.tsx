@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X, Camera } from 'lucide-react';
+import { UsersRound, PlusCircle, Search, Loader2, ChevronDown, ChevronRight, Pencil, Trash2, UserRoundPlus, X, Camera, KeyRound } from 'lucide-react';
 import { maskPhone, validatePhone, maskCPF, validateCPF, validateEmail, validateName } from '../../lib/utils';
 import { AvatarUploadModal } from '../../components/AvatarUploadModal';
-import { normalizePhotoPath } from '../../hooks/useImageUpload';
+import { getUserAvatarUrl } from '../../hooks/useImageUpload';
 
 const emptyForm = { name: '', email: '', phone: '', cpf: '', unitId: '' };
 
@@ -28,11 +28,14 @@ export function ResidentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [depTarget, setDepTarget] = useState<any>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const [editForm, setEditForm] = useState({ name: '', phone: '', cpf: '', unitId: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', cpf: '', unitId: '' });
   const [depForm, setDepForm] = useState({ name: '', relationship: '', cpf: '', birthDate: '' });
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [photoTarget, setPhotoTarget] = useState<any>(null);
+  const [pwdTarget, setPwdTarget] = useState<any>(null);
+  const [pwdForm, setPwdForm] = useState({ newPassword: '', confirm: '' });
+  const [pwdError, setPwdError] = useState('');
   const isAdmin = ['CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'].includes(user?.role || '');
 
   const { data: residents, isLoading } = useQuery({
@@ -83,7 +86,7 @@ export function ResidentsPage() {
   });
 
   const openEdit = (r: any) => {
-    setEditForm({ name: r.user?.name ?? '', phone: r.user?.phone ?? '', cpf: r.user?.cpf ?? '', unitId: r.unit?.id ?? '' });
+    setEditForm({ name: r.user?.name ?? '', email: r.user?.email ?? '', phone: r.user?.phone ?? '', cpf: r.user?.cpf ?? '', unitId: r.unit?.id ?? '' });
     setEditTarget(r);
   };
 
@@ -130,13 +133,12 @@ export function ResidentsPage() {
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm overflow-hidden"
+                    className={`w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm overflow-hidden${isAdmin ? ' cursor-pointer' : ''}`}
                     onClick={(e) => { e.stopPropagation(); if (isAdmin) setPhotoTarget(r); }}
                     title={isAdmin ? 'Alterar foto' : undefined}
-                    style={isAdmin ? { cursor: 'pointer' } : {}}
                   >
                     {r.user?.avatarUrl ? (
-                      <img src={normalizePhotoPath(r.user.avatarUrl)} alt={r.user.name} className="w-full h-full object-cover" />
+                      <img src={getUserAvatarUrl(r.user.avatarUrl)} alt={r.user.name} className="w-full h-full object-cover" />
                     ) : (
                       r.user?.name?.charAt(0).toUpperCase()
                     )}
@@ -192,6 +194,9 @@ export function ResidentsPage() {
                       </button>
                       <button onClick={() => setPhotoTarget(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white border rounded-lg hover:bg-gray-100 text-gray-700">
                         <Camera className="w-3 h-3" /> Foto
+                      </button>
+                      <button onClick={() => { setPwdTarget(r); setPwdForm({ newPassword: '', confirm: '' }); setPwdError(''); }} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white border rounded-lg hover:bg-gray-100 text-gray-700">
+                        <KeyRound className="w-3 h-3" /> Senha
                       </button>
                       <button onClick={() => setDeleteTarget(r)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 text-red-600">
                         <Trash2 className="w-3 h-3" /> Remover do condomínio
@@ -321,6 +326,18 @@ export function ResidentsPage() {
                 {editErrors.phone && <p className="text-xs text-red-500 mt-0.5">{editErrors.phone}</p>}
               </div>
               <div className="space-y-1">
+                <label className="text-sm font-medium">E-mail</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  aria-label="E-mail"
+                  placeholder="email@exemplo.com"
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors.email ? 'border-red-400' : ''}`}
+                />
+                {editErrors.email && <p className="text-xs text-red-500 mt-0.5">{editErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
                 <label className="text-sm font-medium">CPF</label>
                 <input
                   type="text"
@@ -347,13 +364,14 @@ export function ResidentsPage() {
                 onClick={() => {
                   const errs: Record<string, string> = {};
                   const nameErr = validateName(editForm.name); if (nameErr) errs.name = nameErr;
+                  const emailErr = validateEmail(editForm.email); if (emailErr) errs.email = emailErr;
                   const phoneErr = validatePhone(editForm.phone); if (phoneErr) errs.phone = phoneErr;
                   const cpfErr = validateCPF(editForm.cpf); if (cpfErr) errs.cpf = cpfErr;
                   if (Object.keys(errs).length) { setEditErrors(errs); return; }
                   setEditErrors({});
                   updateMutation.mutate(editForm);
                 }}
-                disabled={!editForm.unitId || updateMutation.isPending}
+                disabled={!editForm.email || !editForm.unitId || updateMutation.isPending}
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
               >
                 {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
@@ -460,6 +478,67 @@ export function ResidentsPage() {
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['residents'] })}
           onClose={() => setPhotoTarget(null)}
         />
+      )}
+
+      {pwdTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Redefinir Senha</h2>
+            <p className="text-sm text-gray-500">Morador: <span className="font-medium text-gray-800">{pwdTarget.user?.name}</span></p>
+
+            {pwdError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{pwdError}</div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
+                <input
+                  type="password"
+                  value={pwdForm.newPassword}
+                  onChange={(e) => setPwdForm(f => ({ ...f, newPassword: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar senha</label>
+                <input
+                  type="password"
+                  value={pwdForm.confirm}
+                  onChange={(e) => setPwdForm(f => ({ ...f, confirm: e.target.value }))}
+                  placeholder="Repita a nova senha"
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setPwdTarget(null)}
+                className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  setPwdError('');
+                  if (pwdForm.newPassword.length < 6) { setPwdError('A senha deve ter pelo menos 6 caracteres.'); return; }
+                  if (pwdForm.newPassword !== pwdForm.confirm) { setPwdError('As senhas não coincidem.'); return; }
+                  try {
+                    await api.patch(`/users/${pwdTarget.user?.id}/reset-password`, { newPassword: pwdForm.newPassword });
+                    setPwdTarget(null);
+                  } catch {
+                    setPwdError('Erro ao redefinir senha. Tente novamente.');
+                  }
+                }}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

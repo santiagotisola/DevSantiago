@@ -1,4 +1,8 @@
 import { Router, Request, Response } from "express";
+import multer, { FileFilterCallback } from "multer";
+import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
 import { prisma } from "../../config/prisma";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
@@ -7,6 +11,32 @@ import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { residentService } from "../residents/resident.service";
 import bcrypt from "bcryptjs";
+
+// ── Multer para upload de logo/hero ────────────────────────────
+const UPLOAD_ROOT = path.resolve("/app/uploads");
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+const storage = multer.diskStorage({
+  destination: (req: Request, _file, cb) => {
+    const raw = req.params.id ?? "";
+    const condoId = UUID_REGEX.test(String(raw)) ? String(raw) : "misc";
+    const dir = path.resolve(UPLOAD_ROOT, condoId, "branding");
+    if (!dir.startsWith(UPLOAD_ROOT + path.sep)) return cb(new Error("Path inválido"), UPLOAD_ROOT);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+function imageFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback) {
+  ALLOWED_MIMES.has(file.mimetype) ? cb(null, true) : cb(new Error("Apenas imagens são permitidas."));
+}
+
+const upload = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
 router.use(authenticate);
@@ -110,12 +140,50 @@ router.put(
       req.user!.role as UserRole,
       req.params.id,
     );
-    const data = validateRequest(createSchema.partial(), req.body);
+    const updateSchema = createSchema.partial().extend({
+      logoUrl: z.string().url().optional().nullable(),
+      heroImageUrl: z.string().url().optional().nullable(),
+    });
+    const data = validateRequest(updateSchema, req.body);
     const condominium = await prisma.condominium.update({
       where: { id: req.params.id },
       data,
     });
     res.json({ success: true, data: { condominium } });
+  },
+);
+
+// ── Upload logo ─────────────────────────────────────────────────
+router.post(
+  "/:id/upload/logo",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(req.user!.userId, req.user!.role as UserRole, req.params.id);
+    if (!req.file) return res.status(400).json({ success: false, error: { message: "Arquivo não enviado" } });
+    const fileUrl = `/uploads/${req.params.id}/branding/${req.file.filename}`;
+    const condominium = await prisma.condominium.update({
+      where: { id: req.params.id },
+      data: { logoUrl: fileUrl },
+    });
+    res.json({ success: true, data: { url: fileUrl, condominium } });
+  },
+);
+
+// ── Upload hero image ────────────────────────────────────────────
+router.post(
+  "/:id/upload/hero",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(req.user!.userId, req.user!.role as UserRole, req.params.id);
+    if (!req.file) return res.status(400).json({ success: false, error: { message: "Arquivo não enviado" } });
+    const fileUrl = `/uploads/${req.params.id}/branding/${req.file.filename}`;
+    const condominium = await prisma.condominium.update({
+      where: { id: req.params.id },
+      data: { heroImageUrl: fileUrl },
+    });
+    res.json({ success: true, data: { url: fileUrl, condominium } });
   },
 );
 

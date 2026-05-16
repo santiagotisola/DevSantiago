@@ -17,6 +17,7 @@ import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { VisitorsPage } from "./pages/portaria/VisitorsPage";
 import { ParcelsPage } from "./pages/portaria/ParcelsPage";
 import { VehiclesPage } from "./pages/portaria/VehiclesPage";
+import { PanicAlertsPage } from "./pages/portaria/PanicAlertsPage";
 import { ResidentsPage } from "./pages/residents/ResidentsPage";
 import { UnitsPage } from "./pages/units/UnitsPage";
 import { FinancePage } from "./pages/finance/FinancePage";
@@ -177,6 +178,14 @@ export default function App() {
             element={
               <RoleGuard roles={STAFF}>
                 <VehiclesPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="portaria/panico"
+            element={
+              <RoleGuard roles={STAFF}>
+                <PanicAlertsPage />
               </RoleGuard>
             }
           />

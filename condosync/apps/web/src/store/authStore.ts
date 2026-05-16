@@ -75,6 +75,11 @@ export const useAuthStore = create<AuthState>()(
         selectedCondominiumId: state.selectedCondominiumId,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && !state.selectedCondominiumId && state.user?.condominiumUsers?.[0]?.condominium?.id) {
+          state.selectedCondominiumId = state.user.condominiumUsers[0].condominium.id;
+        }
+      },
     }
   )
 );

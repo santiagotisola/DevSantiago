@@ -371,10 +371,9 @@ export function VehiclesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0"
+                            className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer"
                             onClick={() => setPhotoTarget(v)}
                             title="Ver/alterar foto"
-                            style={{ cursor: 'pointer' }}
                           >
                             {v.photoUrl ? (
                               <img src={normalizePhotoPath(v.photoUrl)} alt={v.plate} className="w-full h-full object-cover" />

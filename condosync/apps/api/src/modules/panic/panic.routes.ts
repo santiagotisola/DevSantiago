@@ -121,7 +121,47 @@ router.get(
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    res.json({ success: true, data: alerts });
+
+    // Enrich with user names
+    const userIds = [
+      ...new Set([
+        ...alerts.map((a) => a.triggeredBy),
+        ...alerts.filter((a) => a.resolvedBy).map((a) => a.resolvedBy as string),
+      ]),
+    ];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    const userMap = Object.fromEntries(users.map((u) => [u.id, u.name]));
+
+    // Enrich with unit info (from condominiumUser membership)
+    const triggeredByIds = [...new Set(alerts.map((a) => a.triggeredBy))];
+    const memberships = await prisma.condominiumUser.findMany({
+      where: {
+        userId: { in: triggeredByIds },
+        condominiumId: req.params.condominiumId,
+        isActive: true,
+      },
+      select: {
+        userId: true,
+        role: true,
+        unit: { select: { identifier: true, block: true } },
+      },
+    });
+    const membershipMap = Object.fromEntries(
+      memberships.map((m) => [m.userId, { role: m.role, unit: m.unit }]),
+    );
+
+    const enriched = alerts.map((a) => ({
+      ...a,
+      triggeredByName: userMap[a.triggeredBy] ?? "Usuário desconhecido",
+      resolvedByName: a.resolvedBy ? (userMap[a.resolvedBy] ?? "Usuário desconhecido") : null,
+      triggeredByRole: membershipMap[a.triggeredBy]?.role ?? null,
+      triggeredByUnit: membershipMap[a.triggeredBy]?.unit ?? null,
+    }));
+
+    res.json({ success: true, data: enriched });
   },
 );
 

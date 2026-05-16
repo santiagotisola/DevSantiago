@@ -4,6 +4,8 @@ import path from "path";
 import fs from "fs";
 import { randomUUID } from "crypto";
 import { prisma } from "../../config/prisma";
+import { sendMail } from "../../config/mail";
+import { logger } from "../../config/logger";
 import { authenticate, authorize } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError } from "../../middleware/errorHandler";
@@ -13,6 +15,28 @@ import bcrypt from "bcryptjs";
 import { env } from "../../config/env";
 
 const router = Router();
+
+// GET /:id/avatar/file — Serve avatar image (público, sem autenticação)
+router.get("/:id/avatar/file", async (req: Request, res: Response) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { avatarUrl: true },
+  });
+
+  if (!user.avatarUrl) {
+    return res.status(404).json({ success: false, message: "Avatar não encontrado." });
+  }
+
+  const filePath = path.join(UPLOAD_ROOT, user.avatarUrl);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: "Arquivo não encontrado." });
+  }
+
+  res.set("Content-Type", "image/jpeg");
+  res.set("Cache-Control", "private, max-age=3600");
+  fs.createReadStream(filePath).pipe(res);
+});
+
 router.use(authenticate);
 
 // Listar usuÃ¡rios do sistema (super admin)
@@ -90,10 +114,29 @@ router.put("/:id", async (req: Request, res: Response) => {
 
   const schema = z.object({
     name: z.string().min(2).optional(),
+    email: z.string().email().optional(),
     phone: z.string().optional(),
     avatarUrl: z.string().url().optional(),
   });
   const data = validateRequest(schema, req.body);
+
+  const currentUser = await prisma.user.findUniqueOrThrow({
+    where: { id: req.params.id },
+    select: { email: true, name: true },
+  });
+
+  const emailChanged = data.email !== undefined && data.email !== currentUser.email;
+
+  if (emailChanged) {
+    const existing = await prisma.user.findUnique({ where: { email: data.email! } });
+    if (existing && existing.id !== req.params.id) {
+      return res.status(409).json({
+        success: false,
+        error: { message: "Este e-mail já está em uso por outro usuário" },
+      });
+    }
+  }
+
   const user = await prisma.user.update({
     where: { id: req.params.id },
     data,
@@ -106,6 +149,33 @@ router.put("/:id", async (req: Request, res: Response) => {
       role: true,
     },
   });
+
+  if (emailChanged) {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">CondoSync — E-mail atualizado</h2>
+        <p>Olá, <strong>${user.name}</strong>.</p>
+        <p>Seu e-mail de acesso foi alterado com sucesso.</p>
+        <p><strong>Novo e-mail:</strong> ${user.email}</p>
+        <p>Se você não reconhece essa alteração, altere sua senha imediatamente.</p>
+      </div>
+    `;
+
+    try {
+      await sendMail(user.email, "CondoSync — E-mail atualizado", html);
+      if (currentUser.email && currentUser.email !== user.email) {
+        await sendMail(currentUser.email, "CondoSync — Alteração de e-mail da sua conta", html);
+      }
+    } catch (error) {
+      logger.error("Falha ao enviar e-mail de alteração de e-mail no perfil", {
+        userId: req.params.id,
+        previousEmail: currentUser.email,
+        newEmail: user.email,
+        error,
+      });
+    }
+  }
+
   res.json({ success: true, data: { user } });
 });
 
@@ -239,8 +309,16 @@ const avatarUpload = multer({
 // POST /:id/avatar — Upload avatar
 router.post(
   "/:id/avatar",
+  authenticate,
   avatarUpload.single("file"),
   async (req: Request, res: Response) => {
+    console.log("DEBUG Avatar Upload:", {
+      userId: req.user?.userId,
+      role: req.user?.role,
+      paramId: req.params.id,
+      hasFile: !!req.file,
+    });
+    
     if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
       return res
         .status(403)
@@ -269,29 +347,8 @@ router.post(
   },
 );
 
-// GET /:id/avatar/file — Serve avatar image
-router.get("/:id/avatar/file", async (req: Request, res: Response) => {
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: req.params.id },
-    select: { avatarUrl: true },
-  });
-
-  if (!user.avatarUrl) {
-    return res.status(404).json({ success: false, message: "Avatar não encontrado." });
-  }
-
-  const filePath = path.join(UPLOAD_ROOT, user.avatarUrl);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ success: false, message: "Arquivo não encontrado." });
-  }
-
-  res.set("Content-Type", "image/jpeg");
-  res.set("Cache-Control", "private, max-age=3600");
-  fs.createReadStream(filePath).pipe(res);
-});
-
 // DELETE /:id/avatar — Remove avatar
-router.delete("/:id/avatar", async (req: Request, res: Response) => {
+router.delete("/:id/avatar", authenticate, async (req: Request, res: Response) => {
   if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
     return res
       .status(403)

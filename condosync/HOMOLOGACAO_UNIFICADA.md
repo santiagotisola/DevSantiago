@@ -2,47 +2,55 @@
 
 ## Consolidação de Acesso
 
-A aplicação está **unificada em um único servidor** na porta **80**:
+A aplicação está **unificada em múltiplos servidores Docker**:
 
 ```
-http://localhost/          → Raiz (SPA React)
-http://localhost/login     → Tela de autenticação
-http://localhost/moradores → Painel do morador
-http://localhost/admin     → Painel administrativo
+http://homologacao/          → Web Admin/Funcionários (SPA React)
+http://homologacao/login     → Tela de autenticação
+http://homologacao:5174/     → App Mobile PWA (moradores/portaria)
+http://homologacao:3333/     → API Backend (Express)
+http://homologacao:3333/docs → Documentação Swagger
+http://homologacao:8025/     → Mailpit (emails de desenvolvimento)
 ```
 
-**Nota**: O Vite dev server (porta 5175) foi descontinuado. Toda a aplicação web é agora servida via **Docker + nginx** na porta 80.
+**Nota**: O Vite dev server foi descontinuado. Todas as aplicações são servidas via **Docker + nginx** em suas respectivas portas.
 
 ---
 
 ## 📍 Endpoints de Acesso
 
-### Aplicação Web
-- **URL**: `http://localhost/`
+### Aplicação Web (Admin / Funcionários)
+- **URL**: `http://homologacao/`
 - **Servidor**: Docker nginx (condosync-web)
 - **Porta**: 80
 - **Tipo**: SPA React + Vite compilado (produção)
 
+### App Mobile PWA (Moradores / Portaria)
+- **URL**: `http://homologacao:5174/`
+- **Servidor**: Docker nginx (condosync-mobile)
+- **Porta**: 5174
+- **Tipo**: PWA React + Vite + Capacitor (produção)
+
 ### API Backend
-- **URL**: `http://localhost/api/` (via proxy nginx)
+- **URL**: `http://homologacao:3333/api/v1/`
 - **Servidor Real**: Docker Express (condosync-api)
 - **Porta Real**: 3333
-- **Documentação**: `http://localhost:3333/docs` (Swagger)
+- **Documentação**: `http://homologacao:3333/docs` (Swagger)
 
 ### Banco de Dados
-- **Host**: localhost
+- **Host**: homologacao
 - **Porta**: 5432
 - **Database**: condosync
 - **User**: condosync
 - **Password**: condosync123
 
 ### Cache (Redis)
-- **Host**: localhost
+- **Host**: homologacao
 - **Porta**: 6379
 
 ### Email (Mailpit)
-- **Web UI**: `http://localhost:8025`
-- **SMTP**: localhost:1025
+- **Web UI**: `http://homologacao:8025`
+- **SMTP**: homologacao:1025
 
 ---
 
@@ -50,7 +58,7 @@ http://localhost/admin     → Painel administrativo
 
 ### 1️⃣ Super Administrador (SUPER_ADMIN)
 ```
-Email: admin@condosync.com.br
+Email: atendimentoveredasbosque@gmail.com
 Senha: Admin@2026
 Acesso: Dashboard completo, gestão de condominios, usuários
 ```
@@ -103,7 +111,7 @@ Acesso: Painel de morador (consultas, solicitações, documentos)
 ## 🚀 Como Usar
 
 ### 1. Login na Aplicação
-1. Abra `http://localhost/login`
+1. Abra `http://homologacao/login`
 2. Insira email e senha (veja tabela acima)
 3. Confirme autenticação
 
@@ -143,7 +151,7 @@ docker compose up -d
 
 ### API Health Check
 ```
-GET http://localhost:3333/health
+GET http://homologacao:3333/health
 ```
 
 ### Nginx Status
@@ -166,7 +174,7 @@ docker exec condosync-postgres pg_isready -U condosync -d condosync
 - [ ] **Negação de Acesso**: Tentar acessar condomínio de outro usuário (deve dar 403)
 - [ ] **API Proxy**: Requisições `/api/*` chegam na Express
 - [ ] **Socket.IO**: Conexão WebSocket com eventos em tempo real
-- [ ] **Emails**: Verificar captura em `http://localhost:8025`
+- [ ] **Emails**: Verificar captura em `http://homologacao:8025`
 - [ ] **Performance**: Verificar tempo de resposta API e carregamento da SPA
 
 ---
@@ -182,7 +190,7 @@ docker exec condosync-postgres pg_isready -U condosync -d condosync
 
 ## 🐛 Troubleshooting
 
-### A aplicação não carrega em localhost/
+### A aplicação não carrega em homologacao/
 ```bash
 # Verificar se Docker Web está saudável
 docker ps | grep condosync-web
@@ -194,7 +202,7 @@ docker logs condosync-web
 ### Login falha
 ```bash
 # Verificar se API está respondendo
-curl http://localhost:3333/health
+curl http://homologacao:3333/health
 
 # Verificar credenciais (seed deve ter rodado)
 docker exec condosync-postgres psql -U condosync -d condosync -c "SELECT email, role FROM public.user LIMIT 5;"
@@ -211,5 +219,32 @@ netstat -ano | findstr :80
 
 ---
 
-**Gerado em**: 11 de maio de 2026
+**Gerado em**: 15 de maio de 2026
+**Versão**: v1.1.0 — Rebuild completo (API + Web + Mobile)
 **Status**: ✅ Homologação Pronta para Testes
+
+---
+
+## 📋 Changelog v1.1.0 (15/05/2026)
+
+### ✨ Novas Funcionalidades
+- App Mobile PWA adicionado ao Docker Compose (porta 5174)
+- Suporte a múltiplos moradores por unidade
+- Dependentes na unidade
+- Redesign global de ícones (lucide-react v1.14.0)
+- Criação de condomínio + CONDOMINIUM_ADMIN em fluxo unificado
+- Reset de senha do admin
+- Módulos: multas, regras de cobrança, contratos, sinalização digital, QR code de visitante
+
+### 🐛 Correções
+- Upload de imagem (ImageUpload) — sintaxe corrigida
+- Moradores já vinculados ocultos no dropdown de vínculo
+- Atualização de email sem unique constraint violation
+- Exibição de múltiplos moradores no card de unidade
+- Status OCCUPIED atualizado ao vincular morador
+- Ordenação numérica de unidades
+
+### 🏗️ Infraestrutura
+- Serviço `mobile` adicionado ao `docker-compose.yml`
+- Rebuild das imagens sem cache (api, web, mobile)
+- Backup automático: `backup_homolog_20260515_110652.sql`

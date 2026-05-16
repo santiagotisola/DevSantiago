@@ -60,6 +60,7 @@ const navItems: NavItem[] = [
       { label: "Visitantes", to: "/portaria/visitantes" },
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
+      { label: "🚨 Alertas de Pânico", to: "/portaria/panico" },
       { label: "Prestadores", to: "/prestadores", roles: MANAGEMENT },
     ],
   },
@@ -175,7 +176,6 @@ const navItems: NavItem[] = [
     roles: MANAGEMENT,
     children: [
       { label: "Controle de Acesso", to: "/acesso", roles: MANAGEMENT },
-      { label: "Dados do Condomínio", to: "/configuracoes", roles: MANAGEMENT },
     ],
   },
   {

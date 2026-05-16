@@ -1,5 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../../config/prisma";
+import { sendMail } from "../../config/mail";
+import { logger } from "../../config/logger";
 import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError } from "../../middleware/errorHandler";
@@ -116,7 +118,7 @@ router.patch("/condominium/:condominiumId/members/:userId/update", authorizeCond
   // Atualiza nome e e-mail do usuário (só atualiza e-mail se mudou)
   const currentUser = await prisma.user.findUniqueOrThrow({
     where: { id: req.params.userId },
-    select: { email: true },
+    select: { email: true, name: true },
   });
 
   const emailChanged = data.email !== undefined && data.email !== currentUser.email;
@@ -136,6 +138,33 @@ router.patch("/condominium/:condominiumId/members/:userId/update", authorizeCond
         ...(emailChanged && { email: data.email }),
       },
     });
+  }
+
+  if (emailChanged) {
+    const updatedName = data.name ?? currentUser.name;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">CondoSync — E-mail atualizado</h2>
+        <p>Olá, <strong>${updatedName}</strong>.</p>
+        <p>Seu e-mail de acesso foi alterado com sucesso no condomínio.</p>
+        <p><strong>Novo e-mail:</strong> ${data.email}</p>
+        <p>Se você não reconhece essa alteração, entre em contato com a administração.</p>
+      </div>
+    `;
+
+    try {
+      await sendMail(data.email!, "CondoSync — E-mail atualizado", html);
+      if (currentUser.email && currentUser.email !== data.email) {
+        await sendMail(currentUser.email, "CondoSync — Alteração de e-mail da sua conta", html);
+      }
+    } catch (error) {
+      logger.error("Falha ao enviar e-mail de alteração de e-mail em members/update", {
+        userId: req.params.userId,
+        previousEmail: currentUser.email,
+        newEmail: data.email,
+        error,
+      });
+    }
   }
 
   // Atualiza role e unidade no CondominiumUser

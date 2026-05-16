@@ -288,7 +288,7 @@ export default function LostAndFoundPage() {
                 Cancelar
               </button>
               <button 
-                onClick={() => createMutation.mutate({ body: form })}
+                onClick={() => createMutation.mutate(form)}
                 disabled={!form.title || createMutation.isPending}
                 className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 disabled:opacity-50"
               >

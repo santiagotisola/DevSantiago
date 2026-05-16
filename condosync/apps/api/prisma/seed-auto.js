@@ -13,11 +13,11 @@ async function main() {
   // ── Super Admin ──────────────────────────────────────────────────────────
   const password = await bcrypt.hash("Admin@2026", 12);
   const superAdmin = await prisma.user.upsert({
-    where: { email: "admin@condosync.com.br" },
+    where: { email: "atendimentoveredasbosque@gmail.com" },
     update: {},
     create: {
       name: "Super Admin",
-      email: "admin@condosync.com.br",
+      email: "atendimentoveredasbosque@gmail.com",
       passwordHash: password,
       role: "SUPER_ADMIN",
       isActive: true,

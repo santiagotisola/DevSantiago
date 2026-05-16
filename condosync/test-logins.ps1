@@ -7,7 +7,7 @@ Write-Host ""
 
 $usuarios = @(
     @{
-        email = "admin@condosync.com.br"
+        email = "atendimentoveredasbosque@gmail.com"
         senha = "Admin@2026"
         papel = "SUPER ADMINISTRADOR"
         desc = "Acesso global a plataforma"
@@ -25,8 +25,8 @@ $usuarios = @(
         desc = "Controle de acesso e encomendas"
     },
     @{
-        email = "atendimento@parqueverde.com.br"
-        senha = "Atendimento@2026"
+        email = "atendimentoveredasbosque@gmail.com"
+        senha = "123456"
         papel = "ATENDIMENTO/SUPORTE"
         desc = "Gestao de chamados e solicitacoes"
     },

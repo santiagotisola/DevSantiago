@@ -9,10 +9,11 @@ const redisStore = new RedisStore({
 
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
   store: redisStore,
+  skip: (req) => req.method === 'GET' && !!req.headers.authorization,
   message: {
     status: 429,
     message: 'Muitas requisições. Tente novamente em 15 minutos.',

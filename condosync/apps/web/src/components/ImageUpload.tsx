@@ -2,7 +2,7 @@ import React, { useCallback, useId, useState } from 'react';
 import { Upload, X, Loader } from 'lucide-react';
 
 interface ImageUploadProps {
-  onImageSelected: (file: File) => void;
+  onImageSelected: (file: File | null) => void;
   currentImage?: string;
   label?: string;
   maxSize?: number; // MB
@@ -94,7 +94,7 @@ export function ImageUpload({
     e.stopPropagation();
     setPreview(null);
     setError('');
-    onImageSelected(null as any);
+    onImageSelected(null);
   };
 
   return (

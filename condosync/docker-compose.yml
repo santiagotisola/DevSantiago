@@ -36,7 +36,7 @@ services:
       JWT_REFRESH_SECRET: condosync-refresh-secret-change-in-production
       JWT_EXPIRES_IN: 1h
       JWT_REFRESH_EXPIRES_IN: 7d
-      CORS_ORIGINS: http://localhost:80,http://localhost
+      CORS_ORIGINS: http://localhost:80,http://localhost,http://homologacao,http://homologacao:5174,http://localhost:5174
       BCRYPT_ROUNDS: "12"
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}" # Opcional: defina no .env ou variável de ambiente para habilitar o Assistente IA
@@ -72,6 +72,21 @@ services:
     environment:
       - API_URL=http://api:3333
 
+  # ─── Mobile (App Web PWA) ────────────────────────────────────────────────
+  mobile:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+    container_name: condosync-mobile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5174:80"
+    environment:
+      - API_URL=http://api:3333
+
   # ─── Redis ──────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -91,8 +106,28 @@ services:
       - "8025:8025" # Interface web para visualizar emails
       - "1025:1025" # Porta SMTP
 
+  # ─── MongoDB (WhatsApp sessões) ───────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: condosync-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: condosync-whatsapp
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh -u admin -p admin123 --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   api_logs:
   redis_data:
   uploads_data:
+  mongo_data:

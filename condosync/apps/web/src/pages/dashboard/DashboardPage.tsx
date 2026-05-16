@@ -21,7 +21,51 @@ import {
   Video,
   Bell,
   Plus,
+  Car,
+  CreditCard,
+  Archive,
+  BarChart2,
+  Ban,
+  FileCheck,
+  Monitor,
+  UserCog,
+  Heart,
+  Vote,
+  Siren,
+  Truck,
+  Megaphone,
+  SearchSlash,
+  ClipboardList,
 } from "lucide-react";
+
+// ── Grid de Módulos ────────────────────────────────────────────────────────
+const SYSTEM_MODULES = [
+  { label: "Visitantes",    to: "/portaria/visitantes",         icon: Shield,        bg: "bg-purple-100",  color: "text-purple-600" },
+  { label: "Encomendas",    to: "/portaria/encomendas",         icon: Package,       bg: "bg-amber-100",   color: "text-amber-600" },
+  { label: "Veículos",      to: "/portaria/veiculos",           icon: Car,           bg: "bg-sky-100",     color: "text-sky-600" },
+  { label: "Pânico",        to: "/portaria/panico",             icon: Siren,         bg: "bg-red-100",     color: "text-red-600" },
+  { label: "Prestadores",   to: "/prestadores",                 icon: Truck,         bg: "bg-orange-100",  color: "text-orange-600" },
+  { label: "Unidades",      to: "/unidades",                    icon: Home,          bg: "bg-indigo-100",  color: "text-indigo-600" },
+  { label: "Moradores",     to: "/moradores",                   icon: Users,         bg: "bg-teal-100",    color: "text-teal-600" },
+  { label: "Funcionários",  to: "/funcionarios",                icon: UserCog,       bg: "bg-blue-100",    color: "text-blue-600" },
+  { label: "Pets",          to: "/pets",                        icon: Heart,         bg: "bg-pink-100",    color: "text-pink-600" },
+  { label: "Financeiro",    to: "/financeiro",                  icon: DollarSign,    bg: "bg-emerald-100", color: "text-emerald-600" },
+  { label: "Cobranças",     to: "/financeiro/cobrancas",        icon: CreditCard,    bg: "bg-green-100",   color: "text-green-600" },
+  { label: "Manutenção",    to: "/manutencao",                  icon: Wrench,        bg: "bg-yellow-100",  color: "text-yellow-700" },
+  { label: "Chamados",      to: "/chamados",                    icon: ClipboardList, bg: "bg-blue-100",    color: "text-blue-700" },
+  { label: "Áreas Comuns",  to: "/areas-comuns",                icon: Calendar,      bg: "bg-cyan-100",    color: "text-cyan-600" },
+  { label: "Avisos",        to: "/comunicacao/avisos",          icon: Bell,          bg: "bg-blue-100",    color: "text-blue-500" },
+  { label: "Ocorrências",   to: "/comunicacao/ocorrencias",     icon: AlertTriangle, bg: "bg-yellow-100",  color: "text-yellow-600" },
+  { label: "Assembleias",   to: "/assembleias",                 icon: Vote,          bg: "bg-violet-100",  color: "text-violet-600" },
+  { label: "Documentos",    to: "/documentos",                  icon: FileText,      bg: "bg-gray-100",    color: "text-gray-600" },
+  { label: "Relatórios",    to: "/relatorios",                  icon: BarChart2,     bg: "bg-indigo-100",  color: "text-indigo-500" },
+  { label: "Galeria",       to: "/galeria",                     icon: Image,         bg: "bg-fuchsia-100", color: "text-fuchsia-600" },
+  { label: "Obras",         to: "/obras",                       icon: HardHat,       bg: "bg-orange-100",  color: "text-orange-700" },
+  { label: "Estoque",       to: "/estoque",                     icon: Archive,       bg: "bg-lime-100",    color: "text-lime-700" },
+  { label: "Multas",        to: "/multas",                      icon: Ban,           bg: "bg-red-100",     color: "text-red-500" },
+  { label: "Contratos",     to: "/contratos",                   icon: FileCheck,     bg: "bg-teal-100",    color: "text-teal-700" },
+  { label: "TV Elevador",   to: "/digital-signage",             icon: Monitor,       bg: "bg-slate-100",   color: "text-slate-600" },
+];
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -469,6 +513,29 @@ export function DashboardPage() {
           color="bg-rose-500"
           to="/manutencao"
         />
+      </div>
+
+      {/* ── Grid de Módulos (portal-style) ───────────────────────────────── */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-5">
+          Módulos do Sistema
+        </h3>
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-3">
+          {SYSTEM_MODULES.map((mod) => (
+            <Link
+              key={mod.to}
+              to={mod.to}
+              className="group flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all border border-gray-100 hover:border-gray-200 hover:shadow-sm text-center"
+            >
+              <div className={`${mod.bg} p-3 rounded-2xl group-hover:scale-110 transition-transform`}>
+                <mod.icon className={`w-5 h-5 ${mod.color}`} />
+              </div>
+              <span className="text-[11px] font-semibold text-gray-600 leading-tight">
+                {mod.label}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -13,7 +13,7 @@ Todos os usuários foram criados via seed e estão prontos para login na platafo
 
 | Campo | Valor |
 |-------|-------|
-| **Email** | admin@condosync.com.br |
+| **Email** | atendimentoveredasbosque@gmail.com |
 | **Senha** | Admin@2026 |
 | **Papel** | SUPER_ADMIN |
 | **Permissões** | Criar condominios, gerenciar usuários globalmente, acessar dashboard executivo |
@@ -23,7 +23,7 @@ Todos os usuários foram criados via seed e estão prontos para login na platafo
 ```bash
 curl -X POST http://localhost:3333/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@condosync.com.br","password":"Admin@2026"}'
+  -d '{"email":"atendimentoveredasbosque@gmail.com","password":"Admin@2026"}'
 ```
 
 ---
@@ -80,8 +80,8 @@ curl -X POST http://localhost:3333/api/v1/auth/login \
 
 | Campo | Valor |
 |-------|-------|
-| **Email** | atendimento@parqueverde.com.br |
-| **Senha** | Atendimento@2026 |
+| **Email** | atendimentoveredasbosque@gmail.com |
+| **Senha** | 123456 |
 | **Papel** | CONDOMINIUM_ADMIN |
 | **CPF** | 33344455600 |
 | **Condomínio** | Residencial Veredas do Bosque |
@@ -199,7 +199,7 @@ authorizeCondominium(req, res, next) {
 ```bash
 POST /api/v1/auth/login
 {
-  "email": "admin@condosync.com.br",
+  "email": "atendimentoveredasbosque@gmail.com",
   "password": "Admin@2026"
 }
 # Esperado: 200 OK + accessToken + refreshToken

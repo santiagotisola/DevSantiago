@@ -15,6 +15,7 @@ import HomeGrid from './pages/home/HomeGrid';
 import PortariaDashboard from './pages/portaria/PortariaDashboard';
 import VisitantesPortaria from './pages/portaria/VisitantesPortaria';
 import EncomendasPortaria from './pages/portaria/EncomendasPortaria';
+import VeiculosPortaria from './pages/portaria/VeiculosPortaria';
 
 // Morador
 import MinhasVisitas from './pages/morador/MinhasVisitas';
@@ -81,6 +82,9 @@ export default function App() {
             </Route>
             <Route element={<MobileLayout title="Encomendas" showBack />}>
               <Route path="/portaria/encomendas" element={<EncomendasPortaria />} />
+            </Route>
+            <Route element={<MobileLayout title="Veículos" showBack />}>
+              <Route path="/portaria/veiculos" element={<VeiculosPortaria />} />
             </Route>
           </Route>
 

@@ -292,6 +292,7 @@ const photoUpload = multer({
 // POST /:id/photo — Upload photo
 router.post(
   "/:id/photo",
+  authenticate,
   photoUpload.single("file"),
   async (req: Request, res: Response) => {
     const vehicle = await prisma.vehicle.findUniqueOrThrow({
@@ -358,7 +359,7 @@ router.get("/:id/photo/file", async (req: Request, res: Response) => {
 });
 
 // DELETE /:id/photo — Remove photo
-router.delete("/:id/photo", async (req: Request, res: Response) => {
+router.delete("/:id/photo", authenticate, async (req: Request, res: Response) => {
   const vehicle = await prisma.vehicle.findUniqueOrThrow({
     where: { id: req.params.id },
     select: { unitId: true, photoUrl: true },

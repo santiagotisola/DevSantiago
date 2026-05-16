@@ -30,25 +30,25 @@ export default function MobileHeader({
     <header
       className={[
         'fixed top-0 left-0 right-0 z-40 h-14 flex items-center px-4 gap-3 safe-top',
-        transparent ? 'bg-transparent' : 'bg-white border-b border-gray-200',
+        transparent ? 'bg-transparent' : 'bg-slate-800 border-b border-slate-700',
       ].join(' ')}
     >
       {showBack && (
         <button
           onClick={handleBack}
           aria-label="Voltar"
-          className="p-1 -ml-1 rounded-full text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform"
+          className="p-1 -ml-1 rounded-full text-slate-300 hover:bg-slate-700 active:scale-95 transition-transform"
         >
           <ArrowLeft size={22} />
         </button>
       )}
 
-      <h1 className="flex-1 text-base font-semibold text-gray-900 truncate">
+      <h1 className="flex-1 text-base font-semibold text-white truncate">
         {title}
       </h1>
 
       {rightNode ?? (
-        <button aria-label="Notificações" className="relative p-1 rounded-full text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform">
+        <button aria-label="Notificações" className="relative p-1 rounded-full text-slate-300 hover:bg-slate-700 active:scale-95 transition-transform">
           <Bell size={20} />
         </button>
       )}

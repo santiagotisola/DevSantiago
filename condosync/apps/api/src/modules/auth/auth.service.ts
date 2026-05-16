@@ -22,7 +22,7 @@ export interface RegisterDTO {
 }
 
 export interface LoginDTO {
-  email: string;
+  email: string; // pode ser e-mail ou CPF (11 dígitos sem máscara)
   password: string;
 }
 
@@ -79,8 +79,13 @@ export class AuthService {
   }
 
   async login(data: LoginDTO, ipAddress?: string) {
+    const isCpf = /^\d{11}$/.test(data.email.replace(/[.\-]/g, ''));
+    const whereClause = isCpf
+      ? { cpf: data.email.replace(/[.\-]/g, '') }
+      : { email: data.email };
+
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: whereClause,
       select: {
         id: true,
         name: true,

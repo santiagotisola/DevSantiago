@@ -34,7 +34,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             onClick={() => setShowCondominiumMenu(!showCondominiumMenu)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50 text-sm transition-colors"
           >
-            <span className="font-medium truncate max-w-48">
+            <span className="font-medium truncate max-w-72">
               {selectedCondominium?.name || 'Selecionar condomínio'}
             </span>
             <ChevronDown className="w-4 h-4 text-gray-500" />

@@ -10,7 +10,7 @@ interface MobileLayoutProps {
 
 export default function MobileLayout({ title, showBack, headerRight }: MobileLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
       <MobileHeader title={title} showBack={showBack} rightNode={headerRight} />
       {/* offset for fixed header (56px) */}
       <main className="flex-1 overflow-y-auto pt-14 pb-20 scroll-area">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
@@ -48,7 +49,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendente", color: "bg-amber-100 text-amber-700 border-amber-200" },
   AUTHORIZED: { label: "Autorizado", color: "bg-blue-100 text-blue-700 border-blue-200" },
   DENIED: { label: "Negado", color: "bg-red-100 text-red-700 border-red-200" },
-  INSIDE: { label: "Dentro Agora", color: "bg-green-100 text-green-700 border-green-200" },
+  INSIDE: { label: "No condomínio agora", color: "bg-green-100 text-green-700 border-green-200" },
   LEFT: { label: "Já Saiu", color: "bg-gray-100 text-gray-600 border-gray-200" },
 };
 
@@ -64,8 +65,14 @@ function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: 
 export function VisitorsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get("search") ?? "";
+  const statusFilter = searchParams.get("status") ?? "";
+
+  const setSearch = (value: string) =>
+    setSearchParams((p) => { const n = new URLSearchParams(p); value ? n.set("search", value) : n.delete("search"); return n; }, { replace: true });
+  const setStatusFilter = (value: string) =>
+    setSearchParams((p) => { const n = new URLSearchParams(p); (value && value !== "ALL") ? n.set("status", value) : n.delete("status"); return n; }, { replace: true });
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     name: "",

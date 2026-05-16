@@ -12,7 +12,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(3, 'Informe e-mail ou CPF'),
   password: z.string().min(1),
 });
 

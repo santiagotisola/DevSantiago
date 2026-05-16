@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { randomBytes } from "crypto";
 import { prisma } from "../../config/prisma";
+import { sendMail } from "../../config/mail";
+import { logger } from "../../config/logger";
 import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { ForbiddenError, ValidationError } from "../../middleware/errorHandler";
 import { validateRequest } from "../../utils/validateRequest";
@@ -197,6 +199,7 @@ router.post(
 
 const updateResidentSchema = z.object({
   name: z.string().min(2).optional(),
+  email: z.string().email().optional(),
   phone: z.string().optional(),
   cpf: z.string().optional(),
   unitId: z.string().uuid().nullable().optional(),
@@ -214,6 +217,9 @@ router.patch(
       include: { user: true },
     });
 
+    const previousEmail = condominiumUser.user.email;
+    const emailChanged = data.email !== undefined && data.email !== previousEmail;
+
     if (condominiumUser.role !== "RESIDENT") {
       throw new ValidationError("Dados invalidos", {
         id: ["O registro informado nao pertence a um morador."],
@@ -227,12 +233,24 @@ router.patch(
       );
     }
 
+    if (emailChanged) {
+      const existing = await prisma.user.findUnique({ where: { email: data.email! } });
+      if (existing && existing.id !== condominiumUser.userId) {
+        res.status(409).json({
+          success: false,
+          message: "Este e-mail já está em uso por outro usuário",
+        });
+        return;
+      }
+    }
+
     // Atualiza dados do usuário
-    if (data.name || data.phone !== undefined || data.cpf !== undefined) {
+    if (data.name || emailChanged || data.phone !== undefined || data.cpf !== undefined) {
       await prisma.user.update({
         where: { id: condominiumUser.userId },
         data: {
           ...(data.name ? { name: data.name } : {}),
+          ...(emailChanged ? { email: data.email } : {}),
           ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
           ...(data.cpf !== undefined ? { cpf: data.cpf || null } : {}),
         },
@@ -257,6 +275,33 @@ router.patch(
         where: { id: data.unitId },
         data: { status: "OCCUPIED" },
       });
+    }
+
+    if (emailChanged) {
+      const updatedName = data.name ?? condominiumUser.user.name;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1e293b;">CondoSync — E-mail atualizado</h2>
+          <p>Olá, <strong>${updatedName}</strong>.</p>
+          <p>Seu e-mail de acesso foi alterado com sucesso.</p>
+          <p><strong>Novo e-mail:</strong> ${data.email}</p>
+          <p>Se você não reconhece essa alteração, entre em contato com a administração do condomínio.</p>
+        </div>
+      `;
+
+      try {
+        await sendMail(data.email!, "CondoSync — E-mail atualizado", html);
+        if (previousEmail && previousEmail !== data.email) {
+          await sendMail(previousEmail, "CondoSync — Alteração de e-mail da sua conta", html);
+        }
+      } catch (error) {
+        logger.error("Falha ao enviar e-mail de notificação de alteração de e-mail", {
+          userId: condominiumUser.userId,
+          previousEmail,
+          newEmail: data.email,
+          error,
+        });
+      }
     }
 
     res.json({ success: true, data: { resident: updated } });

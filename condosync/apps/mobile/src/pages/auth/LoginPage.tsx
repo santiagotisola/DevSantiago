@@ -37,31 +37,31 @@ export default function LoginPage() {
     <div>
       {/* Logo */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4">
-          <Building2 size={32} className="text-white" />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-2xl mb-4">
+          <Building2 size={32} className="text-blue-400" />
         </div>
         <h1 className="text-2xl font-bold text-white">CondoSync</h1>
-        <p className="text-primary-200 text-sm mt-1">Portal do Condomínio</p>
+        <p className="text-slate-300 text-sm mt-1">Portal do Condomínio</p>
       </div>
 
       {/* Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Entrar</h2>
+      <div className="bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700">
+        <h2 className="text-lg font-semibold text-white mb-6">Entrar</h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">E-mail ou CPF</label>
             <input
-              type="email"
+              type="text"
               inputMode="email"
-              autoComplete="email"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="seu@email.com ou 000.000.000-00"
+              className="w-full border border-slate-600 bg-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
@@ -69,12 +69,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full border border-slate-600 bg-slate-700 rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
               >
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -83,7 +83,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-press w-full bg-primary-600 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            className="btn-press w-full bg-blue-600 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-blue-700"
           >
             <LogIn size={18} />
             {loading ? 'Entrando...' : 'Entrar'}
