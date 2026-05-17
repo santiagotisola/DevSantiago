@@ -41,7 +41,7 @@ export default function LoginPage() {
           <Building2 size={36} className="text-white drop-shadow" />
           <h1 className="text-2xl font-bold text-white tracking-wide">CondoSync</h1>
         </div>
-        <p className="text-blue-100 text-sm">Gestão de Condomínios Inteligente</p>
+        <p className="text-white text-sm">Gestão de Condomínios Inteligente</p>
       </div>
 
       {/* Grid de atalhos/serviços */}
@@ -66,12 +66,12 @@ export default function LoginPage() {
 
       {/* Card de login */}
       <div id="login" className="bg-white/5 rounded-2xl p-6 shadow-2xl border border-blue-700 mx-4 mt-4">
-        <h2 className="text-lg font-semibold text-blue-100 mb-6 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <LogIn size={20} /> Entrar no sistema
         </h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-blue-200 mb-1">E-mail ou CPF</label>
+            <label className="block text-sm font-medium text-white mb-1">E-mail ou CPF</label>
             <input
               type="text"
               inputMode="email"
@@ -79,11 +79,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com ou 000.000.000-00"
-              className="w-full border border-blue-700 bg-blue-900/80 rounded-xl px-4 py-3 text-sm text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-blue-600 bg-blue-900/60 rounded-xl px-4 py-3 text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-blue-200 mb-1">Senha</label>
+            <label className="block text-sm font-medium text-white mb-1">Senha</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
@@ -91,12 +91,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full border border-blue-700 bg-blue-900/80 rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-blue-600 bg-blue-900/60 rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
               >
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -121,7 +121,7 @@ export default function LoginPage() {
       </div>
 
       {/* Rodapé institucional */}
-      <footer className="mt-auto py-4 text-center text-xs text-blue-200 opacity-80">
+      <footer className="mt-auto py-4 text-center text-xs text-white opacity-90">
         <div className="mb-1">Rua Gervásio Pinheiro, APM Residencial Solar Central Park</div>
         <div>CEP: 74.968-500 &nbsp;|&nbsp; Telefone: (62) 3545-5800</div>
         <div className="mt-1">© {new Date().getFullYear()} CondoSync. Todos os direitos reservados.</div>

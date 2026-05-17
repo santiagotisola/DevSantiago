@@ -18,7 +18,7 @@ export default function MobileLayout({ title, showBack, headerRight }: MobileLay
           <Building2 size={28} className="text-white drop-shadow" />
           <h1 className="text-lg font-bold text-white tracking-wide">CondoSync</h1>
         </div>
-        <p className="text-blue-100 text-xs">Gestão de Condomínios Inteligente</p>
+        <p className="text-white text-xs">Gestão de Condomínios Inteligente</p>
       </div>
 
       {/* offset para header (mantém compatibilidade com MobileHeader) */}
@@ -39,7 +39,7 @@ export default function MobileLayout({ title, showBack, headerRight }: MobileLay
       <BottomNav />
 
       {/* Rodapé institucional global */}
-      <footer className="mt-auto py-3 text-center text-xs text-blue-200 opacity-80 bg-blue-900/80">
+      <footer className="mt-auto py-3 text-center text-xs text-white opacity-90 bg-blue-900/90">
         <div className="mb-1">Rua Gervásio Pinheiro, APM Residencial Solar Central Park</div>
         <div>CEP: 74.968-500 &nbsp;|&nbsp; Telefone: (62) 3545-5800</div>
         <div className="mt-1">© {new Date().getFullYear()} CondoSync. Todos os direitos reservados.</div>
