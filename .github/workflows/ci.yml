@@ -166,17 +166,25 @@ jobs:
       - run: npx prisma generate
       - run: npx tsc --noEmit
 
-  # ─── Deploy para Railway (apenas em push na main) ────────────────────────────
-  # O Railway faz o deploy automaticamente via webhook do GitHub.
-  # Este job é mantido apenas como referência — o deploy real é feito pelo Railway.
+  # ─── Deploy para VPS Hostinger (push na main) ────────────────────────────────
   deploy:
-    name: Deploy → Railway
+    name: Deploy → VPS (2.24.211.167)
     needs: [test-api, build-web, build-mobile]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: Deploy concluído via Railway webhook
-        run: |
-          echo "✅ CI concluído. Railway faz o deploy automaticamente via GitHub webhook."
-          echo "🌐 Web: https://web-production-916b1.up.railway.app"
+      - name: Deploy via SSH na VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 2.24.211.167
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 120s
+          script: |
+            cd /opt/condosync
+            git pull
+            cd condosync
+            docker compose -f docker-compose.railway.yml up -d --build
+            echo "✅ Deploy concluído!"
+            docker compose -f docker-compose.railway.yml ps
