@@ -6,8 +6,8 @@ FROM node:22-alpine AS dependencies
 WORKDIR /build
 
 # Install both apps' dependencies
-COPY apps/api/package.json apps/api/package.json
-COPY apps/web/package.json apps/web/package.json
+COPY apps/api/package.json ./api/
+COPY apps/web/package.json ./web/
 
 RUN apk add --no-cache openssl
 
@@ -33,7 +33,7 @@ RUN npm run build
 # Runtime stage
 FROM node:22-alpine
 
-RUN apk add --no-cache nginx curl
+RUN apk add --no-cache nginx curl bash
 
 WORKDIR /app
 
@@ -50,9 +50,18 @@ COPY --from=builder /build/web/dist ./web/dist
 COPY nginx.conf.production /etc/nginx/nginx.conf
 
 # Create startup script
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'cd /app/api && node dist/server.js &' >> /start.sh && \
-    echo 'sleep 2' >> /start.sh && \
+RUN echo '#!/bin/bash' > /start.sh && \
+    echo 'set -e' >> /start.sh && \
+    echo 'echo "🚀 Starting CondoSync API..."' >> /start.sh && \
+    echo 'cd /app/api && node dist/server.js > /tmp/api.log 2>&1 &' >> /start.sh && \
+    echo 'API_PID=$!' >> /start.sh && \
+    echo 'sleep 3' >> /start.sh && \
+    echo 'if ! kill -0 $API_PID 2>/dev/null; then' >> /start.sh && \
+    echo '  echo "❌ API failed to start"' >> /start.sh && \
+    echo '  cat /tmp/api.log' >> /start.sh && \
+    echo '  exit 1' >> /start.sh && \
+    echo 'fi' >> /start.sh && \
+    echo 'echo "🌐 Starting Nginx..."' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
 
