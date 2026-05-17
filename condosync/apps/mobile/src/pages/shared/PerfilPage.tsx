@@ -70,13 +70,13 @@ export default function PerfilPage() {
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             aria-label="Nome"
-            className="text-center text-lg font-bold text-gray-900 border-b-2 border-primary-500 focus:outline-none bg-transparent w-full max-w-xs"
+            className="text-center text-lg font-bold text-white border-b-2 border-white focus:outline-none bg-transparent w-full max-w-xs"
             autoFocus
           />
         ) : (
-          <h2 className="text-lg font-bold text-gray-900">{user?.name}</h2>
+          <h2 className="text-lg font-bold text-white">{user?.name}</h2>
         )}
-        <span className="text-xs px-3 py-1 bg-primary-50 text-primary-700 rounded-full mt-1">
+        <span className="text-xs px-3 py-1 bg-white/20 text-white rounded-full mt-1">
           {ROLE_LABELS[user?.role ?? ''] ?? user?.role}
         </span>
       </div>
@@ -121,7 +121,7 @@ export default function PerfilPage() {
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
                 placeholder="(00) 00000-0000"
-                className="text-sm font-medium text-gray-900 w-full focus:outline-none border-b border-gray-200"
+                className="text-sm font-medium text-gray-900 w-full focus:outline-none border-b border-gray-200 bg-transparent"
               />
             </div>
           </div>
