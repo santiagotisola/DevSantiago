@@ -1,7 +1,8 @@
 ﻿[build]
 builder = "dockerfile"
-# Simple Dockerfile that compiles and runs both API and Web
-dockerfilePath = "Dockerfile"
+# Web-only Dockerfile: serves React SPA via Nginx
+# API runs separately on Railway
+dockerfilePath = "Dockerfile.web.final"
 
 [deploy]
 healthcheckPath = "/"
