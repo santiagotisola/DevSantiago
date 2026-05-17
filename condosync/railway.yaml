@@ -1,0 +1,76 @@
+services:
+  # API Backend Service
+  api:
+    build:
+      dockerfile: Dockerfile.api
+      context: .
+    ports:
+      - 3333:3333
+    environment:
+      NODE_ENV: production
+      PORT: 3333
+      DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@${{ services.postgres.host }}:5432/${{ secrets.POSTGRES_DB }}?schema=public
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      REDIS_URL: redis://${{ services.redis.host }}:6379
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Web Frontend Service
+  web:
+    build:
+      dockerfile: Dockerfile.web
+      context: .
+    ports:
+      - 80:80
+    environment:
+      API_URL: http://${{ services.api.host }}:3333
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${{ secrets.POSTGRES_USER }}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+secrets:
+  POSTGRES_USER: condosync
+  POSTGRES_PASSWORD:  # Set via Railway dashboard
+  POSTGRES_DB: condosync
+  JWT_SECRET:  # Set via Railway dashboard
+  JWT_REFRESH_SECRET:  # Set via Railway dashboard
+  CORS_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173
