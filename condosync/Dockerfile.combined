@@ -1,0 +1,24 @@
+# Multi-service builder for CondoSync (Railway)
+# Uses docker-compose to build and run both API and Web
+
+FROM docker:27-dind AS base
+
+RUN apk add --no-cache docker-compose bash
+
+WORKDIR /app
+
+COPY . .
+
+# Build stage
+FROM base AS builder
+
+RUN docker-compose -f docker-compose.railway.yml build
+
+# Final stage  
+FROM base AS production
+
+COPY --from=builder /app .
+
+EXPOSE 80 3333
+
+CMD ["docker-compose", "-f", "docker-compose.railway.yml", "up"]
