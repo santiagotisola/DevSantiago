@@ -1,7 +1,7 @@
 ﻿[build]
 builder = "dockerfile"
 # Production Dockerfile that compiles and runs both API and Web
-dockerfilePath = "../Dockerfile.production"
+dockerfilePath = "Dockerfile.production"
 
 [deploy]
 healthcheckPath = "/health"
