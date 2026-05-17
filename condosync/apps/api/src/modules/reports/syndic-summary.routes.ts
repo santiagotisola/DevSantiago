@@ -29,11 +29,11 @@ router.get("/syndic-summary", async (req: Request, res: Response) => {
 
   // Calcular estatísticas reais do condomínio
   const totalUnits = await prisma.unit.count({
-    where: { condominiumId, isActive: true },
+    where: { condominiumId },
   });
 
   const occupiedUnits = await prisma.unit.count({
-    where: { condominiumId, isActive: true, status: "OCCUPIED" },
+    where: { condominiumId, status: "OCCUPIED" },
   });
 
   const vacantUnits = totalUnits - occupiedUnits;

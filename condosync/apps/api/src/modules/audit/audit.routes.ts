@@ -28,7 +28,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   // Mock: retornar lista vazia (seria de um modelo AuditLog no futuro)
-  const logs = [];
+  const logs: any[] = [];
 
   res.json({ success: true, data: { logs } });
 });

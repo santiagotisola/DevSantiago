@@ -37,7 +37,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 
   // Mock: retornar lista vazia (seria de um modelo Invite no futuro)
-  const invites = [];
+  const invites: any[] = [];
 
   res.json({ success: true, data: { invites } });
 });
