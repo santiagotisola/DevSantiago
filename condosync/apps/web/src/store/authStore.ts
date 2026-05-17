@@ -8,6 +8,7 @@ export interface UserInfo {
   role: string;
   phone?: string;
   avatarUrl?: string;
+  twoFactorEnabled?: boolean;
   condominiumUsers?: Array<{
     condominiumId: string;
     role: string;

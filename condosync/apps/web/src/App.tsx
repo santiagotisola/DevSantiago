@@ -53,6 +53,9 @@ import DigitalSignagePage from "./pages/digital-signage/DigitalSignagePage";
 import DisplayPage from "./pages/digital-signage/DisplayPage";
 import FinesPage from "./pages/fines/FinesPage";
 import ContractsPage from "./pages/contracts/ContractsPage";
+import { InvitesPage } from "./pages/invites/InvitesPage";
+import { AuditPage } from "./pages/audit/AuditPage";
+import { SyndicDashboardPage } from "./pages/syndic/SyndicDashboardPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -485,6 +488,33 @@ export default function App() {
             element={
               <RoleGuard roles={MANAGEMENT}>
                 <SettingsPage />
+              </RoleGuard>
+            }
+          />
+          {/* Convites */}
+          <Route
+            path="convites"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <InvitesPage />
+              </RoleGuard>
+            }
+          />
+          {/* Auditoria */}
+          <Route
+            path="auditoria"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <AuditPage />
+              </RoleGuard>
+            }
+          />
+          {/* Painel do Síndico */}
+          <Route
+            path="painel-sindico"
+            element={
+              <RoleGuard roles={MANAGEMENT}>
+                <SyndicDashboardPage />
               </RoleGuard>
             }
           />

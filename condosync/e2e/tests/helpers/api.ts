@@ -1,7 +1,7 @@
 ﻿import fs from 'fs';
 import path from 'path';
 
-const BASE = 'http://localhost/api/v1';
+const BASE = 'http://localhost:3333/api/v1';
 
 export interface AuthSession {
   accessToken: string;
@@ -112,4 +112,14 @@ export const CREDS = {
   },
 } as const;
 
-export const CONDO_ID = '905f645e-275a-40eb-9166-13f360a2e58e';
+export const CONDO_ID = (() => {
+  try {
+    const idsFile = path.resolve(__dirname, '../../apps/api/.e2e-test-ids.json');
+    const raw = fs.readFileSync(idsFile, 'utf-8');
+    const { condominiumId } = JSON.parse(raw);
+    return condominiumId;
+  } catch {
+    // Fallback para hardcoded ID caso arquivo não exista
+    return '905f645e-275a-40eb-9166-13f360a2e58e';
+  }
+})();

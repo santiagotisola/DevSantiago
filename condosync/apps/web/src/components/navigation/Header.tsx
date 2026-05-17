@@ -84,7 +84,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {user?.name.charAt(0).toUpperCase()}
         </div>
         <div className="hidden md:block text-left">
-          <p className="text-sm font-medium leading-none">{user?.name.split(' ')[0]}</p>
+          <p className="text-sm font-medium leading-none">{user?.email}</p>
           <p className="text-xs text-gray-500 capitalize">{user?.role.toLowerCase().replace('_', ' ')}</p>
         </div>
       </button>

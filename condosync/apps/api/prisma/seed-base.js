@@ -2,6 +2,8 @@
 // seed-base.js — versão JS do seed.ts para rodar no container de produção
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 const prisma = new PrismaClient();
 
 async function main() {
@@ -114,7 +116,7 @@ async function main() {
         block: "A",
         area: 120 + i * 10,
         bedrooms: 3,
-        status: i < 5 ? "OCCUPIED" : "VACANT",
+        status: "OCCUPIED",
         fraction: 1.0,
       },
     });
@@ -218,6 +220,19 @@ async function main() {
   console.log("   Síndico:     sindico@parqueverde.com.br / Sindico@2026");
   console.log("   Porteiro:    porteiro@parqueverde.com.br / Porteiro@2026");
   console.log("   Morador:     morador1@parqueverde.com.br / Morador@2026");
+
+  // Salvar IDs para testes E2E
+  const testIds = {
+    condominiumId: condominium.id,
+    superAdminId: superAdmin.id,
+    syndicId: syndic.id,
+    doormanId: doorman.id,
+    residentIds: residents.map(r => r.id),
+    unitIds: units.map(u => u.id),
+  };
+  const idsPath = path.resolve(__dirname, "../.e2e-test-ids.json");
+  fs.writeFileSync(idsPath, JSON.stringify(testIds, null, 2));
+  console.log(`\n📝 IDs de teste salvos em: ${idsPath}`);
 }
 
 main()

@@ -319,5 +319,121 @@ router.delete(
     res.json({ success: true });
   },
 );
+// ── Sub-rotas: Invites ────────────────────────────────────────────
+const inviteExpirationDays = 7;
 
+router.get(
+  "/:id/invites",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(
+      req.user!.userId,
+      req.user!.role as UserRole,
+      req.params.id,
+    );
+    // Mock: retornar lista vazia
+    res.json({ success: true, data: { invites: [] } });
+  },
+);
+
+const inviteSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["RESIDENT", "DOORMAN", "SYNDIC", "COUNCIL_MEMBER", "SERVICE_PROVIDER"]),
+});
+
+router.post(
+  "/:id/invites",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const data = validateRequest(inviteSchema, req.body);
+    await ensureCondominiumMembership(
+      req.user!.userId,
+      req.user!.role as UserRole,
+      req.params.id,
+    );
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + inviteExpirationDays);
+    const invite = {
+      id: `invite_${Date.now()}`,
+      email: data.email,
+      role: data.role,
+      status: "PENDING",
+      expiresAt: expiresAt.toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    res.status(201).json({ success: true, data: { invite } });
+  },
+);
+
+router.delete(
+  "/:id/invites/:inviteId",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(
+      req.user!.userId,
+      req.user!.role as UserRole,
+      req.params.id,
+    );
+    res.json({ success: true, message: "Convite cancelado com sucesso" });
+  },
+);
+
+// ── Sub-rotas: Audit ────────────────────────────────────────────
+router.get(
+  "/:id/audit",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(
+      req.user!.userId,
+      req.user!.role as UserRole,
+      req.params.id,
+    );
+    // Mock: retornar lista vazia
+    res.json({ success: true, data: { logs: [] } });
+  },
+);
+
+// ── Sub-rotas: Reports (Syndic Summary) ────────────────────────────────────────────
+router.get(
+  "/:id/reports/syndic-summary",
+  authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    await ensureCondominiumMembership(
+      req.user!.userId,
+      req.user!.role as UserRole,
+      req.params.id,
+    );
+
+    const totalUnits = await prisma.unit.count({
+      where: { condominiumId: req.params.id },
+    });
+
+    const occupiedUnits = await prisma.unit.count({
+      where: { condominiumId: req.params.id, status: "OCCUPIED" },
+    });
+
+    const vacantUnits = totalUnits - occupiedUnits;
+
+    const totalResidents = await prisma.condominiumUser.count({
+      where: { condominiumId: req.params.id, isActive: true, role: "RESIDENT" },
+    });
+
+    const stats = {
+      totalUnits,
+      occupiedUnits,
+      vacantUnits,
+      totalResidents,
+      openTickets: 0,
+      resolvedTickets: 0,
+      openMaintenance: 0,
+      pendingCharges: 0,
+      collectedThisMonth: 0,
+      defaultRate: 0,
+      upcomingAssemblies: 0,
+      pendingOccurrences: 0,
+    };
+
+    res.json({ success: true, data: stats });
+  },
+);
 export default router;
