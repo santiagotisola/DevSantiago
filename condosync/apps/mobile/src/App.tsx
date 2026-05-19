@@ -5,6 +5,9 @@ import { useAuthStore } from './store/authStore';
 import AuthLayout from './components/layouts/AuthLayout';
 import MobileLayout from './components/layouts/MobileLayout';
 
+// UI
+import { Toaster } from './components/ui/toaster';
+
 // Auth
 import LoginPage from './pages/auth/LoginPage';
 
@@ -30,6 +33,7 @@ import Pets from './pages/morador/Pets';
 import PerfilPage from './pages/shared/PerfilPage';
 import PanicoPage from './pages/shared/PanicoPage';
 import MarketplacePage from './pages/marketplace/MarketplacePage';
+import MarketplaceMoradorPage from './pages/marketplace/MarketplaceMoradorPage';
 
 const DOORMAN_ROLES = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'];
 const SERVICE_PROVIDER_ROLES = ['SERVICE_PROVIDER'];
@@ -56,7 +60,9 @@ export default function App() {
   const isDoorman = DOORMAN_ROLES.includes(role);
 
   return (
-    <BrowserRouter>
+    <>
+      <Toaster />
+      <BrowserRouter>
       <Routes>
         {/* Public — auth only */}
         <Route element={<PublicOnlyRoute />}>
@@ -120,6 +126,7 @@ export default function App() {
           {/* Marketplace */}
           <Route element={<MobileLayout title="Marketplace" showBack />}>
             <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/marketplace/catalogo" element={<MarketplaceMoradorPage />} />
           </Route>
 
           {/* Encomendas (morador view — read only) */}
@@ -131,6 +138,7 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </>
   );
 }
