@@ -142,6 +142,7 @@ router.post('/partners', authorize(...ADMIN_ROLES), async (req: Request, res: Re
 router.put('/partners/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
   const current = await prisma.marketplacePartner.findUnique({ where: { id: req.params.id } });
   if (!current) throw new NotFoundError('Parceiro não encontrado');
+  if (!current.condominiumId) throw new Error('Parceiro sem condomínio');
 
   const ok = await hasAdminAccess(req, current.condominiumId);
   if (!ok) throw new ForbiddenError('Sem permissão para este condomínio');
@@ -159,6 +160,7 @@ router.put('/partners/:id', authorize(...ADMIN_ROLES), async (req: Request, res:
 router.patch('/partners/:id/toggle', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
   const current = await prisma.marketplacePartner.findUnique({ where: { id: req.params.id } });
   if (!current) throw new NotFoundError('Parceiro não encontrado');
+  if (!current.condominiumId) throw new Error('Parceiro sem condomínio');
 
   const ok = await hasAdminAccess(req, current.condominiumId);
   if (!ok) throw new ForbiddenError('Sem permissão para este condomínio');
@@ -203,6 +205,7 @@ router.post('/offers', authorize(...ADMIN_ROLES), async (req: Request, res: Resp
   // Verificar que o parceiro pertence ao condomínio correto
   const partner = await prisma.marketplacePartner.findUnique({ where: { id: body.partnerId } });
   if (!partner) throw new NotFoundError('Parceiro não encontrado');
+  if (!partner.condominiumId) throw new Error('Parceiro sem condomínio');
 
   const ok = await hasAdminAccess(req, partner.condominiumId);
   if (!ok) throw new ForbiddenError('Sem permissão para este condomínio');
@@ -256,6 +259,383 @@ router.delete('/offers/:id', authorize(...ADMIN_ROLES), async (req: Request, res
 
   await prisma.marketplaceOffer.delete({ where: { id: req.params.id } });
   res.json({ success: true });
+});
+
+// ─── MODELO 4: Produtos do Catálogo ──────────────────────────────────
+
+const productSchema = z.object({
+  name: z.string().min(2).max(200),
+  description: z.string().optional(),
+  price: z.coerce.number().positive(),
+  discount: z.coerce.number().min(0).max(100).optional().default(0),
+  shippingCost: z.coerce.number().min(0).optional().default(0),
+  imageUrl: z.string().url().optional(),
+  category: z.string().optional(),
+  stock: z.coerce.number().int().optional().default(-1),
+  partnerId: z.string().uuid(),
+  condominiumId: z.string().uuid().optional(),
+});
+
+// Listar produtos (morador)
+router.get('/products', async (req: Request, res: Response) => {
+  const { partnerId, category } = req.query;
+  const condominiumId = await resolveCondominiumId(req);
+
+  const where: any = { isActive: true };
+  if (condominiumId) where.condominiumId = condominiumId;
+  if (partnerId) where.partnerId = partnerId;
+  if (category) where.category = category;
+
+  const products = await prisma.marketplaceProduct.findMany({
+    where,
+    include: {
+      images: { orderBy: { displayOrder: 'asc' } },
+      reviews: { take: 5 },
+      partner: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+
+  res.json({ success: true, data: products });
+});
+
+// Detalhe do produto
+router.get('/products/:id', async (req: Request, res: Response) => {
+  const product = await prisma.marketplaceProduct.findUnique({
+    where: { id: req.params.id },
+    include: {
+      images: { orderBy: { displayOrder: 'asc' } },
+      reviews: { include: { resident: { select: { name: true, avatarUrl: true } } } },
+      partner: true,
+    },
+  });
+
+  if (!product) throw new NotFoundError('Produto não encontrado');
+  res.json({ success: true, data: product });
+});
+
+// Criar produto (parceiro admin)
+router.post('/products', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const body = validateRequest(productSchema, req.body);
+  const condominiumId = body.condominiumId || (await resolveCondominiumId(req));
+
+  if (!condominiumId) {
+    res.status(400).json({ success: false, message: 'condominiumId obrigatório' });
+    return;
+  }
+
+  const partner = await prisma.marketplacePartner.findUnique({
+    where: { id: body.partnerId },
+  });
+  if (!partner) throw new NotFoundError('Parceiro não encontrado');
+
+  const ok = await hasAdminAccess(req, condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão');
+
+  const finalPrice = body.price * (1 - (body.discount ?? 0) / 100);
+  const product = await prisma.marketplaceProduct.create({
+    data: {
+      ...body,
+      finalPrice,
+      condominiumId: condominiumId!,
+    },
+    include: { images: true },
+  });
+
+  res.status(201).json({ success: true, data: product });
+});
+
+// Editar produto
+router.put('/products/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const current = await prisma.marketplaceProduct.findUnique({
+    where: { id: req.params.id },
+  });
+  if (!current) throw new NotFoundError('Produto não encontrado');
+  if (!current.condominiumId) throw new Error('Produto sem condomínio');
+
+  const ok = await hasAdminAccess(req, current.condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão');
+
+  const body = validateRequest(productSchema.partial(), req.body);
+  const finalPrice = body.price
+    ? body.price * (1 - ((body.discount ?? current.discount.toNumber()) ?? 0) / 100)
+    : current.finalPrice;
+
+  const product = await prisma.marketplaceProduct.update({
+    where: { id: req.params.id },
+    data: { ...body, finalPrice },
+  });
+
+  res.json({ success: true, data: product });
+});
+
+// Deletar produto
+router.delete('/products/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const current = await prisma.marketplaceProduct.findUnique({
+    where: { id: req.params.id },
+  });
+  if (!current) throw new NotFoundError('Produto não encontrado');
+  if (!current.condominiumId) throw new Error('Produto sem condomínio');
+
+  const ok = await hasAdminAccess(req, current.condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão');
+
+  await prisma.marketplaceProduct.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
+// ─── Requisições de Produtos ────────────────────────────────
+
+const requestSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z.coerce.number().int().min(1).default(1),
+  notes: z.string().optional(),
+});
+
+// Criar requisição (morador)
+router.post('/requests', authorize(), async (req: Request, res: Response) => {
+  const body = validateRequest(requestSchema, req.body);
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const product = await prisma.marketplaceProduct.findUnique({
+    where: { id: body.productId },
+    include: { partner: true },
+  });
+  if (!product) throw new NotFoundError('Produto não encontrado');
+  if (!product.condominiumId) throw new Error('Produto sem condomínio');
+
+  const request = await prisma.marketplaceProductRequest.create({
+    data: {
+      productId: body.productId,
+      partnerId: product.partnerId,
+      residentId: user.userId,
+      condominiumId: product.condominiumId,
+      quantity: body.quantity,
+      notes: body.notes,
+    },
+    include: { product: true, partner: true },
+  });
+
+  res.status(201).json({ success: true, data: request });
+});
+
+// Listar minhas requisições (morador)
+router.get('/requests', authorize(), async (req: Request, res: Response) => {
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const requests = await prisma.marketplaceProductRequest.findMany({
+    where: { residentId: user.userId },
+    include: {
+      product: true,
+      partner: true,
+      messages: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: requests });
+});
+
+// Listar requisições do parceiro (admin)
+router.get('/requests/partner', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  // Buscar parceiros do admin
+  const partners = await prisma.marketplacePartner.findMany({
+    where: {
+      createdByCondominiumId: await resolveCondominiumId(req),
+    },
+    select: { id: true },
+  });
+
+  const partnerIds = partners.map((p) => p.id);
+
+  const requests = await prisma.marketplaceProductRequest.findMany({
+    where: { partnerId: { in: partnerIds } },
+    include: {
+      product: true,
+      resident: { select: { name: true, email: true, phone: true } },
+      messages: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: requests });
+});
+
+// Atualizar status da requisição (parceiro)
+router.patch('/requests/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const { status, quotedPrice } = req.body;
+  const request = await prisma.marketplaceProductRequest.findUnique({
+    where: { id: req.params.id },
+    include: { partner: true },
+  });
+  if (!request) throw new NotFoundError('Requisição não encontrada');
+
+  const ok = await hasAdminAccess(req, request.condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão');
+
+  const updated = await prisma.marketplaceProductRequest.update({
+    where: { id: req.params.id },
+    data: {
+      status,
+      quotedPrice: status === 'QUOTED' ? quotedPrice : undefined,
+      quotedAt: status === 'QUOTED' ? new Date() : undefined,
+      respondedAt: status !== 'PENDING' ? new Date() : undefined,
+      acceptedAt: status === 'ACCEPTED' ? new Date() : undefined,
+    },
+  });
+
+  res.json({ success: true, data: updated });
+});
+
+// ─── Chat (Mensagens) ───────────────────────────────────────
+
+const chatSchema = z.object({
+  requestId: z.string().uuid(),
+  message: z.string().min(1),
+});
+
+// Enviar mensagem
+router.post('/chat', authorize(), async (req: Request, res: Response) => {
+  const body = validateRequest(chatSchema, req.body);
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const request = await prisma.marketplaceProductRequest.findUnique({
+    where: { id: body.requestId },
+  });
+  if (!request) throw new NotFoundError('Requisição não encontrada');
+
+  const message = await prisma.marketplaceChatMessage.create({
+    data: {
+      requestId: body.requestId,
+      senderId: user.userId,
+      message: body.message,
+      isFromPartner: user.role === 'SUPER_ADMIN' || user.role === 'CONDOMINIUM_ADMIN',
+    },
+  });
+
+  res.status(201).json({ success: true, data: message });
+});
+
+// Listar mensagens
+router.get('/chat/:requestId', authorize(), async (req: Request, res: Response) => {
+  const messages = await prisma.marketplaceChatMessage.findMany({
+    where: { requestId: req.params.requestId },
+    include: { sender: { select: { name: true, avatarUrl: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  res.json({ success: true, data: messages });
+});
+
+// ─── Favoritos ──────────────────────────────────────────────
+
+// Adicionar aos favoritos
+router.post('/favorites/:productId', authorize(), async (req: Request, res: Response) => {
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const favorite = await prisma.residentFavorite.create({
+    data: {
+      residentId: user.userId,
+      productId: req.params.productId,
+    },
+  });
+
+  res.status(201).json({ success: true, data: favorite });
+});
+
+// Remover dos favoritos
+router.delete('/favorites/:productId', authorize(), async (req: Request, res: Response) => {
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  await prisma.residentFavorite.deleteMany({
+    where: {
+      residentId: user.userId,
+      productId: req.params.productId,
+    },
+  });
+
+  res.json({ success: true });
+});
+
+// Listar meus favoritos
+router.get('/favorites', authorize(), async (req: Request, res: Response) => {
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const favorites = await prisma.residentFavorite.findMany({
+    where: { residentId: user.userId },
+    include: { product: { include: { partner: true } } },
+  });
+
+  res.json({ success: true, data: favorites });
+});
+
+// ─── Avaliações ─────────────────────────────────────────────
+
+const reviewSchema = z.object({
+  productId: z.string().uuid(),
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().optional(),
+});
+
+// Criar avaliação
+router.post('/reviews', authorize(), async (req: Request, res: Response) => {
+  const body = validateRequest(reviewSchema, req.body);
+  const { user } = req;
+  if (!user) throw new ForbiddenError('Usuário não autenticado');
+
+  const product = await prisma.marketplaceProduct.findUnique({
+    where: { id: body.productId },
+    include: { partner: true },
+  });
+  if (!product) throw new NotFoundError('Produto não encontrado');
+
+  const review = await prisma.marketplaceProductReview.create({
+    data: {
+      productId: body.productId,
+      partnerId: product.partnerId,
+      residentId: user.userId,
+      rating: body.rating,
+      comment: body.comment,
+    },
+  });
+
+  // Atualizar rating do produto
+  const avgRating = await prisma.marketplaceProductReview.aggregate({
+    where: { productId: body.productId },
+    _avg: { rating: true },
+    _count: true,
+  });
+
+  await prisma.marketplaceProduct.update({
+    where: { id: body.productId },
+    data: {
+      rating: avgRating._avg.rating || 0,
+      reviewCount: avgRating._count,
+    },
+  });
+
+  res.status(201).json({ success: true, data: review });
+});
+
+// Listar avaliações do produto
+router.get('/reviews/:productId', async (req: Request, res: Response) => {
+  const reviews = await prisma.marketplaceProductReview.findMany({
+    where: { productId: req.params.productId },
+    include: { resident: { select: { name: true, avatarUrl: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: reviews });
 });
 
 // ─── Categories meta ─────────────────────────────────────────
