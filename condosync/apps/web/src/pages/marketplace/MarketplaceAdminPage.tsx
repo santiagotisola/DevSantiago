@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/ui/toaster';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 type Partner = {
   id: string;
@@ -42,6 +43,8 @@ const empty = { name: '', category: 'servicos', description: '', logoUrl: '', we
 
 export default function MarketplaceAdminPage() {
   const qc = useQueryClient();
+  const { selectedCondominiumId, user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [tab, setTab] = useState<'partners' | 'offers'>('partners');
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -51,18 +54,27 @@ export default function MarketplaceAdminPage() {
 
   // Queries
   const { data: partners, isLoading } = useQuery({
-    queryKey: ['marketplace-partners-admin'],
-    queryFn: async () => (await api.get('/marketplace/partners/admin')).data.data as Partner[],
+    queryKey: ['marketplace-partners-admin', selectedCondominiumId],
+    queryFn: async () => {
+      const params = isSuperAdmin && selectedCondominiumId ? `?condominiumId=${selectedCondominiumId}` : '';
+      return (await api.get(`/marketplace/partners/admin${params}`)).data.data as Partner[];
+    },
   });
 
   const { data: offers } = useQuery({
-    queryKey: ['marketplace-offers-admin'],
-    queryFn: async () => (await api.get('/marketplace/offers')).data.data as (Offer & { partner: Partner })[],
+    queryKey: ['marketplace-offers-admin', selectedCondominiumId],
+    queryFn: async () => {
+      const params = isSuperAdmin && selectedCondominiumId ? `?condominiumId=${selectedCondominiumId}` : '';
+      return (await api.get(`/marketplace/offers${params}`)).data.data as (Offer & { partner: Partner })[];
+    },
   });
 
   // Mutations
   const createPartner = useMutation({
-    mutationFn: () => api.post('/marketplace/partners', { ...form }),
+    mutationFn: () => api.post('/marketplace/partners', {
+      ...form,
+      ...(selectedCondominiumId ? { condominiumId: selectedCondominiumId } : {}),
+    }),
     onSuccess: () => { toast('Parceiro criado!', 'success'); qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }); setShowPartnerForm(false); setForm(empty); },
     onError: () => toast('Erro ao criar parceiro', 'error'),
   });

@@ -20,7 +20,7 @@ RUN npm run build
 # Production stage
 FROM nginx:1.25-alpine AS production
 
-COPY --from=builder /app/apps/mobile/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/mobile/dist /usr/share/nginx/html/app
 COPY apps/mobile/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

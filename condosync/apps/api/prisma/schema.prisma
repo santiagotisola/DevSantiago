@@ -260,8 +260,10 @@ model Condominium {
   assemblies         Assembly[]
   lostAndFoundItems  LostAndFound[]
   documents          CondominiumDocument[]
-  panicAlerts        PanicAlert[]
-  visitorRecurrences VisitorRecurrence[]
+  panicAlerts           PanicAlert[]
+  visitorRecurrences    VisitorRecurrence[]
+  marketplacePartners   MarketplacePartner[]
+  marketplaceOffers     MarketplaceOffer[]
 
   @@map("condominiums")
 }
@@ -1173,35 +1175,39 @@ enum MarketplaceOfferStatus {
 }
 
 model MarketplacePartner {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  logoUrl     String?
-  website     String?
-  phone       String?
-  email       String?
-  category    String   // alimentacao, saude, educacao, servicos, lazer, outro
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String      @id @default(uuid())
+  condominium    Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId  String
+  name           String
+  description    String?
+  logoUrl        String?
+  website        String?
+  phone          String?
+  email          String?
+  category       String   // alimentacao, saude, educacao, servicos, lazer, outro
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  offers      MarketplaceOffer[]
+  offers         MarketplaceOffer[]
 
   @@map("marketplace_partners")
 }
 
 model MarketplaceOffer {
-  id          String                 @id @default(uuid())
-  partner     MarketplacePartner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  partnerId   String
-  title       String
-  description String
-  discount    String?
-  couponCode  String?
-  validUntil  DateTime?
-  status      MarketplaceOfferStatus @default(ACTIVE)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  id             String                 @id @default(uuid())
+  condominium    Condominium            @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId  String
+  partner        MarketplacePartner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId      String
+  title          String
+  description    String
+  discount       String?
+  couponCode     String?
+  validUntil     DateTime?
+  status         MarketplaceOfferStatus @default(ACTIVE)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   @@map("marketplace_offers")
 }

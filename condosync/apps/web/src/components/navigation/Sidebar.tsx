@@ -153,7 +153,7 @@ const navItems: NavItem[] = [
     label: "Marketplace",
     to: "/marketplace",
     icon: Building2,
-    roles: ["SUPER_ADMIN"],
+    roles: ["SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC"],
   },
   {
     label: "Minha Portaria",

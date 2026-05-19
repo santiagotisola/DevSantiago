@@ -435,7 +435,7 @@ export default function App() {
           <Route
             path="marketplace"
             element={
-              <RoleGuard roles={["SUPER_ADMIN"]}>
+              <RoleGuard roles={["SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC"]}>
                 <MarketplaceAdminPage />
               </RoleGuard>
             }
