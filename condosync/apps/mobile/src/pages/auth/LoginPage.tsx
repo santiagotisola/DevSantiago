@@ -46,7 +46,7 @@ export default function LoginPage() {
 
       {/* Grid de atalhos/serviços */}
       <div className="grid grid-cols-2 gap-4 px-6 mt-6 mb-2">
-        <a href="#login" className="flex flex-col items-center bg-white/10 rounded-xl p-3 hover:bg-blue-700/30 transition">
+        <a href="http://homologacao/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center bg-white/10 rounded-xl p-3 hover:bg-blue-700/30 transition">
           <LogIn size={24} className="text-blue-400 mb-1" />
           <span className="text-xs text-white">Acesso ao Sistema</span>
         </a>
