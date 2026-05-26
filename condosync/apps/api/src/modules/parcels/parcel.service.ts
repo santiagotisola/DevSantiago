@@ -119,14 +119,16 @@ export class ParcelService {
         NotificationService.enqueue({
           userId: u.userId,
           type: "PARCEL",
-          title: "Encomenda recebida",
-          message: `Nova encomenda ${data.carrier ? `da ${data.carrier}` : ""} aguarda retirada`,
+          title: "📦 Encomenda recebida",
+          message: `Nova encomenda ${data.carrier ? `da ${data.carrier}` : ""}${data.senderName ? ` de ${data.senderName}` : ""} aguarda retirada${data.storageLocation ? ` em ${data.storageLocation}` : ""}`,
           data: {
             parcelId: parcel.id,
             storageLocation: data.storageLocation,
             trackingCode: data.trackingCode,
+            carrier: data.carrier,
+            senderName: data.senderName,
           },
-          channels: ["inapp", "email"],
+          channels: ["inapp", "email", "whatsapp"],
         }),
       ),
     );
@@ -161,7 +163,7 @@ export class ParcelService {
         `Encomenda não pode ser retirada com status ${parcel.status}`,
       );
     }
-    return prisma.parcel.update({
+    const updatedParcel = await prisma.parcel.update({
       where: { id },
       data: {
         status: ParcelStatus.PICKED_UP,
@@ -170,6 +172,27 @@ export class ParcelService {
         pickupSignature: signature,
       },
     });
+
+    // Notificar moradores sobre retirada
+    const unitUsers = await prisma.condominiumUser.findMany({
+      where: { unitId: parcel.unitId, isActive: true },
+      select: { userId: true },
+    });
+
+    await Promise.all(
+      unitUsers.map((u) =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: "PARCEL",
+          title: "📦 Encomenda retirada",
+          message: `Encomenda ${parcel.carrier ? `da ${parcel.carrier}` : ""} foi retirada por ${pickedUpBy}`,
+          data: { parcelId: parcel.id, pickedUpBy, pickedUpAt: new Date() },
+          channels: ["inapp", "email", "whatsapp"],
+        }),
+      ),
+    );
+
+    return updatedParcel;
   }
 
   async cancel(id: string, actor: ParcelActor, reason?: string) {

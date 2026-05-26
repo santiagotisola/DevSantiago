@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Layouts
 import AuthLayout from './components/layouts/AuthLayout';
@@ -58,6 +59,7 @@ export default function App() {
   const { user } = useAuthStore();
   const role = user?.role ?? '';
   const isDoorman = DOORMAN_ROLES.includes(role);
+  usePushNotifications();
 
   return (
     <>

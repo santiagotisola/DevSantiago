@@ -169,10 +169,10 @@ export class VisitorService {
         NotificationService.enqueue({
           userId: u.userId,
           type: "VISITOR",
-          title: "Visitante chegou",
-          message: `${visitor.name} entrou no condomínio`,
-          data: { visitorId: visitor.id },
-          channels: ["inapp", "email"],
+          title: "🚪 Visitante chegou",
+          message: `${visitor.name} está entrando no condomínio${visitor.company ? ` (${visitor.company})` : ""}${visitor.reason ? " — " + visitor.reason : ""}`,
+          data: { visitorId: visitor.id, visitorName: visitor.name, phone: visitor.phone, company: visitor.company, reason: visitor.reason },
+          channels: ["inapp", "email", "whatsapp"],
         }),
       ),
     );
@@ -191,10 +191,31 @@ export class VisitorService {
 
     await this.ensureUnitAccess(actor.userId, actor.role, visitor.unitId);
 
-    return prisma.visitor.update({
+    const updatedVisitor = await prisma.visitor.update({
       where: { id: visitorId },
       data: { status: VisitorStatus.LEFT, exitAt: new Date(), registeredBy },
     });
+
+    // Notificar moradores sobre saída
+    const unitUsers = await prisma.condominiumUser.findMany({
+      where: { unitId: visitor.unitId, isActive: true },
+      select: { userId: true },
+    });
+
+    await Promise.all(
+      unitUsers.map((u) =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: "VISITOR",
+          title: "🚪 Visitante saiu",
+          message: `${visitor.name} saiu do condomínio`,
+          data: { visitorId: visitor.id, exitAt: new Date() },
+          channels: ["inapp", "email", "whatsapp"],
+        }),
+      ),
+    );
+
+    return updatedVisitor;
   }
 
   async authorize(visitorId: string, actor: VisitorActor, authorized: boolean) {

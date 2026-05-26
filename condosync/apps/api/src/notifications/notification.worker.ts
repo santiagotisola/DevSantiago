@@ -4,6 +4,8 @@ import { logger } from '../config/logger';
 import { NotificationPayload } from './types';
 import { InAppChannel } from './channels/inapp.channel';
 import { EmailChannel } from './channels/email.channel';
+import { WhatsAppChannel } from './channels/whatsapp.channel';
+import { PushChannel } from './channels/push.channel';
 
 const log = logger.child({ module: 'notification.worker' });
 
@@ -26,9 +28,17 @@ export const notificationWorker = new Worker<NotificationPayload>(
       });
     }
 
-    // if (payload.channels.includes('push')) {
-    //   await PushChannel.send(payload); // Not implemented yet
-    // }
+    if (payload.channels.includes('whatsapp')) {
+      await WhatsAppChannel.send(payload).catch(err => {
+        log.error('WhatsApp Channel failed', err);
+      });
+    }
+
+    if (payload.channels.includes('push')) {
+      await PushChannel.send(payload).catch(err => {
+        log.error('Push Channel failed', err);
+      });
+    }
     
     log.info(`Notification job ${job.id} processed successfully`);
   },

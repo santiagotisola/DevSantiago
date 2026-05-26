@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'CondoSync App',
         short_name: 'CondoSync',
@@ -24,7 +27,7 @@ export default defineConfig({
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
+      injectManifest: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
     }),
   ],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },

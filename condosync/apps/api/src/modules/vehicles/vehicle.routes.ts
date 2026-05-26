@@ -9,6 +9,7 @@ import { validateRequest } from "../../utils/validateRequest";
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { env } from "../../config/env";
+import { NotificationService } from "../../notifications/notification.service";
 
 const router = Router();
 router.use(authenticate);
@@ -208,6 +209,29 @@ router.post(
     const log = await prisma.vehicleAccessLog.create({
       data: { ...data, vehicleId, unitId, registeredBy: req.user!.userId },
     });
+
+    // Notifica morador se o veículo pertence a uma unidade identificada
+    if (unitId) {
+      const unitUsers = await prisma.condominiumUser.findMany({
+        where: { unitId, isActive: true, role: 'RESIDENT' },
+        select: { userId: true },
+      });
+      const vehicleInfo = vehicleId
+        ? await prisma.vehicle.findUnique({ where: { id: vehicleId }, select: { brand: true, model: true, color: true, plate: true } })
+        : null;
+
+      await Promise.all(unitUsers.map(u =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: 'VISITOR',
+          title: '🚗 Veículo entrou no condomínio',
+          message: `Veículo ${vehicleInfo ? `${vehicleInfo.brand} ${vehicleInfo.model} ${vehicleInfo.color}` : data.plate} (${data.plate}) registrou entrada`,
+          data: { logId: log.id, plate: data.plate, vehicleId, unitId },
+          channels: ['inapp', 'whatsapp'],
+        })
+      ));
+    }
+
     res.status(201).json({ success: true, data: { log } });
   },
 );
@@ -247,10 +271,34 @@ router.patch(
       }
     }
 
-    const log = await prisma.vehicleAccessLog.update({
+    const log = await prisma.vehicleAccessLog.update(
+      {
       where: { id: req.params.id },
       data: { exitAt: new Date() },
     });
+
+    // Notifica morador sobre saída do veículo
+    const logWithUnit = await prisma.vehicleAccessLog.findUnique({
+      where: { id: req.params.id },
+      select: { unitId: true, plate: true, vehicle: { select: { brand: true, model: true, color: true } } },
+    });
+    if (logWithUnit?.unitId) {
+      const unitUsers = await prisma.condominiumUser.findMany({
+        where: { unitId: logWithUnit.unitId, isActive: true, role: 'RESIDENT' },
+        select: { userId: true },
+      });
+      await Promise.all(unitUsers.map(u =>
+        NotificationService.enqueue({
+          userId: u.userId,
+          type: 'VISITOR',
+          title: '🚗 Veículo saiu do condomínio',
+          message: `Veículo ${logWithUnit.vehicle ? `${logWithUnit.vehicle.brand} ${logWithUnit.vehicle.model}` : logWithUnit.plate} (${logWithUnit.plate}) registrou saída`,
+          data: { logId: req.params.id, plate: logWithUnit.plate },
+          channels: ['inapp', 'whatsapp'],
+        })
+      ));
+    }
+
     res.json({ success: true, data: { log } });
   },
 );

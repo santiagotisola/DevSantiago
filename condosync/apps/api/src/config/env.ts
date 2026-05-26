@@ -29,6 +29,10 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   // Sentry — monitoramento de erros em produção
   SENTRY_DSN: z.string().optional(),
+  // VAPID — Push Notifications
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_EMAIL: z.string().email().optional().default('noreply@condosync.com.br'),
 });
 
 const parsed = envSchema.safeParse(process.env);

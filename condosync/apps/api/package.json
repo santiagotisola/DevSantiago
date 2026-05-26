@@ -51,6 +51,7 @@
     "sharp": "^0.34.5",
     "socket.io": "^4.7.4",
     "uuid": "^9.0.1",
+    "web-push": "^3.6.7",
     "winston": "^3.13.0",
     "xss": "^1.0.15",
     "zod": "^3.22.4"
@@ -68,6 +69,7 @@
     "@types/nodemailer": "^6.4.23",
     "@types/supertest": "^7.2.0",
     "@types/uuid": "^9.0.8",
+    "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.0.18",
     "prisma": "^5.10.2",
     "supertest": "^7.2.2",

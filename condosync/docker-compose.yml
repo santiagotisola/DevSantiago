@@ -40,6 +40,10 @@ services:
       BCRYPT_ROUNDS: "12"
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}" # Opcional: defina no .env ou variável de ambiente para habilitar o Assistente IA
+      # Push Notifications (VAPID)
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-BP_cWYEC808cU465R7XrVh0UXquJ4Bt0LaClrs5nxMNnRbqz7EoKwsjsAcSmE7xp-qRhiabgUw2n3hc87oyL514}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-isa6zWj41mZZLBdCWWB42IAr7yHMdaUWQ8p_fSwfx5M}"
+      VAPID_EMAIL: "${VAPID_EMAIL:-noreply@condosync.com.br}"
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_USER: condosync

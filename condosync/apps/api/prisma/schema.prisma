@@ -173,6 +173,7 @@ model User {
   // NOVO: Marketplace
   productRequests    MarketplaceProductRequest[]
   chatMessages       MarketplaceChatMessage[]
+  pushSubscriptions  PushSubscription[]
   productReviews     MarketplaceProductReview[]
   favorites          ResidentFavorite[]
   loyaltyPoints      LoyaltyPoints?
@@ -508,6 +509,20 @@ model Announcement {
   updatedAt     DateTime    @updatedAt
 
   @@map("announcements")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_subscriptions")
 }
 
 model Notification {
