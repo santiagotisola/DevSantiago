@@ -5,11 +5,44 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 
+interface DefaultCredentials {
+  email: string;
+  password: string;
+}
+
+const DEFAULT_CREDENTIALS_KEY = 'condosync-default-login-mobile';
+const DEFAULT_HOMOLOG_CREDENTIALS: DefaultCredentials = {
+  email: 'atendimentveredasbosque@gmail.com',
+  password: 'Admin@2026',
+};
+
+function getInitialCredentials(): DefaultCredentials {
+  if (typeof window === 'undefined') return { email: '', password: '' };
+
+  const isHomologOrLocal = ['homologacao', 'localhost'].includes(window.location.hostname);
+  if (!isHomologOrLocal) return { email: '', password: '' };
+
+  try {
+    const stored = window.localStorage.getItem(DEFAULT_CREDENTIALS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<DefaultCredentials>;
+      if (parsed.email && parsed.password) {
+        return { email: parsed.email, password: parsed.password };
+      }
+    }
+  } catch {
+    // Ignora erro de parse e usa o padrão de homologação.
+  }
+
+  return DEFAULT_HOMOLOG_CREDENTIALS;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const initialCredentials = getInitialCredentials();
+  const [email, setEmail] = useState(initialCredentials.email);
+  const [password, setPassword] = useState(initialCredentials.password);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -24,6 +57,17 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/login', { email, password });
       const { user, accessToken, refreshToken } = data.data;
       setAuth(user, accessToken, refreshToken);
+
+      if (typeof window !== 'undefined') {
+        const isHomologOrLocal = ['homologacao', 'localhost'].includes(window.location.hostname);
+        if (isHomologOrLocal) {
+          window.localStorage.setItem(
+            DEFAULT_CREDENTIALS_KEY,
+            JSON.stringify({ email, password }),
+          );
+        }
+      }
+
       navigate('/', { replace: true });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Credenciais inválidas';

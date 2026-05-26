@@ -29,6 +29,7 @@ export default function BottomNav() {
     { to: '/portaria/visitantes', icon: Shield, label: 'Visitantes' },
     { to: '/portaria/encomendas', icon: Package, label: 'Entregas' },
     { to: '/portaria/veiculos', icon: Car, label: 'Veículos' },
+    { to: '/marketplace', icon: ShoppingBag, label: 'Ofertas' },
     { to: '/panico', icon: AlertTriangle, label: 'PÂNICO', danger: true },
     { to: '/perfil', icon: User, label: 'Perfil' },
   ];

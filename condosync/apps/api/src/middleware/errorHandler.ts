@@ -60,6 +60,9 @@ export class RateLimitError extends AppError {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof AppError && err.isOperational) {
+    if (err instanceof ValidationError) {
+      logger.error(`Validation Error on ${req.method} ${req.path}:`, err.details);
+    }
     return res.status(err.statusCode).json({
       success: false,
       error: {

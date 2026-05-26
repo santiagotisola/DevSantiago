@@ -274,6 +274,7 @@ model Condominium {
   marketplaceOffers     MarketplaceOffer[]
   marketplacePartnerLinks CondominiumMarketplacePartner[]
   marketplaceProducts   MarketplaceProduct[]
+  marketplaceCategories MarketplaceCategory[]
   productRequests       MarketplaceProductRequest[]
   purchaseHistory       PurchaseHistory[] @relation("PurchaseHistoryCondominium")
 
@@ -1471,8 +1472,31 @@ model MarketplaceOffer {
   @@map("marketplace_offers")
 }
 
-// ─── Botão de Pânico ── MEL-19 ────────────────────────────────────────────────
+// NOVO: Categorias customizáveis por condomínio
+model MarketplaceCategory {
+  id              String                @id @default(uuid())
+  condominium     Condominium           @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId   String
+  
+  name            String                // ex: "Alimentação", "Saúde"
+  label           String?               // ex: "Alimentação e Bebidas" (exibição)
+  slug            String                // ex: "alimentacao" (identificador único)
+  description     String?               // ex: "Produtos e serviços de alimentação"
+  icon            String?               // ex: "🍔" ou "utensils" (Lucide icon)
+  color           String?               // ex: "#FF6B6B" (cor da categoria)
+  displayOrder    Int                   @default(0)
+  isActive        Boolean               @default(true)
+  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
+  @@unique([condominiumId, slug])
+  @@index([condominiumId])
+  @@map("marketplace_categories")
+}
+
+// ─── Ofertas ───────────────────────────────────────────────────
+// ─── Botão de Pânico ── MEL-19 ────────────────────────────────────────────────
 model PanicAlert {
   id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
@@ -1487,7 +1511,6 @@ model PanicAlert {
 }
 
 // ─── Visitantes Recorrentes ────────────────────────────────────────────────────
-
 model VisitorRecurrence {
   id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)

@@ -64,6 +64,7 @@ export default function HomeGrid() {
     { to: '/portaria/veiculos', icon: Car, label: 'Veículos', color: 'text-gray-600', bg: 'bg-gray-100' },
     { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', color: 'text-green-600', bg: 'bg-green-50' },
     { to: '/avisos', icon: Bell, label: 'Avisos', color: 'text-purple-600', bg: 'bg-purple-50' },
+    { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace', color: 'text-emerald-600', bg: 'bg-emerald-50' },
     {
       to: '/panico',
       icon: AlertTriangle,

@@ -14,14 +14,45 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+const DEFAULT_HOMOLOG_CREDENTIALS: LoginForm = {
+  email: 'atendimentveredasbosque@gmail.com',
+  password: 'Admin@2026',
+};
+
+const DEFAULT_CREDENTIALS_KEY = 'condosync-default-login-web';
+
+function getInitialCredentials(): LoginForm {
+  if (typeof window === 'undefined') return { email: '', password: '' };
+
+  const isHomologOrLocal = ['homologacao', 'localhost'].includes(window.location.hostname);
+  if (!isHomologOrLocal) return { email: '', password: '' };
+
+  try {
+    const stored = window.localStorage.getItem(DEFAULT_CREDENTIALS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<LoginForm>;
+      if (parsed.email && parsed.password) {
+        return { email: parsed.email, password: parsed.password };
+      }
+    }
+  } catch {
+    // Ignora erro de parse e usa o padrão de homologação.
+  }
+
+  return DEFAULT_HOMOLOG_CREDENTIALS;
+}
+
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  const initialCredentials = getInitialCredentials();
+
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    defaultValues: initialCredentials,
   });
 
   const onSubmit = async (data: LoginForm) => {
@@ -30,6 +61,14 @@ export function LoginPage() {
       const response = await api.post('/auth/login', data);
       const { user, accessToken, refreshToken } = response.data.data;
       setAuth(user, accessToken, refreshToken);
+
+      if (typeof window !== 'undefined') {
+        const isHomologOrLocal = ['homologacao', 'localhost'].includes(window.location.hostname);
+        if (isHomologOrLocal) {
+          window.localStorage.setItem(DEFAULT_CREDENTIALS_KEY, JSON.stringify(data));
+        }
+      }
+
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Erro ao fazer login. Tente novamente.');

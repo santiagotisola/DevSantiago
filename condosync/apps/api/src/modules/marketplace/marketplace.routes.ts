@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
 import { authenticate, authorize } from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
-import { ForbiddenError, NotFoundError } from '../../middleware/errorHandler';
+import { AppError, ForbiddenError, NotFoundError } from '../../middleware/errorHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -31,6 +31,18 @@ const offerSchema = z.object({
   condominiumId: z.string().uuid().optional(),
 });
 
+const categorySchema = z.object({
+  name: z.string().min(2).max(100),
+  slug: z.string().optional(),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+  label: z.string().optional(),
+  color: z.string().optional(),
+  displayOrder: z.number().optional(),
+  isActive: z.boolean().optional(),
+  condominiumId: z.string().uuid().optional(),
+});
+
 const CATEGORY_LABELS: Record<string, string> = {
   alimentacao: 'Alimentação',
   saude: 'Saúde & Bem-estar',
@@ -48,7 +60,13 @@ async function resolveCondominiumId(req: Request): Promise<string | null> {
   // SUPER_ADMIN pode passar condominiumId explícito via query/body
   if (user.role === 'SUPER_ADMIN') {
     const id = (req.query.condominiumId as string) ?? req.body.condominiumId ?? null;
-    return id ?? null;
+    if (id) return id;
+    // Fallback: busca primeiro condomínio associado
+    const membership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, isActive: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+    return membership?.condominiumId ?? null;
   }
 
   // Outros roles: busca o primeiro vínculo ativo do usuário
@@ -122,8 +140,8 @@ router.post('/partners', authorize(...ADMIN_ROLES), async (req: Request, res: Re
   if (!condominiumId) {
     const resolved = await resolveCondominiumId(req);
     if (!resolved) {
-      res.status(400).json({ success: false, message: 'condominiumId é obrigatório' });
-      return;
+      console.error('[Marketplace] Failed to resolve condominiumId for user:', req.user?.userId);
+      throw new Error('Não foi possível determinar o condomínio. Verifique se você está vinculado a um condomínio válido.');
     }
     condominiumId = resolved;
   }
@@ -195,6 +213,21 @@ router.get('/offers', async (req: Request, res: Response) => {
     include: { partner: true },
     orderBy: { createdAt: 'desc' },
   });
+  res.json({ success: true, data: offers });
+});
+
+// Admin: List all offers for admin panel (without status filters)
+router.get('/offers/admin', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const condominiumId = await resolveCondominiumId(req);
+  const where: any = { partner: { isActive: true } };
+  if (condominiumId) where.condominiumId = condominiumId;
+
+  const offers = await prisma.marketplaceOffer.findMany({
+    where,
+    include: { partner: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
   res.json({ success: true, data: offers });
 });
 
@@ -439,6 +472,26 @@ router.get('/requests', authorize(), async (req: Request, res: Response) => {
   res.json({ success: true, data: requests });
 });
 
+// Admin: List all product requests for condominium
+router.get('/requests/admin', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const condominiumId = await resolveCondominiumId(req);
+  const where: any = {};
+  if (condominiumId) where.condominiumId = condominiumId;
+
+  const requests = await prisma.marketplaceProductRequest.findMany({
+    where,
+    include: {
+      product: true,
+      partner: true,
+      resident: true,
+      messages: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: requests });
+});
+
 // Listar requisições do parceiro (admin)
 router.get('/requests/partner', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
   const { user } = req;
@@ -638,9 +691,107 @@ router.get('/reviews/:productId', async (req: Request, res: Response) => {
   res.json({ success: true, data: reviews });
 });
 
-// ─── Categories meta ─────────────────────────────────────────
-router.get('/categories', async (_req: Request, res: Response) => {
-  res.json({ success: true, data: Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label })) });
+// ─── Custom Categories CRUD ──────────────────────────────────
+// Get all custom categories
+router.get('/categories', async (req: Request, res: Response) => {
+  const params = new URLSearchParams(req.query as Record<string, string>);
+  const providedCondominiumId = params.get('condominiumId');
+  
+  let condominiumId = providedCondominiumId;
+  if (!condominiumId) {
+    const resolved = await resolveCondominiumId(req);
+    condominiumId = resolved;
+  }
+
+  if (!condominiumId) {
+    return res.json({ success: true, data: Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label })) });
+  }
+
+  const categories = await prisma.marketplaceCategory.findMany({
+    where: { condominiumId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: categories });
+});
+
+// Admin: List all custom categories for admin panel
+router.get('/categories/admin', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const condominiumId = await resolveCondominiumId(req);
+  const where: any = {};
+  if (condominiumId) where.condominiumId = condominiumId;
+
+  const categories = await prisma.marketplaceCategory.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ success: true, data: categories });
+});
+
+// Create custom category
+router.post('/categories', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const body = validateRequest(categorySchema, req.body);
+
+  let condominiumId = body.condominiumId;
+  if (!condominiumId) {
+    const resolved = await resolveCondominiumId(req);
+    if (!resolved) {
+      throw new AppError('Não foi possível determinar o condomínio. Selecione um condomínio.', 400);
+    }
+    condominiumId = resolved;
+  }
+
+  const ok = await hasAdminAccess(req, condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão para este condomínio');
+
+  const slug = body.slug || body.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+
+  const category = await prisma.marketplaceCategory.create({
+    data: { 
+      name: body.name,
+      slug,
+      description: body.description || null,
+      icon: body.icon || null,
+      label: body.label || body.name,
+      color: body.color || null,
+      displayOrder: body.displayOrder || 0,
+      isActive: body.isActive !== undefined ? body.isActive : true,
+      condominiumId,
+    },
+  });
+
+  res.status(201).json({ success: true, data: category });
+});
+
+// Update custom category
+router.put('/categories/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const current = await prisma.marketplaceCategory.findUnique({ where: { id: req.params.id } });
+  if (!current) throw new NotFoundError('Categoria não encontrada');
+
+  const ok = await hasAdminAccess(req, current.condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão para editar esta categoria');
+
+  const body = validateRequest(categorySchema.partial(), req.body);
+  const updated = await prisma.marketplaceCategory.update({
+    where: { id: req.params.id },
+    data: body,
+  });
+
+  res.json({ success: true, data: updated });
+});
+
+// Delete custom category
+router.delete('/categories/:id', authorize(...ADMIN_ROLES), async (req: Request, res: Response) => {
+  const current = await prisma.marketplaceCategory.findUnique({ where: { id: req.params.id } });
+  if (!current) throw new NotFoundError('Categoria não encontrada');
+
+  const ok = await hasAdminAccess(req, current.condominiumId);
+  if (!ok) throw new ForbiddenError('Sem permissão para deletar esta categoria');
+
+  await prisma.marketplaceCategory.delete({ where: { id: req.params.id } });
+
+  res.json({ success: true, message: 'Categoria deletada' });
 });
 
 export default router;

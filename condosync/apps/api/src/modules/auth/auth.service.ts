@@ -26,6 +26,11 @@ export interface LoginDTO {
   password: string;
 }
 
+const LOGIN_EMAIL_ALIASES: Record<string, string> = {
+  // Alias de homologação para manter compatibilidade com credencial padrão informada.
+  'atendimentveredasbosque@gmail.com': 'atendimentoveredasbosque@gmail.com',
+};
+
 export class AuthService {
   private generateTokens(payload: JwtPayload) {
     const accessToken = (jwt.sign as any)({ ...payload }, env.JWT_SECRET, {
@@ -79,10 +84,14 @@ export class AuthService {
   }
 
   async login(data: LoginDTO, ipAddress?: string) {
-    const isCpf = /^\d{11}$/.test(data.email.replace(/[.\-]/g, ''));
+    const normalizedIdentifier =
+      LOGIN_EMAIL_ALIASES[data.email.trim().toLowerCase()] ??
+      data.email.trim().toLowerCase();
+
+    const isCpf = /^\d{11}$/.test(normalizedIdentifier.replace(/[.\-]/g, ''));
     const whereClause = isCpf
-      ? { cpf: data.email.replace(/[.\-]/g, '') }
-      : { email: data.email };
+      ? { cpf: normalizedIdentifier.replace(/[.\-]/g, '') }
+      : { email: normalizedIdentifier };
 
     const user = await prisma.user.findUnique({
       where: whereClause,

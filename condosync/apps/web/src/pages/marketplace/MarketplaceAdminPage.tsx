@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShoppingBag, Plus, Edit2, Tag, ToggleLeft, ToggleRight, Trash2, X, Check,
@@ -74,70 +74,119 @@ const empty = { name: '', category: 'servicos', description: '', logoUrl: '', we
 
 export default function MarketplaceAdminPage() {
   const qc = useQueryClient();
-  const { selectedCondominiumId, user } = useAuthStore();
+  const { selectedCondominiumId, user, setSelectedCondominium } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const [tab, setTab] = useState<'partners' | 'offers' | 'products' | 'requests'>('products');
+  
+  // Ensure condominium is selected
+  const effectiveCondominiumId = selectedCondominiumId || user?.condominiumUsers?.[0]?.condominium?.id;
+  
+  // Auto-select first condominium if none is selected
+  React.useEffect(() => {
+    if (!effectiveCondominiumId && user?.condominiumUsers?.[0]?.condominium?.id && !isSuperAdmin) {
+      setSelectedCondominium(user.condominiumUsers[0].condominium.id);
+    }
+  }, [effectiveCondominiumId, user, setSelectedCondominium, isSuperAdmin]);
+  const [tab, setTab] = useState<'categories' | 'partners' | 'offers' | 'products' | 'requests'>('products');
   const [showPartnerForm, setShowPartnerForm] = useState(false);
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editPartner, setEditPartner] = useState<Partner | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editCategory, setEditCategory] = useState<any>(null);
   const [form, setForm] = useState(empty);
   const [offerForm, setOfferForm] = useState({ partnerId: '', title: '', description: '', discount: '', couponCode: '', validUntil: '' });
   const [productForm, setProductForm] = useState({ name: '', description: '', price: '', discount: '', shippingCost: '', category: 'outro', stock: '', imageUrl: '', partnerId: '' });
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', icon: '' });
   const [csvFile, setCsvFile] = useState<File | null>(null);
 
   // Queries
   const { data: partners, isLoading } = useQuery({
-    queryKey: ['marketplace-partners-admin', selectedCondominiumId],
+    queryKey: ['marketplace-partners-admin', effectiveCondominiumId],
     queryFn: async () => {
-      const params = isSuperAdmin && selectedCondominiumId ? `?condominiumId=${selectedCondominiumId}` : '';
+      const params = isSuperAdmin && effectiveCondominiumId ? `?condominiumId=${effectiveCondominiumId}` : '';
       return (await api.get(`/marketplace/partners/admin${params}`)).data.data as Partner[];
     },
   });
 
   const { data: offers } = useQuery({
-    queryKey: ['marketplace-offers-admin', selectedCondominiumId],
+    queryKey: ['marketplace-offers-admin', effectiveCondominiumId],
     queryFn: async () => {
-      const params = isSuperAdmin && selectedCondominiumId ? `?condominiumId=${selectedCondominiumId}` : '';
-      return (await api.get(`/marketplace/offers${params}`)).data.data as (Offer & { partner: Partner })[];
+      const params = isSuperAdmin && effectiveCondominiumId ? `?condominiumId=${effectiveCondominiumId}` : '';
+      return (await api.get(`/marketplace/offers/admin${params}`)).data.data as (Offer & { partner: Partner })[];
     },
   });
 
   const { data: products } = useQuery({
-    queryKey: ['marketplace-products-admin', selectedCondominiumId],
+    queryKey: ['marketplace-products-admin', effectiveCondominiumId],
     queryFn: async () => {
       return (await api.get('/marketplace/products')).data.data as Product[];
     },
   });
 
   const { data: requests } = useQuery({
-    queryKey: ['marketplace-requests-admin', selectedCondominiumId],
+    queryKey: ['marketplace-requests-admin', effectiveCondominiumId],
     queryFn: async () => {
-      return (await api.get('/marketplace/requests')).data.data as ProductRequest[];
+      return (await api.get('/marketplace/requests/admin')).data.data as ProductRequest[];
+    },
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['marketplace-categories', effectiveCondominiumId],
+    queryFn: async () => {
+      const params = isSuperAdmin && effectiveCondominiumId ? `?condominiumId=${effectiveCondominiumId}` : '';
+      return (await api.get(`/marketplace/categories${params}`)).data.data as any[];
     },
   });
 
   // Mutations
   const createPartner = useMutation({
-    mutationFn: () => api.post('/marketplace/partners', {
-      ...form,
-      ...(selectedCondominiumId ? { condominiumId: selectedCondominiumId } : {}),
-    }),
-    onSuccess: () => { toast('Parceiro criado!', 'success'); qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }); setShowPartnerForm(false); setForm(empty); },
-    onError: () => toast('Erro ao criar parceiro', 'error'),
+    mutationFn: () => {
+      if (!form.name.trim()) throw new Error('Nome do parceiro é obrigatório');
+      if (!form.category) throw new Error('Categoria é obrigatória');
+      const payload = {
+        ...form,
+        ...(effectiveCondominiumId ? { condominiumId: effectiveCondominiumId } : {}),
+      };
+      console.log('Creating partner with payload:', payload);
+      return api.post('/marketplace/partners', payload);
+    },
+    onSuccess: () => { 
+      toast('Parceiro criado!', 'success'); 
+      qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }); 
+      setShowPartnerForm(false); 
+      setForm(empty); 
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao criar parceiro';
+      console.error('Erro ao criar parceiro:', error);
+      toast(message, 'error');
+    },
   });
 
   const updatePartner = useMutation({
-    mutationFn: () => api.put(`/marketplace/partners/${editPartner!.id}`, form),
-    onSuccess: () => { toast('Parceiro atualizado!', 'success'); qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }); setEditPartner(null); },
-    onError: () => toast('Erro ao atualizar parceiro', 'error'),
+    mutationFn: () => {
+      if (!form.name.trim()) throw new Error('Nome do parceiro é obrigatório');
+      return api.put(`/marketplace/partners/${editPartner!.id}`, form);
+    },
+    onSuccess: () => { 
+      toast('Parceiro atualizado!', 'success'); 
+      qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }); 
+      setEditPartner(null); 
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao atualizar parceiro';
+      toast(message, 'error');
+    },
   });
 
   const togglePartner = useMutation({
     mutationFn: (id: string) => api.patch(`/marketplace/partners/${id}/toggle`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['marketplace-partners-admin'] }),
-    onError: () => toast('Erro ao alterar status', 'error'),
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Erro ao alterar status';
+      toast(message, 'error');
+    },
   });
 
   const createOffer = useMutation({
@@ -202,6 +251,61 @@ export default function MarketplaceAdminPage() {
     mutationFn: ({ id, status }: { id: string; status: string }) => api.patch(`/marketplace/requests/${id}`, { status }),
     onSuccess: () => { toast('Status atualizado!', 'success'); qc.invalidateQueries({ queryKey: ['marketplace-requests-admin'] }); },
     onError: () => toast('Erro ao atualizar status', 'error'),
+  });
+
+  const createCategory = useMutation({
+    mutationFn: () => {
+      if (!categoryForm.name.trim()) throw new Error('Nome da categoria é obrigatório');
+      const slug = categoryForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      const payload = {
+        ...categoryForm,
+        slug,
+        ...(effectiveCondominiumId ? { condominiumId: effectiveCondominiumId } : {}),
+      };
+      console.log('Creating category with payload:', payload);
+      return api.post('/marketplace/categories', payload);
+    },
+    onSuccess: () => { 
+      toast('Categoria criada!', 'success'); 
+      qc.invalidateQueries({ queryKey: ['marketplace-categories'] }); 
+      setShowCategoryForm(false); 
+      setCategoryForm({ name: '', description: '', icon: '' }); 
+    },
+    onError: (error: any) => {
+      console.log('Category creation error - full error:', error);
+      console.log('Category creation error - response:', error?.response?.data);
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || error?.response?.data?.error?.details || 'Erro ao criar categoria';
+      toast(message, 'error');
+    },
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: () => {
+      if (!categoryForm.name.trim()) throw new Error('Nome da categoria é obrigatório');
+      const slug = categoryForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      return api.put(`/marketplace/categories/${editCategory!.id}`, {
+        ...categoryForm,
+        slug,
+      });
+    },
+    onSuccess: () => { 
+      toast('Categoria atualizada!', 'success'); 
+      qc.invalidateQueries({ queryKey: ['marketplace-categories'] }); 
+      setEditCategory(null); 
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Erro ao atualizar categoria';
+      toast(message, 'error');
+    },
+  });
+
+  const deleteCategory = useMutation({
+    mutationFn: (id: string) => api.delete(`/marketplace/categories/${id}`),
+    onSuccess: () => { toast('Categoria removida', 'success'); qc.invalidateQueries({ queryKey: ['marketplace-categories'] }); },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Erro ao remover categoria';
+      toast(message, 'error');
+    },
   });
 
   const importCSV = useMutation({
@@ -284,14 +388,19 @@ export default function MarketplaceAdminPage() {
               <Plus size={16} /> Novo Parceiro
             </button>
           )}
+          {tab === 'categories' && (
+            <button onClick={() => { setShowCategoryForm(true); setCategoryForm({ name: '', description: '', icon: '' }); setEditCategory(null); }} className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">
+              <Plus size={16} /> Nova Categoria
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 overflow-x-auto">
-        {(['products', 'requests', 'partners', 'offers'] as const).map((t) => (
+        {(['products', 'categories', 'partners', 'offers', 'requests'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={['px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap', tab === t ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'].join(' ')}>
-            {t === 'partners' ? 'Parceiros' : t === 'offers' ? 'Ofertas' : t === 'products' ? 'Catálogo' : 'Requisições'}
+            {t === 'partners' ? 'Parceiros' : t === 'offers' ? 'Ofertas' : t === 'products' ? 'Catálogo' : t === 'categories' ? 'Categorias' : 'Requisições'}
           </button>
         ))}
       </div>
@@ -321,6 +430,27 @@ export default function MarketplaceAdminPage() {
               </div>
               {p.description && <p className="text-xs text-gray-500 mt-2 line-clamp-2">{p.description}</p>}
               <p className="text-xs text-gray-400 mt-2">{p.offers.length} oferta{p.offers.length !== 1 ? 's' : ''}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Categories Tab */}
+      {tab === 'categories' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(categories ?? []).map((cat: any) => (
+            <div key={cat.id} className="bg-white border rounded-xl p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900">{cat.name}</p>
+                  {cat.icon && <p className="text-lg">{cat.icon}</p>}
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => { setEditCategory(cat); setCategoryForm({ name: cat.name, description: cat.description || '', icon: cat.icon || '' }); setShowCategoryForm(true); }} aria-label="Editar" className="p-1.5 text-gray-400 hover:text-gray-600"><Edit2 size={14} /></button>
+                  <button onClick={() => { if (confirm('Remover categoria?')) deleteCategory.mutate(cat.id); }} aria-label="Remover" className="p-1.5 text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                </div>
+              </div>
+              {cat.description && <p className="text-xs text-gray-500 line-clamp-2">{cat.description}</p>}
             </div>
           ))}
         </div>
@@ -377,16 +507,16 @@ export default function MarketplaceAdminPage() {
                   <div>
                     {p.discount ? (
                       <div>
-                        <p className="text-xs text-gray-500 line-through">R$ {p.price.toFixed(2)}</p>
-                        <p className="font-semibold text-green-600 text-sm">R$ {p.finalPrice.toFixed(2)}</p>
+                        <p className="text-xs text-gray-500 line-through">R$ {Number(p.price).toFixed(2)}</p>
+                        <p className="font-semibold text-green-600 text-sm">R$ {Number(p.finalPrice).toFixed(2)}</p>
                       </div>
                     ) : (
-                      <p className="font-semibold text-gray-900 text-sm">R$ {p.price.toFixed(2)}</p>
+                      <p className="font-semibold text-gray-900 text-sm">R$ {Number(p.price).toFixed(2)}</p>
                     )}
                   </div>
                   <div className="text-right text-xs">
                     <p className="text-gray-500">Estoque: {p.stock}</p>
-                    <p className="text-gray-500">Frete: R$ {p.shippingCost.toFixed(2)}</p>
+                    <p className="text-gray-500">Frete: R$ {Number(p.shippingCost).toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -416,7 +546,7 @@ export default function MarketplaceAdminPage() {
                     {getStatusIcon(r.status)}
                     <span className="text-xs">{r.status}</span>
                   </td>
-                  <td className="px-4 py-3">{r.quotedPrice ? `R$ ${r.quotedPrice.toFixed(2)}` : '—'}</td>
+                  <td className="px-4 py-3">{r.quotedPrice ? `R$ ${Number(r.quotedPrice).toFixed(2)}` : '—'}</td>
                   <td className="px-4 py-3">
                     <select value={r.status} onChange={(e) => updateRequestStatus.mutate({ id: r.id, status: e.target.value })} className="text-xs px-2 py-1 border border-gray-200 rounded">
                       <option value="PENDING">Pendente</option>
@@ -463,6 +593,33 @@ export default function MarketplaceAdminPage() {
             </div>
             <button onClick={() => editPartner ? updatePartner.mutate() : createPartner.mutate()} disabled={!form.name.trim()} className="mt-5 w-full bg-primary-600 text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
               <Check size={16} /> {editPartner ? 'Atualizar' : 'Criar Parceiro'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Category Form Modal */}
+      {(showCategoryForm) && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">{editCategory ? 'Editar Categoria' : 'Nova Categoria'}</h3>
+              <button onClick={() => { setShowCategoryForm(false); setEditCategory(null); setCategoryForm({ name: '', description: '', icon: '' }); }} aria-label="Fechar"><X size={18} className="text-gray-400" /></button>
+            </div>
+            <div className="space-y-3">
+              {([
+                { key: 'name', label: 'Nome *', placeholder: 'Nome da categoria' },
+                { key: 'description', label: 'Descrição', placeholder: 'Descrição da categoria' },
+                { key: 'icon', label: 'Ícone (emoji)', placeholder: '🍔' },
+              ] as const).map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                  <input value={(categoryForm as any)[key]} onChange={(e) => setCategoryForm((f) => ({ ...f, [key]: e.target.value }))} placeholder={placeholder} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+              ))}
+            </div>
+            <button onClick={() => editCategory ? updateCategory.mutate() : createCategory.mutate()} disabled={!categoryForm.name.trim()} className="mt-5 w-full bg-primary-600 text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+              <Check size={16} /> {editCategory ? 'Atualizar' : 'Criar Categoria'}
             </button>
           </div>
         </div>
