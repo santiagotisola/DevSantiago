@@ -39,6 +39,7 @@ import {
   BookUser,
   ClipboardList,
   UserPlus,
+  Server,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -147,6 +148,12 @@ const navItems: NavItem[] = [
     label: "Condomínios",
     to: "/admin/condominios",
     icon: Building2,
+    roles: ["SUPER_ADMIN"],
+  },
+  {
+    label: "Deploy & Sistema",
+    to: "/admin/deploy",
+    icon: Server,
     roles: ["SUPER_ADMIN"],
   },
   {

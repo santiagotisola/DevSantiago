@@ -88,16 +88,18 @@ function LightBox({ photos, condominiumId, index, onClose, onNavigate, isMgmt, o
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center" onClick={onClose}>
-      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white p-2"><X className="w-6 h-6" /></button>
+      <button onClick={onClose} aria-label="Fechar" className="absolute top-4 right-4 text-white/70 hover:text-white p-2"><X className="w-6 h-6" /></button>
 
       {index > 0 && (
         <button onClick={(e) => { e.stopPropagation(); onNavigate(index - 1); }}
+          aria-label="Foto anterior"
           className="absolute left-4 text-white/70 hover:text-white p-2 bg-white/10 rounded-full">
           <ChevronLeft className="w-6 h-6" />
         </button>
       )}
       {index < photos.length - 1 && (
         <button onClick={(e) => { e.stopPropagation(); onNavigate(index + 1); }}
+          aria-label="Próxima foto"
           className="absolute right-4 text-white/70 hover:text-white p-2 bg-white/10 rounded-full">
           <ChevronRight className="w-6 h-6" />
         </button>
@@ -120,6 +122,7 @@ function LightBox({ photos, condominiumId, index, onClose, onNavigate, isMgmt, o
           </div>
           {isMgmt && (
             <button onClick={() => onDelete(photo.id)}
+              aria-label="Excluir foto"
               className="text-red-400 hover:text-red-300 p-2 bg-white/10 rounded-lg shrink-0">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -325,6 +328,7 @@ export default function GalleryPage() {
                 </span>
                 {isMgmt && (
                   <button onClick={(e) => { e.stopPropagation(); if (confirm('Excluir esta foto?')) deleteMut.mutate(photo.id); }}
+                    aria-label="Excluir foto"
                     className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity">
                     <Trash2 className="w-3 h-3" />
                   </button>

@@ -37,6 +37,7 @@ import { ServiceProvidersPage } from "./pages/service-providers/ServiceProviders
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { CondominiumsPage } from "./pages/admin/CondominiumsPage";
+import DeployDashboardPage from "./pages/admin/DeployDashboardPage";
 import { MyVisitorsPage } from "./pages/minha-portaria/MyVisitorsPage";
 import MinhasObrasPage from "./pages/minha-portaria/MinhasObrasPage";
 import ObrasAdminPage from "./pages/obras/ObrasAdminPage";
@@ -344,6 +345,14 @@ export default function App() {
             element={
               <RoleGuard roles={["SUPER_ADMIN"]}>
                 <CondominiumsPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="admin/deploy"
+            element={
+              <RoleGuard roles={["SUPER_ADMIN"]}>
+                <DeployDashboardPage />
               </RoleGuard>
             }
           />
