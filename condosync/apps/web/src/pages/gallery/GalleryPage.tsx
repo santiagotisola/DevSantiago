@@ -236,7 +236,7 @@ export default function GalleryPage() {
                 onClick={() => document.getElementById('photo-input')?.click()}
                 className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}
               >
-                <input id="photo-input" type="file" accept="image/*" className="hidden"
+                <input id="photo-input" type="file" accept="image/*" aria-label="Selecionar imagem para upload" className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
@@ -257,8 +257,8 @@ export default function GalleryPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Categoria</label>
-                  <select value={uploadForm.category} onChange={(e) => setUploadForm((f) => ({ ...f, category: e.target.value }))}
+                  <label htmlFor="upload-category" className="block text-xs font-medium text-gray-700 mb-1">Categoria</label>
+                  <select id="upload-category" value={uploadForm.category} onChange={(e) => setUploadForm((f) => ({ ...f, category: e.target.value }))}
                     className="w-full border rounded-lg px-3 py-2 text-sm">
                     {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
                   </select>

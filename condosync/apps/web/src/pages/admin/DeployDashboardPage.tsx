@@ -394,15 +394,17 @@ export default function DeployDashboardPage() {
               </span>
             </div>
             <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
+              <progress
+                value={memPercent}
+                max={100}
+                aria-label={`Uso de memória heap: ${memPercent}%`}
+                className={`block w-full h-full rounded-full [appearance:none] [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:transition-all ${
                   memPercent > 80
-                    ? "bg-red-500"
+                    ? "[&::-webkit-progress-value]:bg-red-500"
                     : memPercent > 60
-                    ? "bg-orange-400"
-                    : "bg-green-500"
+                    ? "[&::-webkit-progress-value]:bg-orange-400"
+                    : "[&::-webkit-progress-value]:bg-green-500"
                 }`}
-                style={{ width: `${memPercent}%` }}
               />
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-1.5">
