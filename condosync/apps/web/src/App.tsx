@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Toaster } from "./components/ui/toaster";
 import { useAuthStore } from "./store/authStore";
 import { connectRealtime } from "./services/socket";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 
 // Layouts
 import { AuthLayout } from "./components/layouts/AuthLayout";
@@ -102,6 +103,8 @@ export default function App() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const selectedCondominiumId = useAuthStore((s) => s.selectedCondominiumId);
+
+  usePushNotifications();
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken || !userId) return;
