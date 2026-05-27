@@ -280,7 +280,8 @@ const UPLOAD_ROOT = path.resolve(env.UPLOAD_PATH);
 const avatarStorage = multer.diskStorage({
   destination: (req: Request, _file, cb) => {
     const userId = req.params.id;
-    const dir = path.join(UPLOAD_ROOT, "avatars", userId);
+    const dir = path.resolve(UPLOAD_ROOT, "avatars", userId);
+    if (!dir.startsWith(UPLOAD_ROOT + path.sep)) return cb(new Error("Path inválido"), UPLOAD_ROOT);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -312,13 +313,6 @@ router.post(
   authenticate,
   avatarUpload.single("file"),
   async (req: Request, res: Response) => {
-    console.log("DEBUG Avatar Upload:", {
-      userId: req.user?.userId,
-      role: req.user?.role,
-      paramId: req.params.id,
-      hasFile: !!req.file,
-    });
-    
     if (req.user!.userId !== req.params.id && req.user!.role !== "SUPER_ADMIN") {
       return res
         .status(403)

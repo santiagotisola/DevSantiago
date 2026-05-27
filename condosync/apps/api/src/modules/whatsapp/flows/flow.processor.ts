@@ -5,6 +5,7 @@ import { enviarMensagem } from "../services/baileys.service";
 import { EstadoWhatsApp } from "../types/whatsapp.types";
 import { prisma } from "../../../config/prisma";
 import * as VisitanteService from "../services/visitante.service";
+import { NotificationService } from "../../../notifications/notification.service";
 
 function extractPhone(jid: string): string {
   return jid.replace("@s.whatsapp.net", "").replace("@g.us", "");
@@ -111,14 +112,22 @@ export async function processarMensagem(sock: WASocket, msg: proto.IWebMessageIn
         condominiumId
       );
 
-      // Notificar moradores da unidade
+      // Notificar moradores da unidade via push/email/WhatsApp
       const moradores = await VisitanteService.obterMoradoresUnidade(unidade.id);
-      for (const morador of moradores) {
-        if (morador.user?.phone) {
-          const msgMorador = `📱 *Novo visitante*\n\nNome: ${sessao.dadosParciais.nome}\nMotivo: ${sessao.dadosParciais.motivo}\nHorário: ${new Date().toLocaleTimeString("pt-BR")}\n\nAprovação pendente. Contacte a portaria.`;
-          // TODO: Enviar SMS ou notificação push
-        }
-      }
+      await Promise.all(
+        moradores
+          .filter((m) => m.user?.id)
+          .map((m) =>
+            NotificationService.enqueue({
+              userId: m.user!.id,
+              type: 'VISITOR',
+              title: '🚪 Novo visitante',
+              message: `${sessao.dadosParciais.nome} solicita entrada (${sessao.dadosParciais.motivo}). Aguarda aprovação na portaria.`,
+              data: { visitorId: visita.id, visitorName: sessao.dadosParciais.nome, reason: sessao.dadosParciais.motivo },
+              channels: ['inapp', 'push', 'whatsapp'],
+            }).catch(() => {})
+          )
+      );
 
       resposta = `✅ *Visita registrada com sucesso!*\n\n📋 Resumo:\n• Nome: ${sessao.dadosParciais.nome}\n• Unidade: ${sessao.dadosParciais.unidade}\n• Motivo: ${sessao.dadosParciais.motivo}\n• ID: ${visita.id}\n• Horário: ${new Date().toLocaleTimeString("pt-BR")}\n\nO porteiro foi notificado. Por favor, aguarde na recepção. 🏢`;
 

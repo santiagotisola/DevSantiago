@@ -146,7 +146,8 @@ const UPLOAD_ROOT = path.resolve(env.UPLOAD_PATH);
 const photoStorage = multer.diskStorage({
   destination: (req: Request, _file, cb) => {
     const providerId = req.params.id;
-    const dir = path.join(UPLOAD_ROOT, "service-providers", providerId);
+    const dir = path.resolve(UPLOAD_ROOT, "service-providers", providerId);
+    if (!dir.startsWith(UPLOAD_ROOT + path.sep)) return cb(new Error("Path inválido"), UPLOAD_ROOT);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
