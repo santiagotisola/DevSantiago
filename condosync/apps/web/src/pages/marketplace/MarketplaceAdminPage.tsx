@@ -548,7 +548,7 @@ export default function MarketplaceAdminPage() {
                   </td>
                   <td className="px-4 py-3">{r.quotedPrice ? `R$ ${Number(r.quotedPrice).toFixed(2)}` : '—'}</td>
                   <td className="px-4 py-3">
-                    <select value={r.status} onChange={(e) => updateRequestStatus.mutate({ id: r.id, status: e.target.value })} className="text-xs px-2 py-1 border border-gray-200 rounded">
+                    <select value={r.status} onChange={(e) => updateRequestStatus.mutate({ id: r.id, status: e.target.value })} aria-label="Alterar status da requisição" className="text-xs px-2 py-1 border border-gray-200 rounded">
                       <option value="PENDING">Pendente</option>
                       <option value="QUOTED">Cotado</option>
                       <option value="ACCEPTED">Aceito</option>

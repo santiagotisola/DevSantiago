@@ -200,6 +200,7 @@ export default function MarketplaceMoradorPage() {
                       e.stopPropagation();
                       toggleFavorite(product.id);
                     }}
+                    aria-label="Favoritar produto"
                     className="absolute top-2 left-2 p-1.5 bg-white rounded-lg shadow hover:bg-gray-100"
                   >
                     <Heart size={16} fill={favorites.includes(product.id) ? 'currentColor' : 'none'} className={favorites.includes(product.id) ? 'text-red-500' : 'text-gray-400'} />
@@ -250,7 +251,7 @@ export default function MarketplaceMoradorPage() {
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">Seu Carrinho</h2>
-            <button onClick={() => setShowCart(false)} className="text-gray-500 hover:text-gray-700">
+            <button onClick={() => setShowCart(false)} aria-label="Fechar carrinho" className="text-gray-500 hover:text-gray-700">
               <X size={20} />
             </button>
           </div>
@@ -272,17 +273,17 @@ export default function MarketplaceMoradorPage() {
                         <div className="flex items-center justify-between">
                           <p className="font-semibold text-sm text-green-600">R$ {(product.finalPrice * item.quantity).toFixed(2)}</p>
                           <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                            <button onClick={() => updateCartQuantity(item.productId, item.quantity - 1)} className="p-0.5 hover:bg-gray-200 rounded">
+                            <button onClick={() => updateCartQuantity(item.productId, item.quantity - 1)} aria-label="Diminuir quantidade" className="p-0.5 hover:bg-gray-200 rounded">
                               <Minus size={14} className="text-gray-600" />
                             </button>
                             <span className="w-6 text-center text-xs font-semibold">{item.quantity}</span>
-                            <button onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} className="p-0.5 hover:bg-gray-200 rounded" disabled={item.quantity >= product.stock}>
+                            <button onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} aria-label="Aumentar quantidade" className="p-0.5 hover:bg-gray-200 rounded" disabled={item.quantity >= product.stock}>
                               <Plus size={14} className="text-gray-600" />
                             </button>
                           </div>
                         </div>
                       </div>
-                      <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600 p-2">
+                      <button onClick={() => removeFromCart(item.productId)} aria-label="Remover do carrinho" className="text-red-400 hover:text-red-600 p-2">
                         <X size={16} />
                       </button>
                     </div>
@@ -332,7 +333,7 @@ export default function MarketplaceMoradorPage() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center sm:justify-center p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md shadow-xl overflow-y-auto max-h-[90vh]">
             {/* Close Button */}
-            <button onClick={() => setSelectedProduct(null)} className="sticky top-4 left-full p-2 text-gray-400 hover:text-gray-600 -mr-10 sm:mr-0">
+            <button onClick={() => setSelectedProduct(null)} aria-label="Fechar detalhes do produto" className="sticky top-4 left-full p-2 text-gray-400 hover:text-gray-600 -mr-10 sm:mr-0">
               <X size={20} />
             </button>
 
@@ -398,11 +399,11 @@ export default function MarketplaceMoradorPage() {
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600">Quantidade:</span>
                   <div className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:bg-gray-200 rounded">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Diminuir quantidade" className="p-1 hover:bg-gray-200 rounded">
                       <Minus size={18} className="text-gray-600" />
                     </button>
                     <span className="w-8 text-center font-semibold text-gray-900">{quantity}</span>
-                    <button onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))} className="p-1 hover:bg-gray-200 rounded">
+                    <button onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))} aria-label="Aumentar quantidade" className="p-1 hover:bg-gray-200 rounded">
                       <Plus size={18} className="text-gray-600" />
                     </button>
                   </div>
