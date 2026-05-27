@@ -13,9 +13,38 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize("CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"));
 
+// Resolve chave e URL da IA (Groq grátis tem prioridade sobre OpenAI pago)
+function getAIConfig() {
+  if (env.GROQ_API_KEY) {
+    return {
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      apiKey: env.GROQ_API_KEY,
+      model: env.GROQ_MODEL,
+      provider: "groq",
+    };
+  }
+  if (env.OPENAI_API_KEY) {
+    return {
+      url: "https://api.openai.com/v1/chat/completions",
+      apiKey: env.OPENAI_API_KEY,
+      model: env.OPENAI_MODEL,
+      provider: "openai",
+    };
+  }
+  return null;
+}
+
 // GET /ai/status — verifica se o assistente está habilitado
 router.get("/status", (_req: Request, res: Response) => {
-  res.json({ success: true, data: { enabled: !!env.OPENAI_API_KEY } });
+  const config = getAIConfig();
+  res.json({
+    success: true,
+    data: {
+      enabled: !!config,
+      provider: config?.provider ?? null,
+      model: config?.model ?? null,
+    },
+  });
 });
 
 // P2 — schema com limites no array de mensagens
@@ -34,11 +63,12 @@ const aiChatSchema = z.object({
 
 // POST /ai/chat — envia mensagem ao assistente
 router.post("/chat", async (req: Request, res: Response) => {
-  if (!env.OPENAI_API_KEY) {
+  const aiConfig = getAIConfig();
+  if (!aiConfig) {
     return res.status(503).json({
       success: false,
       message:
-        "Assistente IA não configurado. Defina a variável OPENAI_API_KEY no ambiente.",
+        "Assistente IA não configurado. Defina GROQ_API_KEY (gratuito) ou OPENAI_API_KEY.",
     });
   }
 
@@ -144,16 +174,16 @@ Use esses dados quando o usuário perguntar sobre a situação do condomínio. P
 
   try {
     const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      aiConfig.url,
       {
-        model: env.OPENAI_MODEL,
+        model: aiConfig.model,
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         max_tokens: 1024,
         temperature: 0.7,
       },
       {
         headers: {
-          Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${aiConfig.apiKey}`,
           "Content-Type": "application/json",
         },
         timeout: 30000,
@@ -161,23 +191,23 @@ Use esses dados quando o usuário perguntar sobre a situação do condomínio. P
     );
 
     const reply = response.data.choices?.[0]?.message?.content ?? "";
-    return res.json({ success: true, data: { reply } });
+    return res.json({ success: true, data: { reply, provider: aiConfig.provider } });
   } catch (error: any) {
     logger.error(
-      "Erro na chamada OpenAI:",
+      `Erro na chamada ${aiConfig.provider}:`,
       error.response?.data || error.message,
     );
     const status = error.response?.status;
     if (status === 401) {
       return res
         .status(502)
-        .json({ success: false, message: "Chave da API OpenAI inválida." });
+        .json({ success: false, message: `Chave da API ${aiConfig.provider} inválida.` });
     }
     if (status === 429) {
       return res.status(429).json({
         success: false,
         message:
-          "Limite de requisições da OpenAI atingido. Tente novamente em instantes.",
+          `Limite de requisições da ${aiConfig.provider} atingido. Tente novamente em instantes.`,
       });
     }
     return res.status(502).json({
