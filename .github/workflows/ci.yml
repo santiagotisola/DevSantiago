@@ -109,7 +109,7 @@ jobs:
       - name: Build de produção
         env:
           # URL da API em produção — altere aqui ou configure vars.VITE_API_URL no GitHub Settings
-          VITE_API_URL: ${{ vars.VITE_API_URL != '' && vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
       - name: Verificar tamanho dos bundles
@@ -142,7 +142,7 @@ jobs:
       - name: Build de produção
         env:
           # URL da API em produção — altere aqui ou configure vars.VITE_API_URL no GitHub Settings
-          VITE_API_URL: ${{ vars.VITE_API_URL != '' && vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://web-production-916b1.up.railway.app/api/v1' }}
         run: npm run build
 
   # ─── TypeScript type-check da API ────────────────────────────────────────────
@@ -168,7 +168,7 @@ jobs:
     name: Deploy → VPS (2.24.211.167)
     needs: [test-api, build-web, build-mobile]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.VPS_SSH_KEY != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
       - name: Deploy via SSH na VPS
