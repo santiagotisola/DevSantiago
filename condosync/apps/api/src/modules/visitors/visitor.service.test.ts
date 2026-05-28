@@ -146,6 +146,7 @@ describe('VisitorService.registerExit', () => {
     } as any);
     prismaMock.unit.findUniqueOrThrow.mockResolvedValue(mockUnit as any);
     prismaMock.condominiumUser.findFirst.mockResolvedValue(mockMembershipDoorman as any);
+    prismaMock.condominiumUser.findMany.mockResolvedValue([]);
     prismaMock.visitor.update.mockResolvedValue({
       ...mockVisitor,
       status: VisitorStatus.LEFT,
