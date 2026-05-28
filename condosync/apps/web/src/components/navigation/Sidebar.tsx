@@ -171,6 +171,7 @@ const navItems: NavItem[] = [
       { label: "Minhas Obras", to: "/minha-portaria/obras" },
       { label: "Visitantes Recorrentes", to: "/minha-portaria/visitantes-recorrentes" },
       { label: "Minhas Cobranças", to: "/minhas-cobrancas" },
+      { label: "\ud83d\udea8 Bot\u00e3o de P\u00e2nico", to: "/panico" },
     ],
   },
 ];
