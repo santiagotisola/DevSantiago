@@ -3,8 +3,12 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+// CAPACITOR_BUILD=true → assets relativos (APK local)
+// Sem variável (Docker/nginx) → /app/ para servir em sub-path
+const isCapacitor = process.env.CAPACITOR_BUILD === 'true';
+
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '/app/' : '/',
+  base: isCapacitor ? './' : (process.env.NODE_ENV === 'production' ? '/app/' : '/'),
   plugins: [
     react(),
     VitePWA({
