@@ -106,6 +106,7 @@ enum NotificationType {
   RESERVATION
   OCCURRENCE
   ASSEMBLY
+  PANIC
 }
 
 enum AssemblyStatus {

@@ -14,6 +14,7 @@ import {
   ConflictError,
   ForbiddenError,
 } from "../../middleware/errorHandler";
+import { NotificationService } from "../../notifications/notification.service";
 
 const router = Router();
 router.use(authenticate);
@@ -54,8 +55,47 @@ router.post(
       triggeredAt: alert.createdAt,
     });
 
+    // Notify all residents/staff of the same unit + condominium staff
+    const triggerMembership = await prisma.condominiumUser.findFirst({
+      where: { userId: user.userId, condominiumId, isActive: true },
+      select: { unitId: true },
+    });
+
+    // Get all users in the same condominium who should be notified
+    const notifyTargets = await prisma.condominiumUser.findMany({
+      where: {
+        condominiumId,
+        isActive: true,
+        userId: { not: user.userId }, // Don't notify the person who triggered
+        OR: [
+          // Staff (porteiros, admin, síndico) — always notified
+          { role: { in: ["DOORMAN", "CONDOMINIUM_ADMIN", "SYNDIC"] } },
+          // Residents of the same unit
+          ...(triggerMembership?.unitId
+            ? [{ unitId: triggerMembership.unitId, role: "RESIDENT" as const }]
+            : []),
+        ],
+      },
+      select: { userId: true },
+    });
+
+    // Send push + in-app notification to all targets
+    const triggeredByName = user.name ?? "Morador";
+    await Promise.all(
+      notifyTargets.map((m) =>
+        NotificationService.enqueue({
+          userId: m.userId,
+          type: "PANIC",
+          title: "🚨 ALERTA DE PÂNICO",
+          message: `${triggeredByName} acionou o botão de pânico!`,
+          data: { alertId: alert.id, condominiumId },
+          channels: ["inapp", "push"],
+        }).catch(() => {}),
+      ),
+    );
+
     logger.warn(
-      `PÂNICO acionado por ${user.userId} no condomínio ${condominiumId}`,
+      `PÂNICO acionado por ${user.userId} no condomínio ${condominiumId} — ${notifyTargets.length} notificações enviadas`,
     );
     res.status(201).json({ success: true, data: alert });
   },
