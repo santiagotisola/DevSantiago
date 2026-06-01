@@ -12,7 +12,7 @@ interface DefaultCredentials {
 
 const DEFAULT_CREDENTIALS_KEY = 'condosync-default-login-mobile';
 const DEFAULT_HOMOLOG_CREDENTIALS: DefaultCredentials = {
-  email: 'atendimentveredasbosque@gmail.com',
+  email: 'atendimentoveredasbosque@gmail.com',
   password: 'Admin@2026',
 };
 
