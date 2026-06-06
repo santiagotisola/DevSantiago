@@ -279,6 +279,8 @@ model Condominium {
   marketplaceCategories MarketplaceCategory[]
   productRequests       MarketplaceProductRequest[]
   purchaseHistory       PurchaseHistory[] @relation("PurchaseHistoryCondominium")
+  movingSchedules       MovingSchedule[]
+  keyControls           KeyControl[]
 
   @@map("condominiums")
 }
@@ -329,6 +331,7 @@ model Unit {
   renovations   Renovation[]
   visitorRecurrences VisitorRecurrence[]
   visitorQRCodes     VisitorQRCode[]
+  movingSchedules    MovingSchedule[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
@@ -1708,4 +1711,88 @@ model DigitalSignageSlide {
   updatedAt       DateTime             @updatedAt
 
   @@map("digital_signage_slides")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENDA DE MUDANÇA
+// ─────────────────────────────────────────────────────────────
+
+enum MovingType {
+  MOVE_IN
+  MOVE_OUT
+  LARGE_DELIVERY
+}
+
+enum MovingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELED
+}
+
+model MovingSchedule {
+  id               String       @id @default(uuid())
+  condominium      Condominium  @relation(fields: [condominiumId], references: [id])
+  condominiumId    String
+  unit             Unit         @relation(fields: [unitId], references: [id])
+  unitId           String
+  type             MovingType
+  scheduledDate    DateTime
+  startTime        String       // "08:00"
+  endTime          String       // "12:00"
+  elevator         String?      // "Social", "Serviço"
+  responsibleName  String
+  responsiblePhone String?
+  companyName      String?      // Nome da empresa de mudança
+  notes            String?
+  status           MovingStatus @default(PENDING)
+  approvedBy       String?
+  rejectedReason   String?
+  createdBy        String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("moving_schedules")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTROLE DE CHAVES
+// ─────────────────────────────────────────────────────────────
+
+enum KeyStatus {
+  AVAILABLE
+  BORROWED
+  LOST
+  MAINTENANCE
+}
+
+model KeyControl {
+  id              String      @id @default(uuid())
+  condominium     Condominium @relation(fields: [condominiumId], references: [id])
+  condominiumId   String
+  keyIdentifier   String      // "Chave Salão 01", "Portão Garagem B"
+  description     String?
+  location        String?     // Onde fica guardada
+  status          KeyStatus   @default(AVAILABLE)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  logs            KeyControlLog[]
+
+  @@map("key_controls")
+}
+
+model KeyControlLog {
+  id              String     @id @default(uuid())
+  key             KeyControl @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  keyId           String
+  action          String     // "BORROW", "RETURN", "LOST", "FOUND"
+  borrowedBy      String?    // Nome de quem pegou
+  borrowedByUnit  String?    // Unidade
+  receivedBy      String?    // Porteiro que entregou/recebeu
+  notes           String?
+  createdAt       DateTime   @default(now())
+
+  @@map("key_control_logs")
 }
