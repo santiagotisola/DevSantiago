@@ -108,10 +108,12 @@ const navItems: NavItem[] = [
   {
     label: "Operacional",
     icon: Wrench,
-    roles: MANAGEMENT,
+    roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"],
     children: [
-      { label: "Manutenção", to: "/manutencao" },
+      { label: "Manutenção", to: "/manutencao", roles: MANAGEMENT },
       { label: "Chamados", to: "/chamados", roles: ["RESIDENT", "DOORMAN", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"] },
+      { label: "Agenda de Mudanças", to: "/agenda-mudancas" },
+      { label: "Controle de Chaves", to: "/controle-chaves" },
     ],
   },
   {

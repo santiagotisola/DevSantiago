@@ -59,6 +59,8 @@ import ContractsPage from "./pages/contracts/ContractsPage";
 import { InvitesPage } from "./pages/invites/InvitesPage";
 import { AuditPage } from "./pages/audit/AuditPage";
 import { SyndicDashboardPage } from "./pages/syndic/SyndicDashboardPage";
+import AgendaMudancasPage from "./pages/agenda-mudancas/AgendaMudancasPage";
+import ControleChavesPage from "./pages/controle-chaves/ControleChavesPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -538,6 +540,26 @@ export default function App() {
             element={
               <RoleGuard roles={MANAGEMENT}>
                 <SyndicDashboardPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Agenda de Mudanças */}
+          <Route
+            path="agenda-mudancas"
+            element={
+              <RoleGuard roles={STAFF}>
+                <AgendaMudancasPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Controle de Chaves */}
+          <Route
+            path="controle-chaves"
+            element={
+              <RoleGuard roles={STAFF}>
+                <ControleChavesPage />
               </RoleGuard>
             }
           />
