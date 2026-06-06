@@ -352,8 +352,9 @@ export default function ControleChavesPage() {
             </div>
             <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Identificador *</label>
+                <label htmlFor="key-identifier" className="block text-sm font-medium text-slate-700 mb-1">Identificador *</label>
                 <input
+                  id="key-identifier"
                   type="text"
                   value={keyForm.keyIdentifier}
                   onChange={(e) => setKeyForm({ ...keyForm, keyIdentifier: e.target.value })}
@@ -363,8 +364,9 @@ export default function ControleChavesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
+                <label htmlFor="key-description" className="block text-sm font-medium text-slate-700 mb-1">Descrição</label>
                 <input
+                  id="key-description"
                   type="text"
                   value={keyForm.description}
                   onChange={(e) => setKeyForm({ ...keyForm, description: e.target.value })}
@@ -373,10 +375,11 @@ export default function ControleChavesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Localização</label>
+                <label htmlFor="key-location" className="block text-sm font-medium text-slate-700 mb-1">Localização</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
+                    id="key-location"
                     type="text"
                     value={keyForm.location}
                     onChange={(e) => setKeyForm({ ...keyForm, location: e.target.value })}
@@ -423,8 +426,9 @@ export default function ControleChavesPage() {
                 {borrowTarget.location && <p className="text-xs text-indigo-500">{borrowTarget.location}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Retirado por *</label>
+                <label htmlFor="borrow-name" className="block text-sm font-medium text-slate-700 mb-1">Retirado por *</label>
                 <input
+                  id="borrow-name"
                   type="text"
                   value={borrowForm.borrowedBy}
                   onChange={(e) => setBorrowForm({ ...borrowForm, borrowedBy: e.target.value })}
@@ -434,8 +438,9 @@ export default function ControleChavesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Unidade</label>
+                <label htmlFor="borrow-unit" className="block text-sm font-medium text-slate-700 mb-1">Unidade</label>
                 <input
+                  id="borrow-unit"
                   type="text"
                   value={borrowForm.borrowedByUnit}
                   onChange={(e) => setBorrowForm({ ...borrowForm, borrowedByUnit: e.target.value })}

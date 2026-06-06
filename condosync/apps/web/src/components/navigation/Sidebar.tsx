@@ -294,7 +294,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         ) : null}
 
         {/* Navegação */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <nav role="navigation" aria-label="Menu principal" className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems
             .filter(
               (item) => !item.roles || item.roles.includes(user?.role || ""),
@@ -306,6 +306,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   <div key={item.label}>
                     <button
                       onClick={() => toggleExpanded(item.label)}
+                      aria-expanded={isExpanded}
                       className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm"
                     >
                       <div className="flex items-center gap-3">

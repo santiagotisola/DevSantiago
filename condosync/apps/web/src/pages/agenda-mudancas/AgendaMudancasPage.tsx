@@ -336,11 +336,11 @@ export default function AgendaMudancasPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
+                  <label htmlFor="move-type" className="block text-sm font-medium text-slate-700 mb-1">Tipo *</label>
                   <select
+                    id="move-type"
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value as MoveType })}
-                    title="Tipo de mudança"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   >
@@ -350,11 +350,11 @@ export default function AgendaMudancasPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Unidade *</label>
+                  <label htmlFor="move-unit" className="block text-sm font-medium text-slate-700 mb-1">Unidade *</label>
                   <select
+                    id="move-unit"
                     value={form.unitId}
                     onChange={(e) => setForm({ ...form, unitId: e.target.value })}
-                    title="Unidade"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   >
@@ -368,34 +368,34 @@ export default function AgendaMudancasPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Data *</label>
+                  <label htmlFor="move-date" className="block text-sm font-medium text-slate-700 mb-1">Data *</label>
                   <input
+                    id="move-date"
                     type="date"
                     value={form.scheduledDate}
                     onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
-                    title="Data da mudança"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Início *</label>
+                  <label htmlFor="move-start" className="block text-sm font-medium text-slate-700 mb-1">Início *</label>
                   <input
+                    id="move-start"
                     type="time"
                     value={form.startTime}
                     onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                    title="Horário de início"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fim *</label>
+                  <label htmlFor="move-end" className="block text-sm font-medium text-slate-700 mb-1">Fim *</label>
                   <input
+                    id="move-end"
                     type="time"
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-                    title="Horário de fim"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
@@ -415,10 +415,11 @@ export default function AgendaMudancasPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Responsável *</label>
+                  <label htmlFor="move-responsible" className="block text-sm font-medium text-slate-700 mb-1">Responsável *</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
+                      id="move-responsible"
                       type="text"
                       value={form.responsibleName}
                       onChange={(e) => setForm({ ...form, responsibleName: e.target.value })}
@@ -429,10 +430,11 @@ export default function AgendaMudancasPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
+                  <label htmlFor="move-phone" className="block text-sm font-medium text-slate-700 mb-1">Telefone</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
+                      id="move-phone"
                       type="tel"
                       value={form.responsiblePhone}
                       onChange={(e) => setForm({ ...form, responsiblePhone: e.target.value })}

@@ -59,6 +59,18 @@
   }
 }
 
+/* WCAG: Focus visible ring para elementos interativos */
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Evitar outline em elementos que já possuem ring do Tailwind */
+[class*="focus:ring"]:focus-visible,
+[class*="focus:outline"]:focus-visible {
+  outline: none;
+}
+
 /* Scrollbar personalizada */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { @apply bg-muted; }

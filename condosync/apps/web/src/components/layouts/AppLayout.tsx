@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../navigation/Sidebar';
 import { Header } from '../navigation/Header';
 import { AiAssistantChat } from '../ai/AiAssistantChat';
+import { SkipLink } from '../accessibility/SkipLink';
 import { useAuthStore } from '../../store/authStore';
 import { useState } from 'react';
 import { AlertCircle, Settings } from 'lucide-react';
@@ -14,6 +15,8 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      <SkipLink />
+
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -39,7 +42,7 @@ export function AppLayout() {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" role="main" className="flex-1 overflow-y-auto">
           <div className="container mx-auto p-6 max-w-7xl animate-fade-in">
             <Outlet />
           </div>
