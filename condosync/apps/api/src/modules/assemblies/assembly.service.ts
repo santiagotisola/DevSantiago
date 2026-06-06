@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { AssemblyStatus, UserRole } from "@prisma/client";
 import { AppError, ForbiddenError } from "../../middleware/errorHandler";
 import { NotificationService } from "../../notifications/notification.service";
+import PDFDocument from "pdfkit";
 
 type AssemblyActor = { userId: string; role: UserRole };
 
@@ -252,6 +253,120 @@ export class AssemblyService {
         results,
         totalVotes: item.votes.length,
       };
+    });
+  }
+
+  async generateMinutesPdf(assemblyId: string, actor: AssemblyActor): Promise<Buffer> {
+    await this.ensureAssemblyAccess(assemblyId, actor);
+
+    const assembly = await prisma.assembly.findUniqueOrThrow({
+      where: { id: assemblyId },
+      include: {
+        condominium: { select: { name: true } },
+        attendees: {
+          include: {
+            user: { select: { name: true } },
+          },
+        },
+        votingItems: {
+          include: { votes: true },
+        },
+      },
+    });
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", reject);
+
+      // Cabeçalho
+      doc
+        .fontSize(18)
+        .font("Helvetica-Bold")
+        .text("ATA DE ASSEMBLEIA", { align: "center" });
+      doc.moveDown(0.5);
+      doc
+        .fontSize(14)
+        .font("Helvetica")
+        .text(assembly.condominium.name, { align: "center" });
+      doc.moveDown(0.3);
+      doc
+        .fontSize(11)
+        .text(
+          `Data: ${assembly.scheduledAt.toLocaleDateString("pt-BR")}`,
+          { align: "center" },
+        );
+      doc.moveDown(1.5);
+
+      // Dados da assembleia
+      doc.fontSize(13).font("Helvetica-Bold").text("Dados da Assembleia");
+      doc.moveDown(0.3);
+      doc.fontSize(11).font("Helvetica");
+      doc.text(`Título: ${assembly.title}`);
+      if (assembly.description) {
+        doc.text(`Descrição: ${assembly.description}`);
+      }
+      doc.text(`Status: ${assembly.status}`);
+      if (assembly.startedAt) {
+        doc.text(`Início: ${assembly.startedAt.toLocaleString("pt-BR")}`);
+      }
+      if (assembly.finishedAt) {
+        doc.text(`Encerramento: ${assembly.finishedAt.toLocaleString("pt-BR")}`);
+      }
+      doc.moveDown(1);
+
+      // Lista de presença
+      doc.fontSize(13).font("Helvetica-Bold").text("Lista de Presença");
+      doc.moveDown(0.3);
+      doc.fontSize(11).font("Helvetica");
+      if (assembly.attendees.length === 0) {
+        doc.text("Nenhum participante registrado.");
+      } else {
+        assembly.attendees.forEach((att, i) => {
+          const name = (att as any).user?.name ?? "Usuário não identificado";
+          doc.text(`${i + 1}. ${name}`);
+        });
+      }
+      doc.moveDown(1);
+
+      // Pautas e votação
+      doc.fontSize(13).font("Helvetica-Bold").text("Pautas e Resultados de Votação");
+      doc.moveDown(0.3);
+
+      if (assembly.votingItems.length === 0) {
+        doc.fontSize(11).font("Helvetica").text("Nenhuma pauta registrada.");
+      } else {
+        assembly.votingItems.forEach((item, idx) => {
+          const options = item.options as { id: string; text: string }[];
+
+          doc.fontSize(12).font("Helvetica-Bold").text(`${idx + 1}. ${item.title}`);
+          if (item.description) {
+            doc.fontSize(10).font("Helvetica-Oblique").text(item.description);
+          }
+          doc.fontSize(11).font("Helvetica");
+
+          const totalVotes = item.votes.length;
+          options.forEach((opt) => {
+            const count = item.votes.filter((v) => v.optionId === opt.id).length;
+            const pct = totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(1) : "0.0";
+            doc.text(`   • ${opt.text}: ${count} voto(s) (${pct}%)`);
+          });
+          doc.text(`   Total de votos: ${totalVotes}`);
+          doc.moveDown(0.5);
+        });
+      }
+
+      // Rodapé
+      doc.moveDown(2);
+      doc
+        .fontSize(9)
+        .font("Helvetica-Oblique")
+        .text("Documento gerado automaticamente pelo CondoSync", { align: "center" });
+
+      doc.end();
     });
   }
 }

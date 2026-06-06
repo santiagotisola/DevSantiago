@@ -24,6 +24,13 @@ router.get("/:id", assemblyController.getById);
 // Pegar resultados da votação
 router.get("/:id/results", assemblyController.getResults);
 
+// Gerar ata digital (PDF) — somente gestores
+router.get(
+  "/:id/minutes",
+  authorize("SYNDIC", "CONDOMINIUM_ADMIN", "SUPER_ADMIN"),
+  assemblyController.generateMinutes,
+);
+
 // Criar assembleia — somente gestores [A1]
 router.post(
   "/condominium/:condominiumId",
