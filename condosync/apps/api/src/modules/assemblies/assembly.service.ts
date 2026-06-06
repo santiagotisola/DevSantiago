@@ -263,16 +263,20 @@ export class AssemblyService {
       where: { id: assemblyId },
       include: {
         condominium: { select: { name: true } },
-        attendees: {
-          include: {
-            user: { select: { name: true } },
-          },
-        },
+        attendees: true,
         votingItems: {
           include: { votes: true },
         },
       },
+    }) as any;
+
+    // Buscar nomes dos participantes
+    const attendeeUserIds: string[] = assembly.attendees.map((a: any) => a.userId);
+    const attendeeUsers = await prisma.user.findMany({
+      where: { id: { in: attendeeUserIds } },
+      select: { id: true, name: true },
     });
+    const userNameMap = new Map(attendeeUsers.map((u) => [u.id, u.name]));
 
     return new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -325,8 +329,8 @@ export class AssemblyService {
       if (assembly.attendees.length === 0) {
         doc.text("Nenhum participante registrado.");
       } else {
-        assembly.attendees.forEach((att, i) => {
-          const name = (att as any).user?.name ?? "Usuário não identificado";
+        assembly.attendees.forEach((att: any, i: number) => {
+          const name = userNameMap.get(att.userId) ?? "Usuário não identificado";
           doc.text(`${i + 1}. ${name}`);
         });
       }
@@ -339,7 +343,7 @@ export class AssemblyService {
       if (assembly.votingItems.length === 0) {
         doc.fontSize(11).font("Helvetica").text("Nenhuma pauta registrada.");
       } else {
-        assembly.votingItems.forEach((item, idx) => {
+        assembly.votingItems.forEach((item: any, idx: number) => {
           const options = item.options as { id: string; text: string }[];
 
           doc.fontSize(12).font("Helvetica-Bold").text(`${idx + 1}. ${item.title}`);
@@ -350,7 +354,7 @@ export class AssemblyService {
 
           const totalVotes = item.votes.length;
           options.forEach((opt) => {
-            const count = item.votes.filter((v) => v.optionId === opt.id).length;
+            const count = item.votes.filter((v: any) => v.optionId === opt.id).length;
             const pct = totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(1) : "0.0";
             doc.text(`   • ${opt.text}: ${count} voto(s) (${pct}%)`);
           });

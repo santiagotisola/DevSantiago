@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { api } from '@/services/api';
 import {
   Plus, Search, Loader2, X, Truck, Calendar,
-  Clock, CheckCircle2, XCircle, Ban, Phone, Building2, User
+  Clock, CheckCircle2, XCircle, Ban, Phone, Building2, User, Pencil
 } from 'lucide-react';
 
 type ScheduleStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CANCELED';
