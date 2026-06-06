@@ -976,6 +976,83 @@ async function main() {
   }
   console.log("  ✅ 8 chaves cadastradas com histórico");
 
+  // ── CÂMERAS ─────────────────────────────────────────────────────────────
+  const camerasData = [
+    {
+      name: "Câmera Entrada Principal",
+      location: "Portaria",
+      brand: "Intelbras",
+      model: "VIP 3230 D",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: true,
+      resolution: "1080p",
+    },
+    {
+      name: "Câmera Garagem B1",
+      location: "Garagem B1",
+      brand: "Hikvision",
+      model: "DS-2CD2143G2-I",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: true,
+      isRecording: true,
+      resolution: "4K",
+    },
+    {
+      name: "Câmera Área de Lazer",
+      location: "Área de Lazer",
+      brand: "Intelbras",
+      model: "VIP 1230 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1564429238961-bf8bf14bf24a?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: false,
+      resolution: "720p",
+    },
+    {
+      name: "Câmera Corredor Bloco A",
+      location: "Bloco A - Corredor",
+      brand: "Hikvision",
+      model: "DS-2CE16H0T",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: true,
+      isRecording: true,
+      resolution: "1080p",
+    },
+    {
+      name: "Câmera Elevador Social",
+      location: "Elevador Social",
+      brand: "Intelbras",
+      model: "VIP 1020 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: false,
+      isRecording: false,
+      resolution: "720p",
+      notes: "Manutenção preventiva agendada",
+    },
+    {
+      name: "Câmera Playground",
+      location: "Playground",
+      brand: "Intelbras",
+      model: "VIP 3230 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1564429238961-bf8bf14bf24a?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: false,
+      resolution: "1080p",
+    },
+  ];
+  for (const camData of camerasData) {
+    await prisma.camera.create({
+      data: {
+        condominiumId: condo.id,
+        ...camData,
+      },
+    });
+  }
+  console.log("  ✅ 6 câmeras cadastradas");
+
   // ── RESUMO ────────────────────────────────────────────────────────────────
   console.log("\n🎉 Seed demo concluído com sucesso!\n");
   console.log("📋 Dados inseridos:");
@@ -994,6 +1071,7 @@ async function main() {
   console.log("  🏛️   2 assembleias (1 encerrada c/ votos, 1 agendada)");
   console.log("  🚚  5 agendamentos de mudança");
   console.log("  🔑  8 chaves cadastradas com histórico");
+  console.log("  📹  6 câmeras de monitoramento");
 }
 
 // ── Helpers de data ───────────────────────────────────────────────────────────

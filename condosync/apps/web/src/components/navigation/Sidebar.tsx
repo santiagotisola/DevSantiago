@@ -40,6 +40,7 @@ import {
   ClipboardList,
   UserPlus,
   Server,
+  Camera,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "../../services/api";
@@ -67,6 +68,7 @@ const navItems: NavItem[] = [
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
       { label: "🚨 Alertas de Pânico", to: "/portaria/panico" },
+      { label: "📹 Câmeras", to: "/cameras" },
       { label: "Prestadores", to: "/prestadores", roles: MANAGEMENT },
     ],
   },

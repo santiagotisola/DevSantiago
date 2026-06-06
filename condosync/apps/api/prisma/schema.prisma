@@ -281,6 +281,7 @@ model Condominium {
   purchaseHistory       PurchaseHistory[] @relation("PurchaseHistoryCondominium")
   movingSchedules       MovingSchedule[]
   keyControls           KeyControl[]
+  cameras               Camera[]
 
   @@map("condominiums")
 }
@@ -1795,4 +1796,25 @@ model KeyControlLog {
   createdAt       DateTime   @default(now())
 
   @@map("key_control_logs")
+}
+
+model Camera {
+  id              String      @id @default(uuid())
+  condominium     Condominium @relation(fields: [condominiumId], references: [id])
+  condominiumId   String
+  name            String      // "Câmera Entrada Principal"
+  location        String      // "Portaria", "Garagem B1"
+  brand           String?     // "Intelbras", "Hikvision"
+  model           String?     // "VIP 1230"
+  streamUrl       String      // URL do stream HLS/RTSP
+  embedUrl        String?     // URL para embed iframe (plataformas cloud)
+  snapshotUrl     String?     // URL para snapshot/thumbnail
+  isActive        Boolean     @default(true)
+  isRecording     Boolean     @default(false)
+  resolution      String?     // "1080p", "4K"
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("cameras")
 }

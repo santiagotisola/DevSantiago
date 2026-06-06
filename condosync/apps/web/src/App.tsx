@@ -61,6 +61,7 @@ import { AuditPage } from "./pages/audit/AuditPage";
 import { SyndicDashboardPage } from "./pages/syndic/SyndicDashboardPage";
 import AgendaMudancasPage from "./pages/agenda-mudancas/AgendaMudancasPage";
 import ControleChavesPage from "./pages/controle-chaves/ControleChavesPage";
+import CamerasPage from "./pages/cameras/CamerasPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -560,6 +561,16 @@ export default function App() {
             element={
               <RoleGuard roles={STAFF}>
                 <ControleChavesPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Monitoramento de Câmeras */}
+          <Route
+            path="cameras"
+            element={
+              <RoleGuard roles={STAFF}>
+                <CamerasPage />
               </RoleGuard>
             }
           />
