@@ -82,3 +82,12 @@ export async function enviarMensagem(para: string, texto: string) {
   const jid = para.includes("@") ? para : `${para}@s.whatsapp.net`;
   await sock.sendMessage(jid, { text: texto });
 }
+
+export async function desconectar() {
+  if (sock) {
+    await sock.logout();
+    sock = null;
+  }
+  statusConexao = "desconectado";
+  qrCodeAtual = null;
+}

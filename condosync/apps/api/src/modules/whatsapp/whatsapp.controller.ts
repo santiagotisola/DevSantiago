@@ -121,3 +121,93 @@ export async function atualizarStatusVisita(req: Request, res: Response) {
     visita 
   });
 }
+
+export async function desconectar(req: Request, res: Response) {
+  await BaileysService.desconectar();
+  return res.json({ ok: true, message: "WhatsApp desconectado" });
+}
+
+export async function broadcast(req: Request, res: Response) {
+  const schema = z.object({
+    group: z.enum(["ALL", "OVERDUE", "UNIT"]),
+    unitId: z.string().optional(),
+    template: z.string().min(1).max(2000),
+  });
+
+  const { group, unitId, template } = schema.parse(req.body);
+  const condominiumId = process.env.WHATSAPP_CONDOMINIUM_ID || "1";
+
+  // Buscar moradores baseado no grupo
+  let residents: { name: string; phone: string | null; unit?: { identifier: string } }[] = [];
+
+  if (group === "ALL") {
+    residents = await prisma.resident.findMany({
+      where: { unit: { condominiumId } },
+      select: { name: true, phone: true, unit: { select: { identifier: true } } },
+    });
+  } else if (group === "UNIT" && unitId) {
+    residents = await prisma.resident.findMany({
+      where: { unitId },
+      select: { name: true, phone: true, unit: { select: { identifier: true } } },
+    });
+  } else if (group === "OVERDUE") {
+    // Buscar moradores com cobranças vencidas
+    const overdue = await prisma.charge.findMany({
+      where: {
+        status: "OVERDUE",
+        unit: { condominiumId },
+      },
+      select: {
+        amount: true,
+        unit: {
+          select: {
+            identifier: true,
+            residents: {
+              select: { name: true, phone: true },
+              where: { isOwner: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    residents = overdue
+      .filter((c) => c.unit.residents.length > 0)
+      .map((c) => ({
+        name: c.unit.residents[0].name,
+        phone: c.unit.residents[0].phone,
+        unit: { identifier: c.unit.identifier },
+      }));
+  }
+
+  // Filtrar moradores com telefone válido
+  const destinatarios = residents.filter((r) => r.phone && r.phone.length >= 10);
+
+  let sent = 0;
+  let failed = 0;
+  const details: { name: string; phone: string; status: string }[] = [];
+
+  // Enviar com delay de 2s entre cada (anti-ban)
+  for (const dest of destinatarios) {
+    const mensagem = template
+      .replace(/\{\{nome\}\}/g, dest.name)
+      .replace(/\{\{unidade\}\}/g, dest.unit?.identifier || "")
+      .replace(/\{\{valor\}\}/g, "");
+
+    try {
+      await BaileysService.enviarMensagem(dest.phone!, mensagem);
+      sent++;
+      details.push({ name: dest.name, phone: dest.phone!, status: "sent" });
+    } catch {
+      failed++;
+      details.push({ name: dest.name, phone: dest.phone!, status: "failed" });
+    }
+
+    // Delay de 2s entre envios (anti-ban WhatsApp)
+    if (destinatarios.indexOf(dest) < destinatarios.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
+  return res.json({ ok: true, sent, failed, total: destinatarios.length, details });
+}

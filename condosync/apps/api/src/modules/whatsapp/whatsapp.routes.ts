@@ -11,9 +11,11 @@ router.get("/status", WhatsAppController.getStatus);
 // Autenticados
 router.use(authenticate);
 router.post("/iniciar", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC"), WhatsAppController.iniciar);
+router.post("/disconnect", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC"), WhatsAppController.desconectar);
 router.get("/sessoes", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN"), WhatsAppController.listarSessoes);
 router.get("/sessao/:phone", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN"), WhatsAppController.getSessao);
 router.post("/send", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN"), WhatsAppController.enviar);
+router.post("/broadcast", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC"), WhatsAppController.broadcast);
 
 // Novo: Listar unidades para visitação
 router.get("/unidades", authorize("SUPER_ADMIN", "CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN"), WhatsAppController.listarUnidades);

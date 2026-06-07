@@ -133,6 +133,7 @@ const navItems: NavItem[] = [
       { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
       { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos", roles: RESIDENT_MANAGEMENT },
       { label: "Assembleias", to: "/assembleias", roles: ["COUNCIL_MEMBER", ...MANAGEMENT] },
+      { label: "WhatsApp", to: "/whatsapp", roles: MANAGEMENT },
     ],
   },
   {
