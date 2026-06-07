@@ -107,6 +107,17 @@ enum NotificationType {
   OCCURRENCE
   ASSEMBLY
   PANIC
+  VISITOR_ARRIVAL
+  PARCEL_RECEIVED
+  MAINTENANCE_UPDATE
+  PAYMENT_DUE
+  PAYMENT_CONFIRMED
+  ANNOUNCEMENT
+  TICKET_REPLY
+  ASSEMBLY_SCHEDULED
+  PANIC_ALERT
+  RESERVATION_STATUS
+  GENERAL
 }
 
 enum AssemblyStatus {
@@ -282,6 +293,7 @@ model Condominium {
   movingSchedules       MovingSchedule[]
   keyControls           KeyControl[]
   cameras               Camera[]
+  notifications         Notification[]
 
   @@map("condominiums")
 }
@@ -531,17 +543,24 @@ model PushSubscription {
 }
 
 model Notification {
-  id        String           @id @default(uuid())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  data      Json?
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
+  id             String           @id @default(uuid())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  condominium    Condominium?     @relation(fields: [condominiumId], references: [id])
+  condominiumId  String?
+  type           NotificationType
+  title          String
+  message        String
+  data           Json?
+  referenceId    String?
+  referenceType  String?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
 
+  @@index([userId, isRead])
+  @@index([condominiumId])
+  @@index([createdAt])
   @@map("notifications")
 }
 

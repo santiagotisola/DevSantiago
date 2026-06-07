@@ -62,6 +62,7 @@ import { SyndicDashboardPage } from "./pages/syndic/SyndicDashboardPage";
 import AgendaMudancasPage from "./pages/agenda-mudancas/AgendaMudancasPage";
 import ControleChavesPage from "./pages/controle-chaves/ControleChavesPage";
 import CamerasPage from "./pages/cameras/CamerasPage";
+import { NotificationsPage } from "./pages/notifications/NotificationsPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -574,6 +575,9 @@ export default function App() {
               </RoleGuard>
             }
           />
+
+          {/* Notificações — acessível por todos os autenticados */}
+          <Route path="notificacoes" element={<NotificationsPage />} />
         </Route>
 
         {/* Redirecionar rotas desconhecidas */}

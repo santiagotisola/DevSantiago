@@ -75,6 +75,7 @@ import collectionRulesRoutes from "./modules/collection-rules/collection-rules.r
 import digitalSignageRoutes from "./modules/digital-signage/digital-signage.routes";
 import whatsappRoutes from "./modules/whatsapp/whatsapp.routes";
 import pushSubscriptionsRoutes from "./modules/notifications/push-subscriptions.routes";
+import notificationInboxRoutes from "./modules/notifications/notification.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import movingScheduleRoutes from "./modules/moving-schedule/moving-schedule.routes";
 import keyControlRoutes from "./modules/key-control/key-control.routes";
@@ -267,6 +268,7 @@ app.use(`${API}/collection-rules`, collectionRulesRoutes);
 app.use(`${API}/digital-signage`, digitalSignageRoutes);
 app.use(`${API}/whatsapp`, whatsappRoutes);
 app.use(`${API}/notifications`, pushSubscriptionsRoutes);
+app.use(`${API}/notifications/inbox`, notificationInboxRoutes);
 app.use(`${API}/admin`, adminRoutes);
 // Novos módulos Fase 1
 app.use(`${API}/moving-schedules`, movingScheduleRoutes);

@@ -17,6 +17,9 @@ export class InAppChannel {
           title: payload.title,
           message: payload.message,
           data: payload.data ? payload.data : undefined,
+          condominiumId: payload.data?.condominiumId || null,
+          referenceId: payload.data?.referenceId || null,
+          referenceType: payload.data?.referenceType || null,
         },
       });
       
