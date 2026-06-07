@@ -1,35 +1,35 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../../config/prisma";
-import { authenticate } from "../../middleware/auth";
-import { ForbiddenError } from "../../middleware/errorHandler";
+import { authenticate, authorize } from "../../middleware/auth";
+import { auditService } from "./audit.service";
+import { UserRole } from "@prisma/client";
 
 const router = Router();
 router.use(authenticate);
+router.use(authorize(UserRole.SUPER_ADMIN, UserRole.CONDOMINIUM_ADMIN, UserRole.SYNDIC));
 
-// GET /api/v1/condominiums/:condominiumId/audit
-router.get("/", async (req: Request, res: Response) => {
-  const condominiumId = req.query.condominiumId as string;
+// GET /api/v1/audit/condominium/:condominiumId — listar logs com paginação e filtros
+router.get("/condominium/:condominiumId", async (req: Request, res: Response) => {
+  const { condominiumId } = req.params;
+  const { entity, action, userId, startDate, endDate, page, limit } = req.query;
 
-  if (!condominiumId) {
-    return res.status(400).json({ success: false, message: "condominiumId é obrigatório" });
-  }
-
-  // Validar acesso ao condomínio
-  const membership = await prisma.condominiumUser.findFirst({
-    where: {
-      userId: req.user!.userId,
-      condominiumId,
-      isActive: true,
-    },
+  const result = await auditService.list({
+    condominiumId,
+    entity: entity as string | undefined,
+    action: action as string | undefined,
+    userId: userId as string | undefined,
+    startDate: startDate ? new Date(startDate as string) : undefined,
+    endDate: endDate ? new Date(endDate as string) : undefined,
+    page: page ? Number(page) : 1,
+    limit: limit ? Number(limit) : 50,
   });
 
-  if (!membership && req.user!.role !== "SUPER_ADMIN") {
-    throw new ForbiddenError("Acesso negado a este condomínio");
-  }
+  res.json({ success: true, data: result });
+});
 
-  // Mock: retornar lista vazia (seria de um modelo AuditLog no futuro)
-  const logs: any[] = [];
-
+// GET /api/v1/audit/entity/:entity/:entityId — histórico de uma entidade específica
+router.get("/entity/:entity/:entityId", async (req: Request, res: Response) => {
+  const { entity, entityId } = req.params;
+  const logs = await auditService.getByEntity(entity, entityId);
   res.json({ success: true, data: { logs } });
 });
 

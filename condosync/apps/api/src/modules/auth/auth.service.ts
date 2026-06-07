@@ -12,6 +12,7 @@ import {
 } from "../../middleware/errorHandler";
 import { JwtPayload } from "../../middleware/auth";
 import type { UserRole } from "@prisma/client";
+import { auditService } from "../audit/audit.service";
 
 export interface RegisterDTO {
   name: string;
@@ -145,6 +146,15 @@ export class AuthService {
 
     const { passwordHash: _, ...userWithoutPassword } = user;
 
+    // Audit: LOGIN
+    auditService.log({
+      userId: user.id,
+      condominiumId: user.condominiumUsers?.[0]?.condominium?.id,
+      action: "LOGIN",
+      entity: "Auth",
+      metadata: { ip: ipAddress },
+    }).catch(() => {});
+
     return {
       user: userWithoutPassword,
       accessToken,
@@ -173,8 +183,17 @@ export class AuthService {
     return tokens;
   }
 
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, userId?: string) {
     await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
+
+    // Audit: LOGOUT
+    if (userId) {
+      auditService.log({
+        userId,
+        action: "LOGOUT",
+        entity: "Auth",
+      }).catch(() => {});
+    }
   }
 
   async requestPasswordReset(email: string) {

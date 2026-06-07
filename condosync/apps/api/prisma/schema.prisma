@@ -943,21 +943,22 @@ model AssemblyAttendee {
 // ─────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id            String      @id @default(uuid())
-  user          User?       @relation(fields: [userId], references: [id])
-  userId        String?
-  condominium   Condominium? @relation(fields: [condominiumId], references: [id])
-  condominiumId String?
-  action        String      // CREATE, UPDATE, DELETE, LOGIN, etc.
-  module        String      // portaria, financeiro, etc.
-  entityType    String?     // Visitor, Parcel, etc.
-  entityId      String?
-  description   String
-  metadata      Json?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime    @default(now())
+  id             String       @id @default(uuid())
+  condominiumId  String?
+  condominium    Condominium? @relation(fields: [condominiumId], references: [id])
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  action         String       // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, ACCESS
+  entity         String       // Visitor, Parcel, Unit, Resident, etc.
+  entityId       String?
+  changes        Json?        // { before: {...}, after: {...} } para UPDATE
+  metadata       Json?        // IP, user-agent, etc.
+  createdAt      DateTime     @default(now())
 
+  @@index([condominiumId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 model FinalizedAssembly {
