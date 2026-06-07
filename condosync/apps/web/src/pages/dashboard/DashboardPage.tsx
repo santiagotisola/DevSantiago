@@ -11,64 +11,17 @@ import {
   Home,
   Shield,
   Calendar,
-  ChevronRight,
   Loader2,
   Building2,
-  HardHat,
-  FileText,
   MessageSquare,
-  Image,
-  Video,
   Bell,
-  Plus,
-  Car,
-  CreditCard,
-  Archive,
-  BarChart2,
-  Ban,
-  FileCheck,
-  Monitor,
-  UserCog,
-  Heart,
+  UserCheck,
+  Clock,
   Vote,
-  Siren,
-  Truck,
-  Megaphone,
-  SearchSlash,
-  ClipboardList,
+  ChevronRight,
 } from "lucide-react";
-
-// ── Grid de Módulos ────────────────────────────────────────────────────────
-const SYSTEM_MODULES = [
-  { label: "Visitantes",    to: "/portaria/visitantes",         icon: Shield,        bg: "bg-purple-100",  color: "text-purple-600" },
-  { label: "Encomendas",    to: "/portaria/encomendas",         icon: Package,       bg: "bg-amber-100",   color: "text-amber-600" },
-  { label: "Veículos",      to: "/portaria/veiculos",           icon: Car,           bg: "bg-sky-100",     color: "text-sky-600" },
-  { label: "Pânico",        to: "/portaria/panico",             icon: Siren,         bg: "bg-red-100",     color: "text-red-600" },
-  { label: "Prestadores",   to: "/prestadores",                 icon: Truck,         bg: "bg-orange-100",  color: "text-orange-600" },
-  { label: "Unidades",      to: "/unidades",                    icon: Home,          bg: "bg-indigo-100",  color: "text-indigo-600" },
-  { label: "Moradores",     to: "/moradores",                   icon: Users,         bg: "bg-teal-100",    color: "text-teal-600" },
-  { label: "Funcionários",  to: "/funcionarios",                icon: UserCog,       bg: "bg-blue-100",    color: "text-blue-600" },
-  { label: "Pets",          to: "/pets",                        icon: Heart,         bg: "bg-pink-100",    color: "text-pink-600" },
-  { label: "Financeiro",    to: "/financeiro",                  icon: DollarSign,    bg: "bg-emerald-100", color: "text-emerald-600" },
-  { label: "Cobranças",     to: "/financeiro/cobrancas",        icon: CreditCard,    bg: "bg-green-100",   color: "text-green-600" },
-  { label: "Manutenção",    to: "/manutencao",                  icon: Wrench,        bg: "bg-yellow-100",  color: "text-yellow-700" },
-  { label: "Chamados",      to: "/chamados",                    icon: ClipboardList, bg: "bg-blue-100",    color: "text-blue-700" },
-  { label: "Áreas Comuns",  to: "/areas-comuns",                icon: Calendar,      bg: "bg-cyan-100",    color: "text-cyan-600" },
-  { label: "Avisos",        to: "/comunicacao/avisos",          icon: Bell,          bg: "bg-blue-100",    color: "text-blue-500" },
-  { label: "Ocorrências",   to: "/comunicacao/ocorrencias",     icon: AlertTriangle, bg: "bg-yellow-100",  color: "text-yellow-600" },
-  { label: "Assembleias",   to: "/assembleias",                 icon: Vote,          bg: "bg-violet-100",  color: "text-violet-600" },
-  { label: "Documentos",    to: "/documentos",                  icon: FileText,      bg: "bg-gray-100",    color: "text-gray-600" },
-  { label: "Relatórios",    to: "/relatorios",                  icon: BarChart2,     bg: "bg-indigo-100",  color: "text-indigo-500" },
-  { label: "Galeria",       to: "/galeria",                     icon: Image,         bg: "bg-fuchsia-100", color: "text-fuchsia-600" },
-  { label: "Obras",         to: "/obras",                       icon: HardHat,       bg: "bg-orange-100",  color: "text-orange-700" },
-  { label: "Estoque",       to: "/estoque",                     icon: Archive,       bg: "bg-lime-100",    color: "text-lime-700" },
-  { label: "Multas",        to: "/multas",                      icon: Ban,           bg: "bg-red-100",     color: "text-red-500" },
-  { label: "Contratos",     to: "/contratos",                   icon: FileCheck,     bg: "bg-teal-100",    color: "text-teal-700" },
-  { label: "TV Elevador",   to: "/digital-signage",             icon: Monitor,       bg: "bg-slate-100",   color: "text-slate-600" },
-];
 import { formatCurrency, formatRelativeTime } from "../../lib/utils";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   BarChart,
   Bar,
@@ -77,8 +30,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -109,13 +60,13 @@ function StatCardSkeleton() {
   );
 }
 
-function StatCard({
+function KPICard({
   title,
   value,
   subtitle,
   icon: Icon,
   color,
-  trend,
+  alert,
   to,
 }: {
   title: string;
@@ -123,20 +74,21 @@ function StatCard({
   subtitle?: string;
   icon: React.ElementType;
   color: string;
-  trend?: { value: number; label: string };
+  alert?: boolean;
   to?: string;
 }) {
   const content = (
-    <motion.div
-      whileHover={{ y: -4 }}
-      className={`bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 h-full ${to ? "cursor-pointer" : ""}`}
+    <div
+      className={`bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all duration-300 h-full ${
+        alert ? "border-red-200 bg-red-50/30" : "border-gray-100"
+      } ${to ? "cursor-pointer hover:-translate-y-1" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
             {title}
           </p>
-          <p className="text-3xl font-black text-gray-800 tracking-tight">
+          <p className={`text-3xl font-black tracking-tight ${alert ? "text-red-600" : "text-gray-800"}`}>
             {value}
           </p>
           {subtitle && (
@@ -145,23 +97,12 @@ function StatCard({
               {subtitle}
             </p>
           )}
-          {trend && (
-            <div
-              className={`flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-wider ${trend.value >= 0 ? "text-emerald-500" : "text-rose-500"}`}
-            >
-              <TrendingUp
-                className={`w-3 h-3 ${trend.value < 0 ? "rotate-180" : ""}`}
-              />
-              {trend.value >= 0 ? "+" : ""}
-              {trend.value}% {trend.label}
-            </div>
-          )}
         </div>
         <div className={`${color} p-3 rounded-2xl shadow-lg shadow-current/10`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 
   return to ? (
@@ -173,215 +114,26 @@ function StatCard({
   );
 }
 
-function ResidentDashboard({
-  d,
-  user,
-  selectedCondominiumId,
-}: {
-  d: any;
-  user: any;
-  selectedCondominiumId: string | null;
-}) {
-  const condominium = user?.condominiumUsers?.find(
-    (cu: any) => cu.condominium.id === selectedCondominiumId,
-  )?.condominium;
-
-  const { data: openTickets } = useQuery({
-    queryKey: ["resident-tickets-open", selectedCondominiumId],
-    queryFn: async () => {
-      const res = await api.get(
-        `/tickets/${selectedCondominiumId}?status=OPEN`,
-      );
-      return (res.data.data ?? []) as any[];
-    },
-    enabled: !!selectedCondominiumId,
-  });
-
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-
-  return (
-    <div className="space-y-8 pb-8">
-      {/* Header Premium Resident */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">
-            {greeting}, {user?.name.split(" ")[0]}! 👋
-          </h1>
-          <p className="text-gray-500 font-medium mt-1">
-            {condominium?.name} ·{" "}
-            <span className="text-blue-600">
-              {new Date().toLocaleDateString("pt-BR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-4 py-2 rounded-full border border-gray-100">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          Unidade {user?.residentUnits?.[0]?.unit?.number || "—"}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Minhas Encomendas"
-          value={d?.portaria?.parcelsAwaiting ?? 0}
-          subtitle="pendentes na portaria"
-          icon={Package}
-          color="bg-amber-500"
-          to="/minha-portaria/encomendas"
-        />
-        <StatCard
-          title="Minhas Reservas"
-          value={d?.communication?.upcomingReservations ?? 0}
-          subtitle="áreas agendadas"
-          icon={Calendar}
-          color="bg-teal-500"
-          to="/areas-comuns"
-        />
-        <StatCard
-          title="Eventos / Avisos"
-          value={d?.communication?.unreadOccurrences ?? 0}
-          subtitle="não lidos"
-          icon={Bell}
-          color="bg-indigo-500"
-          to="/comunicacao/avisos"
-        />
-        <StatCard
-          title="Meus Chamados"
-          value={openTickets?.length ?? 0}
-          subtitle="em andamento"
-          icon={MessageSquare}
-          color="bg-blue-500"
-          to="/chamados"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-bold text-gray-800">
-                Comunicados Recentes
-              </h3>
-              <p className="text-xs text-gray-400 font-medium">
-                Fique por dentro das novidades
-              </p>
-            </div>
-            <Link
-              to="/comunicacao/avisos"
-              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold transition-colors border border-gray-100"
-            >
-              Ver Tudo
-            </Link>
-          </div>
-          <div className="space-y-4 flex-1 overflow-auto max-h-[450px] pr-2 custom-scrollbar">
-            {d?.recentAnnouncements?.length > 0 ? (
-              d.recentAnnouncements.map((a: any) => (
-                <div
-                  key={a.id}
-                  className="group flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
-                >
-                  <div
-                    className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}
-                  >
-                    <Bell className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">
-                      {a.title}
-                    </p>
-                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">
-                      {a.content}
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">
-                      {formatRelativeTime(a.publishedAt)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <Shield className="w-8 h-8 text-gray-200" />
-                </div>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">
-                  Nenhum aviso no momento
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">
-            Acesso Rápido
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              {
-                label: "Visita",
-                to: "/minha-portaria/visitantes",
-                icon: Shield,
-                color: "text-purple-600 bg-purple-50",
-              },
-              {
-                label: "Encomenda",
-                to: "/minha-portaria/encomendas",
-                icon: Package,
-                color: "text-amber-600 bg-amber-50",
-              },
-              {
-                label: "Reserva",
-                to: "/areas-comuns",
-                icon: Calendar,
-                color: "text-teal-600 bg-teal-50",
-              },
-              {
-                label: "Chamado",
-                to: "/chamados",
-                icon: MessageSquare,
-                color: "text-blue-600 bg-blue-50",
-              },
-              {
-                label: "Documentos",
-                to: "/documentos",
-                icon: FileText,
-                color: "text-rose-600 bg-rose-50",
-              },
-              {
-                label: "Ocorrência",
-                to: "/comunicacao/ocorrencias",
-                icon: AlertTriangle,
-                color: "text-yellow-600 bg-yellow-50",
-              },
-            ].map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-gray-50/50 transition-all text-center"
-              >
-                <div
-                  className={`${item.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}
-                >
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-gray-600">
-                  {item.label}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// ─── Activity Icon ─────────────────────────────────────────────────────────
+function getActivityIcon(type: string) {
+  switch (type) {
+    case "visitor":
+      return { icon: UserCheck, color: "text-purple-600 bg-purple-50" };
+    case "parcel":
+      return { icon: Package, color: "text-amber-600 bg-amber-50" };
+    case "ticket":
+      return { icon: MessageSquare, color: "text-blue-600 bg-blue-50" };
+    case "maintenance":
+      return { icon: Wrench, color: "text-rose-600 bg-rose-50" };
+    default:
+      return { icon: Bell, color: "text-gray-600 bg-gray-50" };
+  }
 }
 
+// ─── Pie Chart Colors ──────────────────────────────────────────────────────
+const TICKET_COLORS = ["#3B82F6", "#F59E0B", "#10B981"];
+
+// ─── Main Dashboard ────────────────────────────────────────────────────────
 export function DashboardPage() {
   const { selectedCondominiumId, user } = useAuthStore();
 
@@ -418,11 +170,10 @@ export function DashboardPage() {
           </div>
           <Skeleton className="h-10 w-32 rounded-full" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-          <StatCardSkeleton />
-          <StatCardSkeleton />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Skeleton className="lg:col-span-2 h-[400px] rounded-3xl" />
@@ -433,28 +184,28 @@ export function DashboardPage() {
   }
 
   const d = data;
+  const metrics = d?.metrics;
+  const financialChart = d?.financialChart || [];
+  const ticketsByStatus = d?.ticketsByStatus || { open: 0, inProgress: 0, closed: 0 };
+  const recentActivity = d?.recentActivity || [];
+  const upcomingAssemblies = d?.upcomingAssemblies || [];
 
-  if (user?.role === "RESIDENT") {
-    return (
-      <ResidentDashboard
-        d={d}
-        user={user}
-        selectedCondominiumId={selectedCondominiumId}
-      />
-    );
-  }
-
-  const visitorsWeek = d?.portaria?.visitorStats || [];
-  const parcelWeek = d?.portaria?.parcelStats || [];
-  const financeMonths = d?.financial?.financeStats || [];
+  const ticketPieData = [
+    { name: "Abertos", value: ticketsByStatus.open },
+    { name: "Em Andamento", value: ticketsByStatus.inProgress },
+    { name: "Fechados", value: ticketsByStatus.closed },
+  ].filter((d) => d.value > 0);
 
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
 
+  const formatBRL = (value: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
   return (
     <div className="space-y-8 pb-8">
-      {/* Header Premium */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-800 tracking-tight">
@@ -477,103 +228,95 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Grid de Métricas Visuais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Ocupação Geral"
-          value={`${d?.summary?.occupiedUnits || 0}`}
-          subtitle={`de ${d?.summary?.totalUnits || 0} unidades`}
-          icon={Home}
+      {/* ── KPI Cards ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Moradores Ativos"
+          value={metrics?.totalResidents ?? 0}
+          subtitle={`${metrics?.totalUnits ?? 0} unidades`}
+          icon={Users}
           color="bg-indigo-500"
-          trend={{ value: 2.5, label: "este mês" }}
+          to="/moradores"
+        />
+        <KPICard
+          title="Taxa de Ocupação"
+          value={`${metrics?.occupancyRate ?? 0}%`}
+          subtitle={`${metrics?.occupiedUnits ?? 0} de ${metrics?.totalUnits ?? 0}`}
+          icon={Home}
+          color="bg-teal-500"
           to="/unidades"
         />
-        <StatCard
-          title="Visitantes Ativos"
-          value={d?.portaria?.visitorsInside || 0}
-          subtitle={`${d?.portaria?.visitorsToday || 0} hoje`}
-          icon={Users}
-          color="bg-fuchsia-500"
+        <KPICard
+          title="Visitantes Pendentes"
+          value={metrics?.pendingVisitors ?? 0}
+          subtitle="aguardando aprovação"
+          icon={UserCheck}
+          color="bg-purple-500"
           to="/portaria/visitantes"
         />
-        <StatCard
-          title="Encomendas"
-          value={d?.portaria?.parcelsAwaiting || 0}
+        <KPICard
+          title="Encomendas Pendentes"
+          value={metrics?.parcelsAwaiting ?? 0}
           subtitle="na portaria"
           icon={Package}
           color="bg-amber-500"
-          trend={{ value: -12, label: "vs ontem" }}
           to="/portaria/encomendas"
         />
-        <StatCard
-          title="Incidentes"
-          value={d?.maintenance?.urgentOrders || 0}
-          subtitle={`${d?.maintenance?.openOrders || 0} abertos`}
-          icon={AlertTriangle}
+        <KPICard
+          title="Chamados Abertos"
+          value={metrics?.openTickets ?? 0}
+          subtitle="em aberto ou andamento"
+          icon={MessageSquare}
+          color="bg-blue-500"
+          to="/chamados"
+        />
+        <KPICard
+          title="Manutenções Abertas"
+          value={metrics?.openMaintenanceOrders ?? 0}
+          subtitle="ordens de serviço"
+          icon={Wrench}
           color="bg-rose-500"
           to="/manutencao"
         />
+        <KPICard
+          title="Receita do Mês"
+          value={formatBRL(metrics?.monthlyRevenue ?? 0)}
+          subtitle="pagamentos confirmados"
+          icon={DollarSign}
+          color="bg-emerald-500"
+          to="/financeiro"
+        />
+        <KPICard
+          title="Cobranças Vencidas"
+          value={metrics?.overdueCharges ?? 0}
+          subtitle="em atraso"
+          icon={AlertTriangle}
+          color={metrics?.overdueCharges > 0 ? "bg-red-500" : "bg-gray-400"}
+          alert={metrics?.overdueCharges > 0}
+          to="/financeiro/cobrancas"
+        />
       </div>
 
-      {/* ── Grid de Módulos (portal-style) ───────────────────────────────── */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-5">
-          Módulos do Sistema
-        </h3>
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-3">
-          {SYSTEM_MODULES.map((mod) => (
-            <Link
-              key={mod.to}
-              to={mod.to}
-              className="group flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-all border border-gray-100 hover:border-gray-200 hover:shadow-sm text-center"
-            >
-              <div className={`${mod.bg} p-3 rounded-2xl group-hover:scale-110 transition-transform`}>
-                <mod.icon className={`w-5 h-5 ${mod.color}`} />
-              </div>
-              <span className="text-[11px] font-semibold text-gray-600 leading-tight">
-                {mod.label}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
+      {/* ── Gráficos ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-full">
-          <div className="flex items-center justify-between mb-8">
+        {/* Receita vs Despesa - Bar Chart */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-gray-800">
-                Saúde Financeira
-              </h3>
-              <p className="text-xs text-gray-400 font-medium">
-                Fluxo de caixa (6 meses)
-              </p>
+              <h3 className="text-lg font-bold text-gray-800">Receita vs Despesa</h3>
+              <p className="text-xs text-gray-400 font-medium">Últimos 6 meses</p>
             </div>
             <Link
               to="/financeiro"
               className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold transition-colors border border-gray-100"
             >
-              Relatório
+              Detalhes
             </Link>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={financeMonths}>
-                <defs>
-                  <linearGradient id="colorRec" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorDes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#F3F4F6"
-                />
+              <BarChart data={financialChart} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                 <XAxis
                   dataKey="month"
                   axisLine={false}
@@ -584,189 +327,181 @@ export function DashboardPage() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: "#9CA3AF" }}
-                  tickFormatter={(val) => `R$ ${val / 1000}k`}
+                  tickFormatter={(val) =>
+                    val >= 1000 ? `R$${(val / 1000).toFixed(0)}k` : `R$${val}`
+                  }
                 />
                 <Tooltip
+                  formatter={(value: number) => formatBRL(value)}
                   contentStyle={{
-                    borderRadius: "16px",
+                    borderRadius: "12px",
                     border: "none",
                     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="receitas"
-                  stroke="#10B981"
-                  strokeWidth={3}
-                  fill="url(#colorRec)"
+                <Legend
+                  wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="despesas"
-                  stroke="#EF4444"
-                  strokeWidth={3}
-                  fill="url(#colorDes)"
-                />
-              </AreaChart>
+                <Bar dataKey="receitas" name="Receitas" fill="#10B981" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="despesas" name="Despesas" fill="#EF4444" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 font-inter">
-            Ações Rápidas
-          </h3>
-          <div className="grid grid-cols-2 gap-4 flex-1">
-            {[
-              {
-                label: "Visita",
-                to: "/portaria/visitantes",
-                icon: Shield,
-                color: "text-purple-600 bg-purple-50",
-              },
-              {
-                label: "Encomenda",
-                to: "/portaria/encomendas",
-                icon: Package,
-                color: "text-amber-600 bg-amber-50",
-              },
-              {
-                label: "Chamado",
-                to: "/manutencao",
-                icon: Wrench,
-                color: "text-rose-600 bg-rose-50",
-              },
-              {
-                label: "Cobrança",
-                to: "/financeiro/cobrancas",
-                icon: DollarSign,
-                color: "text-emerald-600 bg-emerald-50",
-              },
-              {
-                label: "Áreas",
-                to: "/areas-comuns",
-                icon: Calendar,
-                color: "text-teal-600 bg-teal-50",
-              },
-              {
-                label: "Aviso",
-                to: "/comunicacao/avisos",
-                icon: Bell,
-                color: "text-blue-600 bg-blue-50",
-              },
-            ].map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="group flex flex-col items-center justify-center gap-3 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
-              >
-                <div
-                  className={`${item.color} p-3 rounded-xl transform group-hover:scale-110 transition-transform`}
-                >
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-gray-500">
-                  {item.label}
-                </span>
-              </Link>
-            ))}
-          </div>
+        {/* Tickets por Status - Pie Chart */}
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-gray-800 mb-2">Chamados por Status</h3>
+          <p className="text-xs text-gray-400 font-medium mb-4">Distribuição atual</p>
+          {ticketPieData.length > 0 ? (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={ticketPieData}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={false}
+                  >
+                    {ticketPieData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={TICKET_COLORS[index % TICKET_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Legend
+                    wrapperStyle={{ fontSize: "12px" }}
+                    verticalAlign="bottom"
+                  />
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[260px] text-center opacity-40">
+              <MessageSquare className="w-8 h-8 mb-3" />
+              <p className="text-xs font-bold uppercase tracking-widest">Sem chamados</p>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* ── Feed de Atividades + Assembleias + Ações Rápidas ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Visitantes (Semana)
-            </h4>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={visitorsWeek}>
-                <defs>
-                  <linearGradient id="colorVis" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="step"
-                  dataKey="visitantes"
-                  stroke="#8B5CF6"
-                  fill="url(#colorVis)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Encomendas (Semana)
-            </h4>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={parcelWeek}>
-                <defs>
-                  <linearGradient id="colorPar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area
-                  type="monotone"
-                  dataKey="recebidas"
-                  stroke="#F59E0B"
-                  fill="url(#colorPar)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm flex flex-col h-full">
+        {/* Feed de Atividades Recentes */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-800">Comunicados</h3>
-            <Link
-              to="/comunicacao/avisos"
-              className="text-blue-600 hover:text-blue-700"
-            >
-              <Plus className="w-5 h-5" />
-            </Link>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">Atividades Recentes</h3>
+              <p className="text-xs text-gray-400 font-medium">Últimos eventos do condomínio</p>
+            </div>
+            <Clock className="w-5 h-5 text-gray-300" />
           </div>
-          <div className="space-y-4 flex-1 overflow-auto max-h-[350px] pr-2 custom-scrollbar">
-            {d?.recentAnnouncements?.length > 0 ? (
-              d.recentAnnouncements.map((a: any) => (
-                <div
-                  key={a.id}
-                  className="flex gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
-                >
+          <div className="space-y-3 max-h-[400px] overflow-auto pr-2">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity: any) => {
+                const { icon: ActivityIcon, color } = getActivityIcon(activity.type);
+                return (
                   <div
-                    className={`p-2 rounded-xl shrink-0 h-fit ${a.isPinned ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400"}`}
+                    key={activity.id}
+                    className="flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
                   >
-                    <Bell className="w-4 h-4" />
+                    <div className={`p-2 rounded-xl shrink-0 ${color}`}>
+                      <ActivityIcon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{activity.detail}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      {formatRelativeTime(activity.createdAt)}
+                    </span>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800 truncate">
-                      {a.title}
-                    </p>
-                    <p className="text-[12px] text-gray-500 line-clamp-2 mt-1">
-                      {a.content}
-                    </p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-3">
-                      {formatRelativeTime(a.publishedAt)}
-                    </p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
-                <Shield className="w-8 h-8 mb-4 " />
-                <p className="text-xs font-bold uppercase tracking-widest">
-                  Sem avisos
-                </p>
+                <Bell className="w-8 h-8 mb-3" />
+                <p className="text-xs font-bold uppercase tracking-widest">Nenhuma atividade recente</p>
               </div>
             )}
           </div>
         </div>
-      </div>
 
+        {/* Próximas Assembleias + Ações Rápidas */}
+        <div className="space-y-6">
+          {/* Próximas Assembleias */}
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-gray-800">Próximas Assembleias</h3>
+              <Link to="/assembleias" className="text-blue-500 hover:text-blue-600">
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            {upcomingAssemblies.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingAssemblies.map((assembly: any) => (
+                  <Link
+                    key={assembly.id}
+                    to="/assembleias"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-50"
+                  >
+                    <div className="bg-violet-50 p-2 rounded-xl">
+                      <Vote className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {assembly.title}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {new Date(assembly.scheduledAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 text-center py-4">Nenhuma assembleia agendada</p>
+            )}
+          </div>
+
+          {/* Ações Rápidas */}
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-800 mb-4">Ações Rápidas</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Registrar Visitante", to: "/portaria/visitantes", icon: UserCheck, color: "text-purple-600 bg-purple-50" },
+                { label: "Registrar Encomenda", to: "/portaria/encomendas", icon: Package, color: "text-amber-600 bg-amber-50" },
+                { label: "Criar Chamado", to: "/chamados", icon: MessageSquare, color: "text-blue-600 bg-blue-50" },
+                { label: "Nova Reserva", to: "/areas-comuns", icon: Calendar, color: "text-teal-600 bg-teal-50" },
+              ].map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="group flex flex-col items-center justify-center gap-2 p-4 rounded-2xl hover:bg-gray-50 transition-all border border-gray-100 hover:border-gray-200"
+                >
+                  <div className={`${item.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-gray-600 text-center leading-tight">
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
