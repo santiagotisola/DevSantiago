@@ -12,6 +12,10 @@ import {
   ShoppingBag,
   LogOut,
   MessageCircle,
+  CalendarDays,
+  FileText,
+  Building2,
+  BellRing,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
@@ -47,6 +51,10 @@ export default function HomeGrid() {
     { to: '/pets', icon: PawPrint, label: 'Pets', color: 'text-pink-600', bg: 'bg-pink-50' },
     { to: '/chamados', icon: Ticket, label: 'Chamados', color: 'text-orange-600', bg: 'bg-orange-50' },
     { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { to: '/assembleias', icon: CalendarDays, label: 'Assembleias', color: 'text-cyan-600', bg: 'bg-cyan-50' },
+    { to: '/documentos', icon: FileText, label: 'Documentos', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { to: '/reservas', icon: Building2, label: 'Reservas', color: 'text-teal-600', bg: 'bg-teal-50' },
+    { to: '/notificacoes', icon: BellRing, label: 'Notificações', color: 'text-rose-600', bg: 'bg-rose-50' },
     {
       to: '/panico',
       icon: AlertTriangle,

@@ -29,6 +29,10 @@ import MinhasVisitas from './pages/morador/MinhasVisitas';
 import MinhasCobrancas from './pages/morador/MinhasCobrancas';
 import Avisos from './pages/morador/Avisos';
 import Pets from './pages/morador/Pets';
+import AssembleiasMobilePage from './pages/morador/AssembleiasMobilePage';
+import DocumentosMobilePage from './pages/morador/DocumentosMobilePage';
+import ReservasMobilePage from './pages/morador/ReservasMobilePage';
+import NotificacoesMobilePage from './pages/morador/NotificacoesMobilePage';
 
 // Shared
 import PerfilPage from './pages/shared/PerfilPage';
@@ -120,6 +124,20 @@ export default function App() {
           {/* Chamados (morador + porteiro + prestador) */}
           <Route element={<MobileLayout title="Chamados" showBack />}>
             <Route path="/chamados" element={<Avisos />} />
+          </Route>
+
+          {/* Novas páginas morador */}
+          <Route element={<MobileLayout title="Assembleias" showBack />}>
+            <Route path="/assembleias" element={<AssembleiasMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Documentos" showBack />}>
+            <Route path="/documentos" element={<DocumentosMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Reservas" showBack />}>
+            <Route path="/reservas" element={<ReservasMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Notificações" showBack />}>
+            <Route path="/notificacoes" element={<NotificacoesMobilePage />} />
           </Route>
           <Route element={<MobileLayout title="Perfil" showBack />}>
             <Route path="/perfil" element={<PerfilPage />} />
