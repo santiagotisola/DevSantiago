@@ -24,7 +24,7 @@ async function getRecentActivity(condominiumId: string) {
       where: { unit: { condominiumId } },
       orderBy: { receivedAt: "desc" },
       take: 5,
-      select: { id: true, description: true, receivedAt: true, unit: { select: { identifier: true } } },
+      include: { unit: { select: { identifier: true } } },
     }),
     prisma.ticket.findMany({
       where: { condominiumId },
@@ -51,7 +51,7 @@ async function getRecentActivity(condominiumId: string) {
     ...parcels.map((p) => ({
       id: p.id,
       type: "parcel" as const,
-      description: `Encomenda recebida${p.description ? `: ${p.description}` : ""}`,
+      description: `Encomenda recebida${p.senderName ? ` de ${p.senderName}` : ""}`,
       detail: `Unidade ${p.unit.identifier}`,
       createdAt: p.receivedAt,
     })),

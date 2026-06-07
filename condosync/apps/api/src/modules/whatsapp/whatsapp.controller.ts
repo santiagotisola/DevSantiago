@@ -141,15 +141,17 @@ export async function broadcast(req: Request, res: Response) {
   let residents: { name: string; phone: string | null; unit?: { identifier: string } }[] = [];
 
   if (group === "ALL") {
-    residents = await prisma.resident.findMany({
-      where: { unit: { condominiumId } },
-      select: { name: true, phone: true, unit: { select: { identifier: true } } },
+    const users = await prisma.condominiumUser.findMany({
+      where: { condominiumId, role: "RESIDENT", isActive: true },
+      include: { user: { select: { name: true, phone: true } }, unit: { select: { identifier: true } } },
     });
+    residents = users.map((u) => ({ name: u.user.name, phone: u.user.phone, unit: u.unit || undefined }));
   } else if (group === "UNIT" && unitId) {
-    residents = await prisma.resident.findMany({
-      where: { unitId },
-      select: { name: true, phone: true, unit: { select: { identifier: true } } },
+    const users = await prisma.condominiumUser.findMany({
+      where: { unitId, role: "RESIDENT", isActive: true },
+      include: { user: { select: { name: true, phone: true } }, unit: { select: { identifier: true } } },
     });
+    residents = users.map((u) => ({ name: u.user.name, phone: u.user.phone, unit: u.unit || undefined }));
   } else if (group === "OVERDUE") {
     // Buscar moradores com cobranças vencidas
     const overdue = await prisma.charge.findMany({
@@ -157,14 +159,13 @@ export async function broadcast(req: Request, res: Response) {
         status: "OVERDUE",
         unit: { condominiumId },
       },
-      select: {
-        amount: true,
+      include: {
         unit: {
           select: {
             identifier: true,
             residents: {
-              select: { name: true, phone: true },
-              where: { isOwner: true },
+              include: { user: { select: { name: true, phone: true } } },
+              where: { role: "RESIDENT", isActive: true },
               take: 1,
             },
           },
@@ -174,8 +175,8 @@ export async function broadcast(req: Request, res: Response) {
     residents = overdue
       .filter((c) => c.unit.residents.length > 0)
       .map((c) => ({
-        name: c.unit.residents[0].name,
-        phone: c.unit.residents[0].phone,
+        name: c.unit.residents[0].user.name,
+        phone: c.unit.residents[0].user.phone,
         unit: { identifier: c.unit.identifier },
       }));
   }
