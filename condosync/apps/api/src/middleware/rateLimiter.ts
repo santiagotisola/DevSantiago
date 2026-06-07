@@ -44,6 +44,16 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+// Rate limiter para operações sensíveis (finance, password reset, broadcast)
+export const sensitiveRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 50,
+  message: {
+    status: 429,
+    message: 'Limite de operações sensíveis atingido. Tente novamente em 1 hora.',
+  },
+});
+
 // Tenta substituir para RedisStore em background (não bloqueia boot)
 if (process.env.REDIS_URL) {
   Promise.all([
