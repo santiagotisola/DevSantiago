@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
-import { BarChart3, Loader2, UsersRound, Banknote, Settings2, Building2, FileDown } from 'lucide-react';
+import { BarChart3, Loader2, UsersRound, Banknote, Settings2, Building2, FileDown, FileSpreadsheet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatCurrency } from '../../lib/utils';
 
@@ -19,6 +19,35 @@ export function ReportsPage() {
   const { selectedCondominiumId } = useAuthStore();
   const [activeTab, setActiveTab] = useState('visitors');
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+  const downloadExcel = async (type: string) => {
+    try {
+      setIsExportingExcel(true);
+      const params: Record<string, string> = {};
+      if (type !== 'residents' && type !== 'delinquency') {
+        const now = new Date();
+        params.startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        params.endDate = now.toISOString();
+      }
+      const response = await api.get(`/reports/${type}/${selectedCondominiumId}/excel`, {
+        params,
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `relatorio_${type}_${new Date().toISOString().substring(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar Excel:', error);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
 
   const downloadPdf = async () => {
     try {
@@ -59,6 +88,16 @@ export function ReportsPage() {
           <div key={label as string} className="bg-white border rounded-xl p-4 text-center"><p className="text-2xl font-bold text-blue-600">{value ?? 0}</p><p className="text-sm text-muted-foreground mt-1">{label}</p></div>
         ))}
       </div>
+      <div className="flex justify-end p-2">
+        <button 
+          onClick={() => downloadExcel('visitors')}
+          disabled={isExportingExcel}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+        >
+          {isExportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+          Exportar Excel
+        </button>
+      </div>
     </div>
   );
 
@@ -70,7 +109,15 @@ export function ReportsPage() {
         ))}
       </div>
 
-      <div className="flex justify-end p-2">
+      <div className="flex justify-end gap-2 p-2">
+        <button 
+          onClick={() => downloadExcel('financial')}
+          disabled={isExportingExcel}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+        >
+          {isExportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+          Exportar Excel
+        </button>
         <button 
           onClick={downloadPdf}
           disabled={isExporting}
@@ -103,15 +150,45 @@ export function ReportsPage() {
           </div>
         </div>
         {data?.avgResolutionHours && <p className="text-sm text-muted-foreground">Tempo médio de resolução: <strong>{data.avgResolutionHours.toFixed(1)}h</strong></p>}
+        <div className="flex justify-end p-2">
+          <button 
+            onClick={() => downloadExcel('maintenance')}
+            disabled={isExportingExcel}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+          >
+            {isExportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            Exportar Excel
+          </button>
+        </div>
       </div>
     );
   };
 
   const renderOccupancy = () => (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {[['Total de Unidades', data?.totalUnits], ['Ocupadas', data?.occupied], ['Vagas', data?.vacant], ['Taxa de ocupação', `${data?.occupancyRate?.toFixed(1) ?? 0}%`]].map(([label, value]) => (
-        <div key={label as string} className="bg-white border rounded-xl p-4 text-center"><p className="text-2xl font-bold text-blue-600">{value ?? 0}</p><p className="text-sm text-muted-foreground mt-1">{label}</p></div>
-      ))}
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[['Total de Unidades', data?.totalUnits], ['Ocupadas', data?.occupied], ['Vagas', data?.vacant], ['Taxa de ocupação', `${data?.occupancyRate?.toFixed(1) ?? 0}%`]].map(([label, value]) => (
+          <div key={label as string} className="bg-white border rounded-xl p-4 text-center"><p className="text-2xl font-bold text-blue-600">{value ?? 0}</p><p className="text-sm text-muted-foreground mt-1">{label}</p></div>
+        ))}
+      </div>
+      <div className="flex justify-end gap-2 p-2">
+        <button 
+          onClick={() => downloadExcel('residents')}
+          disabled={isExportingExcel}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+        >
+          {isExportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+          Moradores (Excel)
+        </button>
+        <button 
+          onClick={() => downloadExcel('delinquency')}
+          disabled={isExportingExcel}
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+        >
+          {isExportingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+          Inadimplência (Excel)
+        </button>
+      </div>
     </div>
   );
 
