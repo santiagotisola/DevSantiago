@@ -134,7 +134,7 @@ export function NotificationBell() {
                   Marcar todas
                 </button>
               )}
-              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600" title="Fechar notificações" aria-label="Fechar notificações">
                 <X className="w-4 h-4" />
               </button>
             </div>

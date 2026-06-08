@@ -180,6 +180,7 @@ export function NotificationsPage() {
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
             className="text-sm border rounded-lg px-3 py-1.5 bg-white"
+            aria-label="Filtrar por tipo de notificação"
           >
             <option value="">Todos os tipos</option>
             <option value="VISITOR">Visitantes</option>
