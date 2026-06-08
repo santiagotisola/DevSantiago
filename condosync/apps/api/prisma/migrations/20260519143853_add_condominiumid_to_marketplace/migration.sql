@@ -1,9 +1,11 @@
 /*
   Warnings:
   - Added condominiumId to marketplace tables (with data migration for existing rows)
+  - marketplace_partners.condominiumId is nullable (String?) for multi-condominium junction table pattern
+  - marketplace_offers.condominiumId is NOT NULL (String)
 */
 
--- AlterTable: Add as nullable first
+-- AlterTable: Add condominiumId as nullable
 ALTER TABLE "marketplace_partners" ADD COLUMN "condominiumId" TEXT;
 ALTER TABLE "marketplace_offers" ADD COLUMN "condominiumId" TEXT;
 
@@ -16,8 +18,7 @@ UPDATE "marketplace_offers"
 SET "condominiumId" = (SELECT id FROM "condominiums" ORDER BY "createdAt" ASC LIMIT 1)
 WHERE "condominiumId" IS NULL;
 
--- Make NOT NULL after backfill
-ALTER TABLE "marketplace_partners" ALTER COLUMN "condominiumId" SET NOT NULL;
+-- Make NOT NULL only for offers (partners stays nullable per schema design)
 ALTER TABLE "marketplace_offers" ALTER COLUMN "condominiumId" SET NOT NULL;
 
 -- AddForeignKey
