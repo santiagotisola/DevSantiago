@@ -72,11 +72,11 @@ export function AcceptInvitePage() {
       // Faz login automaticamente para evitar o usuário ter que digitar de novo
       try {
         const r = await publicApi.post('/auth/login', {
-          email: preview.data!.email,
+          identifier: preview.data!.email,
           password,
         });
-        const { user, accessToken, refreshToken } = r.data.data;
-        setAuth(user, accessToken, refreshToken);
+        const { user, accessToken, refreshToken, mustEnable2FA } = r.data.data;
+        setAuth(user, accessToken, refreshToken, !!mustEnable2FA);
         navigate('/', { replace: true });
       } catch {
         // Se o auto-login falhar, manda para a tela de login normal

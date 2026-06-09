@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, ShieldOff, Loader2, AlertTriangle, Copy, CheckCircle2, X } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 interface Status {
   enabled: boolean;
@@ -11,6 +12,7 @@ interface Status {
 
 export function TwoFactorCard() {
   const qc = useQueryClient();
+  const setMustEnable2FA = useAuthStore((s) => s.setMustEnable2FA);
   const status = useQuery<Status>({
     queryKey: ['2fa-status'],
     queryFn: async () => (await api.get('/2fa/status')).data.data,
@@ -39,6 +41,7 @@ export function TwoFactorCard() {
       setBackupCodes(r.data.data.backupCodes);
       setSetupData(null);
       setVerifyCode('');
+      setMustEnable2FA(false);
       qc.invalidateQueries({ queryKey: ['2fa-status'] });
     },
     onError: (e: any) => setError(e?.response?.data?.message ?? 'Código inválido'),
@@ -50,6 +53,7 @@ export function TwoFactorCard() {
       setShowDisable(false);
       setDisableCode('');
       setBackupCodes(null);
+      setMustEnable2FA(false);
       qc.invalidateQueries({ queryKey: ['2fa-status'] });
     },
     onError: (e: any) => setError(e?.response?.data?.message ?? 'Código inválido'),
@@ -141,7 +145,6 @@ export function TwoFactorCard() {
               placeholder="000000"
               maxLength={8}
               className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
             />
             <button
               onClick={() => verifyMut.mutate()}
@@ -221,7 +224,6 @@ export function TwoFactorCard() {
               onChange={(e) => setDisableCode(e.target.value)}
               placeholder="000000 ou XXXXX-XXXXX"
               className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
-              autoFocus
             />
             <button
               onClick={() => disableMut.mutate()}

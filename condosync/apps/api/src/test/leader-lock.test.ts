@@ -6,7 +6,7 @@
  * leadership porque a chave existe). Deve usar Lua atômico com GET
  * + comparação + EXPIRE.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 
 // Mock do ioredis ANTES de importar redis.ts
 const mockSet = vi.fn();
@@ -21,12 +21,17 @@ vi.mock("ioredis", () => {
   };
 });
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const {
-  tryAcquireLeaderLock,
-  renewLeaderLock,
-  releaseLeaderLock,
-} = require("../config/redis");
+let tryAcquireLeaderLock: typeof import("../config/redis").tryAcquireLeaderLock;
+let renewLeaderLock: typeof import("../config/redis").renewLeaderLock;
+let releaseLeaderLock: typeof import("../config/redis").releaseLeaderLock;
+
+beforeAll(async () => {
+  ({
+    tryAcquireLeaderLock,
+    renewLeaderLock,
+    releaseLeaderLock,
+  } = await import("../config/redis"));
+});
 
 describe("Leader lock — eleição", () => {
   beforeEach(() => {

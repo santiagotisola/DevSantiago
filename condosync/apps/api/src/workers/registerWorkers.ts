@@ -119,7 +119,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
         tags: { component: "bullmq", queue: queueName },
       });
     });
-    w.on?.("stalled", () => {
+    w.on?.("stalled" as any, () => {
       bullJobsTotal.labels(queueName, "stalled").inc();
     });
   }

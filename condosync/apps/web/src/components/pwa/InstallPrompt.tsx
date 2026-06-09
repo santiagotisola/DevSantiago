@@ -58,7 +58,9 @@ export function InstallPrompt() {
     setOpen(false);
     try {
       localStorage.setItem(STORAGE_KEY, String(Date.now()));
-    } catch {}
+    } catch {
+      // ignore storage errors (private mode / blocked storage)
+    }
   }
 
   async function install() {

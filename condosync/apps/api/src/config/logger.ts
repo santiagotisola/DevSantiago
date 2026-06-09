@@ -47,7 +47,7 @@ const logFormat = winston.format.combine(
       )
 );
 
-export const logger = winston.createLogger({
+export const logger: any = winston.createLogger({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: logFormat,
   transports: [

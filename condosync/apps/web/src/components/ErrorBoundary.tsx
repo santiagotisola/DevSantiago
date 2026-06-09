@@ -25,7 +25,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // eslint-disable-next-line no-console
     console.error("ErrorBoundary captured:", error, info);
     // Hook de Sentry/observability — adicionar quando configurado:
     // Sentry.captureException(error, { extra: { componentStack: info.componentStack } });

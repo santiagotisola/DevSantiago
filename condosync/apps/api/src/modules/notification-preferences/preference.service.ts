@@ -1,17 +1,8 @@
-import { NotificationType, Prisma } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import type { NotificationChannel } from '../../notifications/types';
 
-const ALL_TYPES: NotificationType[] = [
-  'VISITOR',
-  'PARCEL',
-  'MAINTENANCE',
-  'FINANCIAL',
-  'COMMUNICATION',
-  'RESERVATION',
-  'OCCURRENCE',
-  'ASSEMBLY',
-];
+const ALL_TYPES = Object.values(NotificationType) as NotificationType[];
 
 export const preferenceService = {
   /**

@@ -8,6 +8,7 @@ import type {
   RegistrationResponseJSON,
   AuthenticationResponseJSON,
 } from '@simplewebauthn/server';
+type AuthenticatorTransport = 'ble' | 'hybrid' | 'internal' | 'nfc' | 'usb';
 import jwt, { type SignOptions, type Secret } from 'jsonwebtoken';
 import { prisma } from '../../config/prisma';
 import { env } from '../../config/env';

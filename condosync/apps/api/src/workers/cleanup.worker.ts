@@ -39,7 +39,7 @@ export const cleanupWorker = new Worker(
 
     const [expiredInvites, expiredRefresh, expiredPwd, oldAudit] = await Promise.all([
       prisma.invitation.deleteMany({
-        where: { usedAt: null, expiresAt: { lt: inviteCutoff } },
+        where: { acceptedAt: null, revokedAt: null, expiresAt: { lt: inviteCutoff } },
       }),
       prisma.refreshToken.deleteMany({ where: { expiresAt: { lt: now } } }),
       prisma.passwordReset.deleteMany({ where: { expiresAt: { lt: now } } }),

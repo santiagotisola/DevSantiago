@@ -569,7 +569,6 @@ export function UnitsPage() {
                     Identificador da Unidade *
                   </label>
                   <input
-                    autoFocus
                     value={form.identifier}
                     onChange={(e) =>
                       setForm({ ...form, identifier: e.target.value })
@@ -953,7 +952,6 @@ export function UnitsPage() {
                   {showDependentForm && isAdmin && (
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2">
                       <input
-                        autoFocus
                         value={dependentForm.name}
                         onChange={(e) =>
                           setDependentForm({ ...dependentForm, name: e.target.value })

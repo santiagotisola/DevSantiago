@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { Prisma } from "@prisma/client";
@@ -32,8 +32,11 @@ vi.mock("./webhook.processor", () => ({
   enqueueWebhookProcessing: enqueueMock,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const router = require("./asaas.routes").default;
+let router: import("express").Router;
+
+beforeAll(async () => {
+  ({ default: router } = await import("./asaas.routes"));
+});
 
 function buildApp() {
   const app = express();

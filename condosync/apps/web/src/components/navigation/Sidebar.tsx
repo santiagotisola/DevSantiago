@@ -3,30 +3,17 @@ import { cn } from "../../lib/utils";
 import { useAuthStore } from "../../store/authStore";
 import {
   LayoutGrid,
-  UsersRound,
-  Home,
   Banknote,
-  Settings2,
-  CalendarRange,
   Megaphone,
   BarChart3,
-  UserRoundCog,
   Building2,
   ShieldCheck,
-  PackageOpen,
   LogOut,
   ChevronDown,
   X,
-  PawPrint,
-  Ticket,
-  Image as ImageIcon,
-  HardHat,
   DoorOpen,
   Settings,
   UserRound,
-  MonitorPlay,
-  FileSignature,
-  Gavel,
   Contact,
   Palette,
   Wrench,
@@ -49,7 +36,6 @@ interface NavItem {
 }
 
 const MANAGEMENT = ["CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
-const RESIDENT_MANAGEMENT = ["RESIDENT", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 const COUNCIL_COMMUNITY = ["RESIDENT", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN"];
 const ALL_AUTH = ["RESIDENT", "DOORMAN", "COUNCIL_MEMBER", "CONDOMINIUM_ADMIN", "SYNDIC", "SUPER_ADMIN", "SERVICE_PROVIDER"];
 
@@ -275,7 +261,9 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
     <>
       {/* Overlay mobile */}
       {open && (
-        <div
+        <button
+          type="button"
+          aria-label="Fechar menu lateral"
           className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={onClose}
         />
