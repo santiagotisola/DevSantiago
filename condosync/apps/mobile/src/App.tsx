@@ -1,9 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Layouts
 import AuthLayout from './components/layouts/AuthLayout';
 import MobileLayout from './components/layouts/MobileLayout';
+
+// UI
+import { Toaster } from './components/ui/toaster';
 
 // Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -15,17 +19,26 @@ import HomeGrid from './pages/home/HomeGrid';
 import PortariaDashboard from './pages/portaria/PortariaDashboard';
 import VisitantesPortaria from './pages/portaria/VisitantesPortaria';
 import EncomendasPortaria from './pages/portaria/EncomendasPortaria';
+import VeiculosPortaria from './pages/portaria/VeiculosPortaria';
+
+// Messaging
+import WhatsAppMessaging from './pages/messaging/WhatsAppMessaging';
 
 // Morador
 import MinhasVisitas from './pages/morador/MinhasVisitas';
 import MinhasCobrancas from './pages/morador/MinhasCobrancas';
 import Avisos from './pages/morador/Avisos';
 import Pets from './pages/morador/Pets';
+import AssembleiasMobilePage from './pages/morador/AssembleiasMobilePage';
+import DocumentosMobilePage from './pages/morador/DocumentosMobilePage';
+import ReservasMobilePage from './pages/morador/ReservasMobilePage';
+import NotificacoesMobilePage from './pages/morador/NotificacoesMobilePage';
 
 // Shared
 import PerfilPage from './pages/shared/PerfilPage';
 import PanicoPage from './pages/shared/PanicoPage';
 import MarketplacePage from './pages/marketplace/MarketplacePage';
+import MarketplaceMoradorPage from './pages/marketplace/MarketplaceMoradorPage';
 
 const DOORMAN_ROLES = ['DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'];
 const SERVICE_PROVIDER_ROLES = ['SERVICE_PROVIDER'];
@@ -50,9 +63,12 @@ export default function App() {
   const { user } = useAuthStore();
   const role = user?.role ?? '';
   const isDoorman = DOORMAN_ROLES.includes(role);
+  usePushNotifications();
 
   return (
-    <BrowserRouter>
+    <>
+      <Toaster />
+      <BrowserRouter>
       <Routes>
         {/* Public — auth only */}
         <Route element={<PublicOnlyRoute />}>
@@ -82,6 +98,12 @@ export default function App() {
             <Route element={<MobileLayout title="Encomendas" showBack />}>
               <Route path="/portaria/encomendas" element={<EncomendasPortaria />} />
             </Route>
+            <Route element={<MobileLayout title="Veículos" showBack />}>
+              <Route path="/portaria/veiculos" element={<VeiculosPortaria />} />
+            </Route>
+            <Route element={<MobileLayout title="WhatsApp Messaging" showBack />}>
+              <Route path="/whatsapp" element={<WhatsAppMessaging />} />
+            </Route>
           </Route>
 
           {/* Morador routes */}
@@ -103,6 +125,20 @@ export default function App() {
           <Route element={<MobileLayout title="Chamados" showBack />}>
             <Route path="/chamados" element={<Avisos />} />
           </Route>
+
+          {/* Novas páginas morador */}
+          <Route element={<MobileLayout title="Assembleias" showBack />}>
+            <Route path="/assembleias" element={<AssembleiasMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Documentos" showBack />}>
+            <Route path="/documentos" element={<DocumentosMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Reservas" showBack />}>
+            <Route path="/reservas" element={<ReservasMobilePage />} />
+          </Route>
+          <Route element={<MobileLayout title="Notificações" showBack />}>
+            <Route path="/notificacoes" element={<NotificacoesMobilePage />} />
+          </Route>
           <Route element={<MobileLayout title="Perfil" showBack />}>
             <Route path="/perfil" element={<PerfilPage />} />
           </Route>
@@ -110,6 +146,7 @@ export default function App() {
           {/* Marketplace */}
           <Route element={<MobileLayout title="Marketplace" showBack />}>
             <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/marketplace/catalogo" element={<MarketplaceMoradorPage />} />
           </Route>
 
           {/* Encomendas (morador view — read only) */}
@@ -121,6 +158,7 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </>
   );
 }

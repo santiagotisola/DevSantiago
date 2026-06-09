@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 type Partner = { id: string; name: string; logoUrl?: string; category: string; website?: string };
 type Offer = {
@@ -27,14 +28,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function MarketplacePage() {
+  const { selectedCondominiumId } = useAuthStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
 
   const { data: offersData, isLoading } = useQuery({
-    queryKey: ['marketplace-offers', selectedCategory],
+    queryKey: ['marketplace-offers', selectedCondominiumId, selectedCategory],
     queryFn: async () => {
-      const params = selectedCategory ? `?category=${selectedCategory}` : '';
-      const res = await api.get(`/marketplace/offers${params}`);
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set('category', selectedCategory);
+      const res = await api.get(`/marketplace/offers?${params.toString()}`);
       return res.data.data as Offer[];
     },
   });
@@ -96,8 +99,9 @@ export default function MarketplacePage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(selectedOffer.couponCode!);
-                    toast.success('Código copiado!');
+                    toast.success('Codigo copiado!');
                   }}
+                  aria-label="Copiar codigo de desconto"
                   className="btn-press p-3 bg-primary-600 text-white rounded-xl"
                 >
                   <Copy size={18} />
@@ -124,6 +128,12 @@ export default function MarketplacePage() {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Marketplace</h1>
+        <p className="text-xs text-gray-500 mt-0.5">Ofertas e parcerias exclusivas do seu condomínio</p>
+      </div>
+
       {/* Category filter */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
         <button

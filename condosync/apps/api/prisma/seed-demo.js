@@ -792,6 +792,7 @@ async function main() {
       data: [
         {
           partnerId: partner.id,
+          condominiumId: condo.id,
           title: `10% de desconto para moradores`,
           description: `Desconto especial para moradores do condomínio ${condo.name}`,
           discount: "10%",
@@ -803,6 +804,261 @@ async function main() {
     });
   }
   console.log("  ✅ Parceiros e ofertas do Marketplace criados");
+
+  // ── 12. PETS ──────────────────────────────────────────────────────────────
+  console.log("🐾 Criando pets...");
+  const petData = [
+    { name: "Thor", type: "Cachorro", breed: "Golden Retriever", size: "Grande", gender: "Macho", color: "Dourado", weight: 32 },
+    { name: "Luna", type: "Gato", breed: "Siamês", size: "Pequeno", gender: "Fêmea", color: "Branco e cinza", weight: 4 },
+    { name: "Rex", type: "Cachorro", breed: "Pastor Alemão", size: "Grande", gender: "Macho", color: "Preto e marrom", weight: 35 },
+    { name: "Mimi", type: "Gato", breed: "Persa", size: "Pequeno", gender: "Fêmea", color: "Branco", weight: 3.5 },
+    { name: "Pipoca", type: "Cachorro", breed: "Poodle", size: "Pequeno", gender: "Fêmea", color: "Branco", weight: 5 },
+    { name: "Bob", type: "Cachorro", breed: "Bulldog Francês", size: "Médio", gender: "Macho", color: "Tigrado", weight: 12 },
+    { name: "Nina", type: "Cachorro", breed: "Shih Tzu", size: "Pequeno", gender: "Fêmea", color: "Caramelo e branco", weight: 6 },
+    { name: "Zé", type: "Pássaro", breed: "Calopsita", size: "Pequeno", gender: "Macho", color: "Cinza e amarelo", weight: 0.1 },
+    { name: "Amora", type: "Gato", breed: "Vira-lata", size: "Médio", gender: "Fêmea", color: "Rajado", weight: 4.5 },
+    { name: "Max", type: "Cachorro", breed: "Labrador", size: "Grande", gender: "Macho", color: "Chocolate", weight: 30 },
+  ];
+  for (let i = 0; i < petData.length; i++) {
+    const unit = units[i % units.length];
+    await prisma.pet.create({
+      data: {
+        unitId: unit.id,
+        ...petData[i],
+        isActive: true,
+      },
+    });
+  }
+  console.log("  ✅ 10 pets criados");
+
+  // ── 13. ASSEMBLEIAS ───────────────────────────────────────────────────────
+  console.log("🏛️  Criando assembleias...");
+  const assemblyPast = await prisma.assembly.create({
+    data: {
+      condominiumId: condo.id,
+      title: "Assembleia Geral Ordinária - 2026/1",
+      description: "Aprovação de contas do 1º semestre e eleição do conselho fiscal. Local: Salão de Festas. Quórum: 50%.",
+      scheduledAt: daysAgo(30, 19),
+      startedAt: daysAgo(30, 19),
+      finishedAt: daysAgo(30, 21),
+      status: "FINISHED",
+      createdBy: syndic?.id ?? "system",
+    },
+  });
+
+  const assemblyFuture = await prisma.assembly.create({
+    data: {
+      condominiumId: condo.id,
+      title: "Assembleia Extraordinária - Reforma Piscina",
+      description: "Deliberação sobre proposta de reforma da piscina e vestiários. Orçamentos em anexo. Local: Salão de Festas. Quórum: 67%.",
+      scheduledAt: daysFromNow(15, 19),
+      status: "SCHEDULED",
+      createdBy: syndic?.id ?? "system",
+    },
+  });
+
+  // Itens de votação para a assembleia passada
+  const votingItem1 = await prisma.assemblyVotingItem.create({
+    data: {
+      assemblyId: assemblyPast.id,
+      title: "Aprovação de contas do 1º semestre",
+      description: "Receitas R$ 245.000 | Despesas R$ 198.000 | Saldo R$ 47.000",
+      options: [
+        { id: "approve", text: "Aprovar" },
+        { id: "reject", text: "Rejeitar" },
+        { id: "abstain", text: "Abstenção" },
+      ],
+    },
+  });
+  const votingItem2 = await prisma.assemblyVotingItem.create({
+    data: {
+      assemblyId: assemblyPast.id,
+      title: "Reajuste de 5% na taxa condominial",
+      description: "Proposta de reajuste para cobrir aumento nos custos de manutenção",
+      options: [
+        { id: "approve", text: "Aprovar" },
+        { id: "reject", text: "Rejeitar" },
+        { id: "abstain", text: "Abstenção" },
+      ],
+    },
+  });
+
+  // Votos dos moradores
+  if (residents.length > 0) {
+    for (let i = 0; i < Math.min(residents.length, 5); i++) {
+      await prisma.assemblyVote.createMany({
+        data: [
+          { votingItemId: votingItem1.id, userId: residents[i].id, optionId: "approve" },
+          { votingItemId: votingItem2.id, userId: residents[i].id, optionId: i < 3 ? "approve" : "reject" },
+        ],
+        skipDuplicates: true,
+      });
+      await prisma.assemblyAttendee.create({
+        data: { assemblyId: assemblyPast.id, userId: residents[i].id },
+      }).catch(() => {});
+    }
+  }
+
+  // Itens para assembleia futura
+  await prisma.assemblyVotingItem.create({
+    data: {
+      assemblyId: assemblyFuture.id,
+      title: "Aprovação da reforma da piscina - Orçamento A (R$ 85.000)",
+      description: "Empresa AquaReforma - prazo 45 dias",
+      options: [
+        { id: "approve", text: "Aprovar" },
+        { id: "reject", text: "Rejeitar" },
+        { id: "abstain", text: "Abstenção" },
+      ],
+    },
+  });
+  await prisma.assemblyVotingItem.create({
+    data: {
+      assemblyId: assemblyFuture.id,
+      title: "Aprovação da reforma da piscina - Orçamento B (R$ 72.000)",
+      description: "Empresa PiscinaPro - prazo 60 dias",
+      options: [
+        { id: "approve", text: "Aprovar" },
+        { id: "reject", text: "Rejeitar" },
+        { id: "abstain", text: "Abstenção" },
+      ],
+    },
+  });
+  console.log("  ✅ 2 assembleias com itens de votação criadas");
+
+  // ── 14. AGENDA DE MUDANÇAS ────────────────────────────────────────────────
+  console.log("🚚 Criando agendamentos de mudança...");
+  const movingData = [
+    { type: "MOVE_IN", startTime: "08:00", endTime: "12:00", elevator: "Serviço", responsibleName: "João Silva", companyName: "Mudanças Rápidas", status: "COMPLETED", scheduledDate: daysAgo(10, 8) },
+    { type: "MOVE_OUT", startTime: "14:00", endTime: "18:00", elevator: "Serviço", responsibleName: "Maria Santos", companyName: "TransMudanças", status: "COMPLETED", scheduledDate: daysAgo(5, 14) },
+    { type: "MOVE_IN", startTime: "07:00", endTime: "11:00", elevator: "Serviço", responsibleName: "Carlos Oliveira", status: "APPROVED", scheduledDate: daysFromNow(3, 7) },
+    { type: "LARGE_DELIVERY", startTime: "09:00", endTime: "10:00", elevator: "Social", responsibleName: "Ana Costa", notes: "Entrega de geladeira e máquina de lavar", status: "PENDING", scheduledDate: daysFromNow(5, 9) },
+    { type: "MOVE_OUT", startTime: "08:00", endTime: "14:00", elevator: "Serviço", responsibleName: "Pedro Almeida", companyName: "MudaBem", status: "PENDING", scheduledDate: daysFromNow(7, 8) },
+  ];
+  for (let i = 0; i < movingData.length; i++) {
+    const unit = units[i % units.length];
+    await prisma.movingSchedule.create({
+      data: {
+        condominiumId: condo.id,
+        unitId: unit.id,
+        ...movingData[i],
+        createdBy: syndic?.id ?? "system",
+      },
+    });
+  }
+  console.log("  ✅ 5 agendamentos de mudança criados");
+
+  // ── 15. CONTROLE DE CHAVES ────────────────────────────────────────────────
+  console.log("🔑 Criando controle de chaves...");
+  const keysData = [
+    { keyIdentifier: "Salão de Festas - Chave 01", description: "Chave principal do salão", location: "Portaria 1 - Quadro A", status: "AVAILABLE" },
+    { keyIdentifier: "Salão de Festas - Chave 02", description: "Chave reserva do salão", location: "Portaria 1 - Quadro A", status: "BORROWED" },
+    { keyIdentifier: "Piscina - Portão", description: "Chave do portão da piscina", location: "Portaria 1 - Quadro B", status: "AVAILABLE" },
+    { keyIdentifier: "Academia - Principal", description: "Chave da academia", location: "Portaria 1 - Quadro B", status: "AVAILABLE" },
+    { keyIdentifier: "Churrasqueira 01", description: "Chave da churrasqueira 1", location: "Portaria 1 - Quadro C", status: "BORROWED" },
+    { keyIdentifier: "Churrasqueira 02", description: "Chave da churrasqueira 2", location: "Portaria 1 - Quadro C", status: "AVAILABLE" },
+    { keyIdentifier: "Depósito - Manutenção", description: "Chave do depósito de materiais", location: "Portaria 2", status: "AVAILABLE" },
+    { keyIdentifier: "Portão Garagem B", description: "Chave manual do portão B", location: "Portaria 2", status: "AVAILABLE" },
+  ];
+  for (const keyItem of keysData) {
+    const key = await prisma.keyControl.create({
+      data: {
+        condominiumId: condo.id,
+        ...keyItem,
+      },
+    });
+    // Criar logs para chaves emprestadas
+    if (keyItem.status === "BORROWED") {
+      await prisma.keyControlLog.create({
+        data: {
+          keyId: key.id,
+          action: "BORROW",
+          borrowedBy: keyItem.keyIdentifier.includes("Salão") ? "Carlos - Casa 05" : "Maria - Casa 12",
+          borrowedByUnit: keyItem.keyIdentifier.includes("Salão") ? "Casa 05" : "Casa 12",
+          receivedBy: doorman?.id ?? "system",
+          notes: "Reserva para evento no fim de semana",
+        },
+      });
+    }
+  }
+  console.log("  ✅ 8 chaves cadastradas com histórico");
+
+  // ── CÂMERAS ─────────────────────────────────────────────────────────────
+  const camerasData = [
+    {
+      name: "Câmera Entrada Principal",
+      location: "Portaria",
+      brand: "Intelbras",
+      model: "VIP 3230 D",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: true,
+      resolution: "1080p",
+    },
+    {
+      name: "Câmera Garagem B1",
+      location: "Garagem B1",
+      brand: "Hikvision",
+      model: "DS-2CD2143G2-I",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: true,
+      isRecording: true,
+      resolution: "4K",
+    },
+    {
+      name: "Câmera Área de Lazer",
+      location: "Área de Lazer",
+      brand: "Intelbras",
+      model: "VIP 1230 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1564429238961-bf8bf14bf24a?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: false,
+      resolution: "720p",
+    },
+    {
+      name: "Câmera Corredor Bloco A",
+      location: "Bloco A - Corredor",
+      brand: "Hikvision",
+      model: "DS-2CE16H0T",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: true,
+      isRecording: true,
+      resolution: "1080p",
+    },
+    {
+      name: "Câmera Elevador Social",
+      location: "Elevador Social",
+      brand: "Intelbras",
+      model: "VIP 1020 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      isActive: false,
+      isRecording: false,
+      resolution: "720p",
+      notes: "Manutenção preventiva agendada",
+    },
+    {
+      name: "Câmera Playground",
+      location: "Playground",
+      brand: "Intelbras",
+      model: "VIP 3230 B",
+      streamUrl: "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      snapshotUrl: "https://images.unsplash.com/photo-1564429238961-bf8bf14bf24a?w=400&h=250&fit=crop",
+      isActive: true,
+      isRecording: false,
+      resolution: "1080p",
+    },
+  ];
+  for (const camData of camerasData) {
+    await prisma.camera.create({
+      data: {
+        condominiumId: condo.id,
+        ...camData,
+      },
+    });
+  }
+  console.log("  ✅ 6 câmeras cadastradas");
 
   // ── RESUMO ────────────────────────────────────────────────────────────────
   console.log("\n🎉 Seed demo concluído com sucesso!\n");
@@ -818,6 +1074,11 @@ async function main() {
   console.log("  🛒  3 parceiros marketplace com ofertas");
   console.log("  📢  5 comunicados");
   console.log("  🗳️   1 enquete ativa");
+  console.log("  🐾  10 pets (cachorros, gatos, pássaro)");
+  console.log("  🏛️   2 assembleias (1 encerrada c/ votos, 1 agendada)");
+  console.log("  🚚  5 agendamentos de mudança");
+  console.log("  🔑  8 chaves cadastradas com histórico");
+  console.log("  📹  6 câmeras de monitoramento");
 }
 
 // ── Helpers de data ───────────────────────────────────────────────────────────

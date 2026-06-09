@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../../config/prisma';
-import { authenticate, authorize } from '../../middleware/auth';
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from '../../middleware/auth';
 import { validateRequest } from '../../utils/validateRequest';
 import { z } from 'zod';
 
@@ -32,6 +36,7 @@ async function getActiveMembership(userId: string, condominiumId: string) {
 router.get(
   '/:condominiumId',
   authorize('RESIDENT', 'DOORMAN', 'CONDOMINIUM_ADMIN', 'SYNDIC', 'SUPER_ADMIN'),
+  authorizeCondominium,
   async (req: Request, res: Response) => {
     const { condominiumId } = req.params;
     const user = req.user!;

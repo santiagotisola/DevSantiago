@@ -211,6 +211,7 @@ export function DocumentsPage() {
                           if (window.confirm("Remover este documento?"))
                             deleteMutation.mutate(doc.id);
                         }}
+                        aria-label="Remover documento"
                         className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -247,6 +248,7 @@ export function DocumentsPage() {
                     setForm({ ...form, description: e.target.value })
                   }
                   rows={2}
+                  aria-label="Descrição"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
@@ -257,6 +259,7 @@ export function DocumentsPage() {
                   onChange={(e) =>
                     setForm({ ...form, category: e.target.value })
                   }
+                  aria-label="Categoria"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {CATEGORIES.map((c) => (
@@ -297,6 +300,7 @@ export function DocumentsPage() {
                   ref={fileInputRef}
                   type="file"
                   className="hidden"
+                  aria-label="Selecionar arquivo"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />

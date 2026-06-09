@@ -150,9 +150,44 @@ services:
     environment:
       - API_URL=http://api:3333
 
+  # ─── Mobile (App Web PWA) ────────────────────────────────────────────────
+  mobile:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+    container_name: condosync-mobile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5174:80"
+    environment:
+      - API_URL=http://api:3333
+
+  # ─── MongoDB (WhatsApp sessões) ───────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: condosync-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: condosync-whatsapp
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh -u admin -p admin123 --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:
   mailpit_data:
   api_logs:
   uploads_data:
+  mongo_data:

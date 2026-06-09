@@ -172,6 +172,7 @@ export default function ObrasAdminPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Unidade *</label>
                 <select value={createForm.unitId} onChange={(e) => setCreateForm({ ...createForm, unitId: e.target.value })}
+                  aria-label="Unidade"
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">Selecione a unidade</option>
                   {units.map((u: any) => (
@@ -184,6 +185,7 @@ export default function ObrasAdminPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Tipo *</label>
                 <select value={createForm.type} onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+                  aria-label="Tipo de obra"
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   {["pintura", "hidráulica", "elétrica", "estrutural", "outro"].map((t) => (
                     <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
@@ -200,11 +202,13 @@ export default function ObrasAdminPage() {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Início *</label>
                   <input type="date" value={createForm.startDate} onChange={(e) => setCreateForm({ ...createForm, startDate: e.target.value })}
+                    aria-label="Data de início"
                     className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Término (opcional)</label>
                   <input type="date" value={createForm.endDate} onChange={(e) => setCreateForm({ ...createForm, endDate: e.target.value })}
+                    aria-label="Data de término"
                     className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>

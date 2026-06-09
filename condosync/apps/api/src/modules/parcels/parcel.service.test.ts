@@ -100,6 +100,7 @@ describe('ParcelService.confirmPickup', () => {
   it('confirma retirada com sucesso', async () => {
     prismaMock.parcel.findUniqueOrThrow.mockResolvedValue(mockParcel as any);
     prismaMock.condominiumUser.findFirst.mockResolvedValue({ id: 'cu-1' } as any);
+    prismaMock.condominiumUser.findMany.mockResolvedValue([]);
     prismaMock.parcel.update.mockResolvedValue({
       ...mockParcel,
       status: ParcelStatus.PICKED_UP,

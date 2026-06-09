@@ -252,4 +252,86 @@ router.get(
   },
 );
 
+// ─── Excel Exports ──────────────────────────────────────────────
+
+router.get(
+  "/financial/:condominiumId/excel",
+  async (req: Request, res: Response) => {
+    const { startDate, endDate } = dateRangeSchema.parse(req.query);
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const buffer = await reportService.generateFinancialExcel(
+      req.params.condominiumId,
+      start,
+      end,
+    );
+
+    const dateStr = start.toISOString().substring(0, 10);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=relatorio_financeiro_${dateStr}.xlsx`);
+    res.send(buffer);
+  },
+);
+
+router.get(
+  "/residents/:condominiumId/excel",
+  async (req: Request, res: Response) => {
+    const buffer = await reportService.generateResidentsExcel(req.params.condominiumId);
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=relatorio_moradores_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    res.send(buffer);
+  },
+);
+
+router.get(
+  "/visitors/:condominiumId/excel",
+  async (req: Request, res: Response) => {
+    const { startDate, endDate } = dateRangeSchema.parse(req.query);
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const buffer = await reportService.generateVisitorsExcel(
+      req.params.condominiumId,
+      start,
+      end,
+    );
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=relatorio_visitantes_${start.toISOString().substring(0, 10)}.xlsx`);
+    res.send(buffer);
+  },
+);
+
+router.get(
+  "/maintenance/:condominiumId/excel",
+  async (req: Request, res: Response) => {
+    const { startDate, endDate } = dateRangeSchema.parse(req.query);
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const buffer = await reportService.generateMaintenanceExcel(
+      req.params.condominiumId,
+      start,
+      end,
+    );
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=relatorio_manutencao_${start.toISOString().substring(0, 10)}.xlsx`);
+    res.send(buffer);
+  },
+);
+
+router.get(
+  "/delinquency/:condominiumId/excel",
+  async (req: Request, res: Response) => {
+    const buffer = await reportService.generateDelinquencyExcel(req.params.condominiumId);
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=relatorio_inadimplencia_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    res.send(buffer);
+  },
+);
+
 export default router;

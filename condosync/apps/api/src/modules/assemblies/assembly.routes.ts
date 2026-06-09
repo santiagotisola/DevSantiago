@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { assemblyController } from "./assembly.controller";
-import { authenticate, authorize } from "../../middleware/auth";
+import {
+  authenticate,
+  authorize,
+  authorizeCondominium,
+} from "../../middleware/auth";
 
 const router = Router();
 
@@ -8,7 +12,11 @@ const router = Router();
 router.use(authenticate);
 
 // Listar assembleias de um condomínio
-router.get("/condominium/:condominiumId", assemblyController.list);
+router.get(
+  "/condominium/:condominiumId",
+  authorizeCondominium,
+  assemblyController.list,
+);
 
 // Pegar detalhes da assembleia (incluindo pauta e opções)
 router.get("/:id", assemblyController.getById);
@@ -16,10 +24,18 @@ router.get("/:id", assemblyController.getById);
 // Pegar resultados da votação
 router.get("/:id/results", assemblyController.getResults);
 
+// Gerar ata digital (PDF) — somente gestores
+router.get(
+  "/:id/minutes",
+  authorize("SYNDIC", "CONDOMINIUM_ADMIN", "SUPER_ADMIN"),
+  assemblyController.generateMinutes,
+);
+
 // Criar assembleia — somente gestores [A1]
 router.post(
   "/condominium/:condominiumId",
   authorize("SYNDIC", "CONDOMINIUM_ADMIN", "SUPER_ADMIN"),
+  authorizeCondominium,
   assemblyController.create,
 );
 

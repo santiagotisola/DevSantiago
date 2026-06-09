@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import { NotificationType } from '@prisma/client';
 import { prismaMock } from '../../test/setup';
 import { makeTestApp, makeAuthHeader } from '../../test/testApp';
 import preferenceRoutes from './preference.routes';
@@ -17,11 +18,11 @@ beforeEach(() => {
 });
 
 describe('GET /notification-preferences', () => {
-  it('retorna 8 tipos com defaults opt-in quando não há rows', async () => {
+  it('retorna um default opt-in por NotificationType quando não há rows', async () => {
     prismaMock.notificationPreference.findMany.mockResolvedValue([] as any);
     const r = await request(app).get('/notification-preferences').set('Authorization', header);
     expect(r.status).toBe(200);
-    expect(r.body.data.preferences).toHaveLength(8);
+    expect(r.body.data.preferences).toHaveLength(Object.values(NotificationType).length);
     expect(r.body.data.preferences[0]).toMatchObject({ inapp: true, email: true, push: true });
   });
 

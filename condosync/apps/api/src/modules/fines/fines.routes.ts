@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../../config/prisma";
-import { authenticate, authorize } from "../../middleware/auth";
+import { authenticate, authorize, authorizeCondominium } from "../../middleware/auth";
 import { validateRequest } from "../../utils/validateRequest";
 import { ForbiddenError, AppError } from "../../middleware/errorHandler";
 import { NotificationService } from "../../notifications/notification.service";
@@ -39,7 +39,7 @@ async function ensureMembership(userId: string, role: string, condominiumId: str
 }
 
 // GET /fines/:condominiumId — lista multas (gestão vê todas; morador vê da sua unidade)
-router.get("/:condominiumId", async (req: Request, res: Response) => {
+router.get("/:condominiumId", authorizeCondominium, async (req: Request, res: Response) => {
   await ensureMembership(req.user!.userId, req.user!.role, req.params.condominiumId);
 
   const { status, unitId } = req.query;

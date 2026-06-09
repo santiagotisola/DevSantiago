@@ -3,11 +3,19 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+// CAPACITOR_BUILD=true → assets relativos (APK local)
+// Sem variável (Docker/nginx) → /app/ para servir em sub-path
+const isCapacitor = process.env.CAPACITOR_BUILD === 'true';
+
 export default defineConfig({
+  base: isCapacitor ? './' : (process.env.NODE_ENV === 'production' ? '/app/' : '/'),
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'CondoSync App',
         short_name: 'CondoSync',
@@ -16,14 +24,14 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: '/',
-        scope: '/',
+        start_url: '/app/',
+        scope: '/app/',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
+      injectManifest: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'] },
     }),
   ],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },

@@ -88,6 +88,8 @@ import { prisma } from "./config/prisma";
 import { httpMetricsMiddleware, registry as metricsRegistry } from "./config/metrics";
 import { requestContextMiddleware } from "./middleware/requestContext";
 import type { JwtPayload } from "./middleware/auth";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./config/swagger";
 
 // Workers em background são opcionais. Quando RUN_WORKERS=true (ou
 // padrão por compat com setup atual), o processo da API também
@@ -146,6 +148,15 @@ import condominiumContractsRoutes from "./modules/condominium-contracts/condomin
 import finesRoutes from "./modules/fines/fines.routes";
 import collectionRulesRoutes from "./modules/collection-rules/collection-rules.routes";
 import digitalSignageRoutes from "./modules/digital-signage/digital-signage.routes";
+import whatsappRoutes from "./modules/whatsapp/whatsapp.routes";
+import pushSubscriptionsRoutes from "./modules/notifications/push-subscriptions.routes";
+import notificationInboxRoutes from "./modules/notifications/notification.routes";
+import adminRoutes from "./modules/admin/admin.routes";
+import movingScheduleRoutes from "./modules/moving-schedule/moving-schedule.routes";
+import keyControlRoutes from "./modules/key-control/key-control.routes";
+import cameraRoutes from "./modules/cameras/cameras.routes";
+import { connectMongoDB } from "./modules/whatsapp/utils/mongodb";
+import { auditMiddleware } from "./middleware/auditMiddleware";
 const app = express();
 // Atrás de proxies (Railway/Nginx/VPS) — necessário para que req.ip,
 // rate-limit por IP e logs reflitam o cliente real e não o proxy.
@@ -378,13 +389,51 @@ app.get("/metrics", async (req, res) => {
   res.send(await metricsRegistry.metrics());
 });
 
+// ── Audit Middleware (fire-and-forget, antes das rotas) ───────────────────
+app.use(auditMiddleware);
+
+// ── Static uploads ────────────────────────────────────────────────────────
+app.use("/uploads", express.static("/app/uploads"));
+
+// ── Swagger API Docs ──────────────────────────────────────────────────────
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: ".swagger-ui .topbar { display: none }",
+  customSiteTitle: "CondoSync API Docs",
+}));
+app.get("/api/docs.json", (req, res) => res.json(swaggerSpec));
+
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Health Check ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
+app.get("/health", async (req, res) => {
+  const checks: Record<string, string> = {};
+  let healthy = true;
+
+  // Database check
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = "ok";
+  } catch {
+    checks.database = "error";
+    healthy = false;
+  }
+
+  // Redis check
+  try {
+    const { redis } = await import("./config/redis");
+    const pong = await redis.ping();
+    checks.redis = pong === "PONG" ? "ok" : "error";
+  } catch {
+    checks.redis = "error";
+    healthy = false;
+  }
+
+  const status = healthy ? "ok" : "degraded";
+  res.status(healthy ? 200 : 503).json({
+    status,
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || "1.0.0",
     environment: env.NODE_ENV,
+    checks,
+    uptime: process.uptime(),
   });
 });
 
@@ -443,6 +492,14 @@ app.use(`${API}/condominium-contracts`, condominiumContractsRoutes);
 app.use(`${API}/fines`, finesRoutes);
 app.use(`${API}/collection-rules`, collectionRulesRoutes);
 app.use(`${API}/digital-signage`, digitalSignageRoutes);
+app.use(`${API}/whatsapp`, whatsappRoutes);
+app.use(`${API}/notifications`, pushSubscriptionsRoutes);
+app.use(`${API}/notifications/inbox`, notificationInboxRoutes);
+app.use(`${API}/admin`, adminRoutes);
+// Novos módulos Fase 1
+app.use(`${API}/moving-schedules`, movingScheduleRoutes);
+app.use(`${API}/key-control`, keyControlRoutes);
+app.use(`${API}/cameras`, cameraRoutes);
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Error Handlers ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.use(notFoundHandler);
@@ -453,6 +510,11 @@ const PORT = env.PORT || 3333;
 
 // Hoisted (referenciado dentro do listen e do shutdown).
 let workerHandles: WorkerHandles | null = null;
+
+// Conectar MongoDB (WhatsApp sessions) — opcional, não quebra se WHATSAPP_ENABLED não setado
+if (process.env.WHATSAPP_ENABLED === "true" && process.env.MONGODB_URI) {
+  connectMongoDB().catch((err) => console.error("[MongoDB] Falha na conexão:", err));
+}
 
 httpServer.listen(PORT, async () => {
   logger.info(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ CondoSync API rodando na porta ${PORT}`);

@@ -426,6 +426,7 @@ export function CommonAreasPage() {
                   setShowReserveModal(false);
                   setSelectedArea(null);
                 }}
+                aria-label="Fechar"
               >
                 <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
               </button>
@@ -443,6 +444,7 @@ export function CommonAreasPage() {
                     onChange={(e) =>
                       setReserveForm({ ...reserveForm, [key]: e.target.value })
                     }
+                    aria-label={label}
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -455,6 +457,7 @@ export function CommonAreasPage() {
                     setReserveForm({ ...reserveForm, notes: e.target.value })
                   }
                   rows={2}
+                  aria-label="Observações"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
@@ -493,7 +496,7 @@ export function CommonAreasPage() {
               <h2 className="text-lg font-bold text-slate-800">
                 {editArea ? "Editar Área" : "Nova Área Comum"}
               </h2>
-              <button onClick={closeAreaModal}>
+              <button onClick={closeAreaModal} aria-label="Fechar">
                 <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
               </button>
             </div>
@@ -521,6 +524,7 @@ export function CommonAreasPage() {
                     setAreaForm({ ...areaForm, description: e.target.value })
                   }
                   rows={2}
+                  aria-label="Descrição"
                   className="w-full px-3 py-2 border rounded-xl text-sm resize-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -535,6 +539,7 @@ export function CommonAreasPage() {
                     onChange={(e) =>
                       setAreaForm({ ...areaForm, capacity: e.target.value })
                     }
+                    aria-label="Capacidade em pessoas"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -551,6 +556,7 @@ export function CommonAreasPage() {
                         maxDaysAdvance: e.target.value,
                       })
                     }
+                    aria-label="Máximo de dias de antecedência"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -566,6 +572,7 @@ export function CommonAreasPage() {
                     onChange={(e) =>
                       setAreaForm({ ...areaForm, openTime: e.target.value })
                     }
+                    aria-label="Horário de abertura"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -579,6 +586,7 @@ export function CommonAreasPage() {
                     onChange={(e) =>
                       setAreaForm({ ...areaForm, closeTime: e.target.value })
                     }
+                    aria-label="Horário de fechamento"
                     className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -594,6 +602,7 @@ export function CommonAreasPage() {
                   }
                   rows={3}
                   placeholder="Ex: Proibido animais, silêncio após 22h..."
+                  aria-label="Regras e observações"
                   className="w-full px-3 py-2 border rounded-xl text-sm resize-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

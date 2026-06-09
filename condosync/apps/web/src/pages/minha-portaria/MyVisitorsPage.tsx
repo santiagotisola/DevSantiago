@@ -249,6 +249,7 @@ export function MyVisitorsPage() {
               </h2>
               <button
                 onClick={() => setShowModal(false)}
+                aria-label="Fechar"
                 className="text-slate-400 hover:text-slate-600"
               >
                 <X className="w-5 h-5" />
@@ -294,6 +295,7 @@ export function MyVisitorsPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, documentType: e.target.value }))
                     }
+                    aria-label="Tipo de documento"
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="RG">RG</option>
@@ -358,6 +360,7 @@ export function MyVisitorsPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, scheduledAt: e.target.value }))
                   }
+                  aria-label="Data e hora esperada"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

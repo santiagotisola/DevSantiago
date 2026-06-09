@@ -6,7 +6,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['node_modules', '**/dist/**', '**/*.js', 'src/test/it/**'],
+    // src/tests/** são smoke tests E2E "live" (fazem fetch contra uma API rodando).
+    // Não pertencem à suíte unitária rápida — rode-os manualmente com a API no ar.
+    exclude: ['node_modules', '**/dist/**', '**/*.js', 'src/test/it/**', 'src/tests/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

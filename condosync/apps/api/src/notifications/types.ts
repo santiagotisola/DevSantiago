@@ -1,6 +1,6 @@
 import { NotificationType } from '@prisma/client';
 
-export type NotificationChannel = 'inapp' | 'email' | 'push';
+export type NotificationChannel = 'inapp' | 'email' | 'push' | 'whatsapp';
 
 export interface NotificationPayload {
   userId: string;

@@ -100,7 +100,7 @@ export function AiAssistantChat() {
     <>
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border flex flex-col" style={{ height: '520px' }}>
+        <div className="fixed bottom-20 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border flex flex-col h-[520px]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl">
             <div className="flex items-center gap-2 text-white">
@@ -124,6 +124,7 @@ export function AiAssistantChat() {
               )}
               <button
                 onClick={() => setOpen(false)}
+                aria-label="Minimizar chat"
                 className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10"
               >
                 <ChevronDown className="w-4 h-4" />
@@ -215,13 +216,13 @@ export function AiAssistantChat() {
                     : 'Assistente IA desativado. Configure a chave de API para usar.'
                 }
                 rows={1}
-                className="flex-1 bg-transparent text-sm resize-none focus:outline-none max-h-28"
-                style={{ minHeight: '1.5rem' }}
+                className="flex-1 bg-transparent text-sm resize-none focus:outline-none max-h-28 min-h-[1.5rem]"
                 disabled={chatMutation.isPending || !aiEnabled}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || chatMutation.isPending || !aiEnabled}
+                aria-label="Enviar mensagem"
                 className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 shrink-0"
               >
                 <Send className="w-4 h-4" />

@@ -51,6 +51,7 @@ function Combobox({
         onChange={e => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
+        aria-label={placeholder || 'Campo de texto'}
         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${inputClassName}`}
       />
       {open && filtered.length > 0 && (
@@ -145,6 +146,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PICKED_UP: { label: 'Retirada', color: 'bg-green-100 text-green-700' },
   RETURNED: { label: 'Devolvida', color: 'bg-gray-100 text-gray-700' },
 };
+
+// Função para ordenar unidades numericamente
+function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: string }[]) {
+  return [...units].sort((a, b) => {
+    const numA = parseInt(a.identifier.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.identifier.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+}
 
 const emptyForm = {
   unitId: '', carrier: '', trackingCode: '', storageLocation: '', senderName: '',
@@ -621,7 +631,7 @@ export function ParcelsPage() {
                 placeholder="Nome da transportadora"
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button onClick={addCarrier} disabled={!newCarrierName.trim()} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              <button onClick={addCarrier} disabled={!newCarrierName.trim()} aria-label="Adicionar transportadora" className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
                 <PlusCircle className="w-4 h-4" />
               </button>
             </div>
@@ -639,20 +649,21 @@ export function ParcelsPage() {
                           value={editingCarrier.name}
                           onChange={e => setEditingCarrier({ ...editingCarrier, name: e.target.value })}
                           onKeyDown={e => { if (e.key === 'Enter') saveCarrier(); if (e.key === 'Escape') setEditingCarrier(null); }}
+                          aria-label="Nome da transportadora"
                           className="flex-1 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button onClick={saveCarrier} className="text-green-600 hover:text-green-700 text-xs font-medium">Salvar</button>
-                        <button onClick={() => setEditingCarrier(null)} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => setEditingCarrier(null)} aria-label="Cancelar edição" className="text-gray-400 hover:text-gray-600">
                           <X className="w-4 h-4" />
                         </button>
                       </>
                     ) : (
                       <>
                         <span className="flex-1 text-sm">{c.name}</span>
-                        <button onClick={() => setEditingCarrier({ id: c.id, name: c.name })} className="text-blue-400 hover:text-blue-600">
+                        <button onClick={() => setEditingCarrier({ id: c.id, name: c.name })} aria-label="Editar transportadora" className="text-blue-400 hover:text-blue-600">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => removeCarrier(c.id)} className="text-red-400 hover:text-red-600">
+                        <button onClick={() => removeCarrier(c.id)} aria-label="Remover transportadora" className="text-red-400 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </>
@@ -686,7 +697,7 @@ export function ParcelsPage() {
                 placeholder="Ex: Prateleira A-01, Armário 3"
                 className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button onClick={addLocation} disabled={!newLocationName.trim()} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              <button onClick={addLocation} disabled={!newLocationName.trim()} aria-label="Adicionar local" className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
                 <PlusCircle className="w-4 h-4" />
               </button>
             </div>
@@ -704,20 +715,21 @@ export function ParcelsPage() {
                           value={editingLocation.name}
                           onChange={e => setEditingLocation({ ...editingLocation, name: e.target.value })}
                           onKeyDown={e => { if (e.key === 'Enter') saveLocation(); if (e.key === 'Escape') setEditingLocation(null); }}
+                          aria-label="Nome do local de armazenamento"
                           className="flex-1 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button onClick={saveLocation} className="text-green-600 hover:text-green-700 text-xs font-medium">Salvar</button>
-                        <button onClick={() => setEditingLocation(null)} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => setEditingLocation(null)} aria-label="Cancelar edição" className="text-gray-400 hover:text-gray-600">
                           <X className="w-4 h-4" />
                         </button>
                       </>
                     ) : (
                       <>
                         <span className="flex-1 text-sm">{l.name}</span>
-                        <button onClick={() => setEditingLocation({ id: l.id, name: l.name })} className="text-blue-400 hover:text-blue-600">
+                        <button onClick={() => setEditingLocation({ id: l.id, name: l.name })} aria-label="Editar local" className="text-blue-400 hover:text-blue-600">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => removeLocation(l.id)} className="text-red-400 hover:text-red-600">
+                        <button onClick={() => removeLocation(l.id)} aria-label="Remover local" className="text-red-400 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </>
@@ -785,7 +797,7 @@ export function ParcelsPage() {
                         {d.company}{d.doc ? ` · Doc: ${d.doc}` : ''}{d.plate ? ` · Placa: ${d.plate}` : ''}
                       </div>
                     </div>
-                    <button onClick={() => removeDeliverer(d.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                    <button onClick={() => removeDeliverer(d.id)} aria-label="Remover entregador" className="text-red-400 hover:text-red-600 shrink-0">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -809,6 +821,7 @@ export function ParcelsPage() {
               </div>
               <button 
                 onClick={() => { setShowModal(false); setForm(emptyForm); }}
+                aria-label="Fechar"
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
@@ -826,10 +839,11 @@ export function ParcelsPage() {
                   <select
                     value={form.unitId}
                     onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                    aria-label="Unidade destinatária"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-shadow"
                   >
                     <option value="">Selecione a unidade...</option>
-                    {(unitsData || []).map((u) => (
+                    {sortUnitsByIdentifier(unitsData || []).map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.block ? `${u.block} - ` : ''}{u.identifier}
                       </option>
@@ -1016,6 +1030,7 @@ export function ParcelsPage() {
                       setPickupName(resident.user.name);
                     }
                   }}
+                  aria-label="Morador"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione...</option>
@@ -1065,6 +1080,7 @@ export function ParcelsPage() {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 rows={3}
+                aria-label="Motivo do cancelamento"
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
@@ -1095,6 +1111,7 @@ export function ParcelsPage() {
               </div>
               <button 
                 onClick={() => { setEditModal(false); setEditTarget(null); }}
+                aria-label="Fechar"
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
@@ -1143,6 +1160,7 @@ export function ParcelsPage() {
                     <input 
                       value={editForm.trackingCode} 
                       onChange={(e) => setEditForm({ ...editForm, trackingCode: e.target.value })}
+                      aria-label="Código de rastreio ou nota fiscal"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                     />
                   </div>
@@ -1168,6 +1186,7 @@ export function ParcelsPage() {
                     <input 
                       value={editForm.deliveryPersonName} 
                       onChange={(e) => setEditForm({ ...editForm, deliveryPersonName: e.target.value })}
+                      aria-label="Nome do entregador"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                     />
                   </div>
@@ -1176,6 +1195,7 @@ export function ParcelsPage() {
                     <input 
                       value={editForm.deliveryPersonDoc} 
                       onChange={(e) => setEditForm({ ...editForm, deliveryPersonDoc: e.target.value.replace(/\D/g, '') })}
+                      aria-label="Documento CPF ou RG do entregador"
                       className="w-full px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" maxLength={14} 
                     />
                   </div>
@@ -1188,6 +1208,7 @@ export function ParcelsPage() {
                   <input 
                     value={editForm.senderName} 
                     onChange={(e) => setEditForm({ ...editForm, senderName: e.target.value })}
+                    aria-label="Remetente"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                   />
                 </div>

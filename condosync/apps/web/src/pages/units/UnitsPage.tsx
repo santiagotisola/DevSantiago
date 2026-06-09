@@ -464,6 +464,7 @@ export function UnitsPage() {
                         setEditTarget(u);
                         setEditModal(true);
                       }}
+                      aria-label="Editar unidade"
                       className="p-1.5 bg-white text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 transition-colors shadow-sm"
                     >
                       <Pencil className="w-3 h-3" />
@@ -556,6 +557,7 @@ export function UnitsPage() {
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
+                  aria-label="Fechar"
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
@@ -633,6 +635,7 @@ export function UnitsPage() {
                       onChange={(e) =>
                         setForm({ ...form, fraction: e.target.value })
                       }
+                      aria-label="Fração ideal em percentual"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     />
                   </div>
@@ -645,6 +648,7 @@ export function UnitsPage() {
                       onChange={(e) =>
                         setForm({ ...form, type: e.target.value })
                       }
+                      aria-label="Tipo de unidade"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
                       <option value="">Selecionar...</option>
@@ -706,6 +710,7 @@ export function UnitsPage() {
                     setShowDependentForm(false);
                     setDependentForm({ name: "", relationship: "", birthDate: "", cpf: "" });
                   }}
+                  aria-label="Fechar"
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
@@ -722,6 +727,7 @@ export function UnitsPage() {
                     onChange={(e) =>
                       setEditForm({ ...editForm, identifier: e.target.value })
                     }
+                    aria-label="Identificador da unidade"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   />
                 </div>
@@ -736,6 +742,7 @@ export function UnitsPage() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, block: e.target.value })
                       }
+                      aria-label="Bloco"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     />
                   </div>
@@ -748,6 +755,7 @@ export function UnitsPage() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, floor: e.target.value })
                       }
+                      aria-label="Andar"
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     />
                   </div>
@@ -761,6 +769,7 @@ export function UnitsPage() {
                   <select
                     value={editForm.status}
                     onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    aria-label="Status da unidade"
                     className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   >
                     <option value="VACANT">Vaga</option>
@@ -830,6 +839,7 @@ export function UnitsPage() {
                           value={selectedResidentId}
                           onChange={(e) => setSelectedResidentId(e.target.value)}
                           disabled={availableResidents.length === 0}
+                          aria-label="Selecionar morador"
                           className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-50 disabled:text-gray-400"
                         >
                           {availableResidents.length === 0 ? (
@@ -980,6 +990,7 @@ export function UnitsPage() {
                               birthDate: e.target.value,
                             })
                           }
+                          aria-label="Data de nascimento"
                           className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                         />
                         <input

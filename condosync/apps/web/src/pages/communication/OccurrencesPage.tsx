@@ -99,7 +99,7 @@ export function OccurrencesPage() {
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Título *</label>
-                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} aria-label="Título" placeholder="Título da ocorrência" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Categoria</label>
@@ -107,7 +107,7 @@ export function OccurrencesPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Descrição *</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} aria-label="Descrição" placeholder="Descreva a ocorrência" className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
               </div>
             </div>
             <div className="flex gap-3">

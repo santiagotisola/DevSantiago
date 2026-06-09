@@ -1,0 +1,7 @@
+version: 2.0.0
+compiled: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+features:
+  - alertas-de-panico
+  - 2fa-banner
+  - new-menu-structure
+status: "prod-ready"

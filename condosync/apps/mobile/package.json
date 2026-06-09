@@ -7,13 +7,20 @@
   "scripts": {
     "dev": "vite --port 5174",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --port 5174"
+    "preview": "vite preview --port 5174",
+    "android:init": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:apk": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android-installer.ps1",
+    "android:apk:release": "powershell -ExecutionPolicy Bypass -File ./scripts/build-android-installer.ps1 -Release"
   },
   "dependencies": {
+    "@capacitor/android": "^7.1.0",
+    "@capacitor/core": "^7.1.0",
     "@tanstack/react-query": "^5.28.0",
     "axios": "^1.6.8",
     "date-fns": "^3.6.0",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
@@ -21,6 +28,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.1.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",

@@ -1,0 +1,25 @@
+{
+  "condominiumId": "e59e98dd-1807-4b87-ad63-d421adb3f711",
+  "superAdminId": "4ad11ac1-1dab-4d98-aa0d-4181f3d29d7f",
+  "syndicId": "cc7e3060-70cd-4706-8f51-d17da1e6055f",
+  "doormanId": "84bd9bb7-7cd6-4882-be7a-4cf1c501c2c6",
+  "residentIds": [
+    "83760b89-4c18-45f0-bfbf-5402cd69e8d9",
+    "fed93466-4221-4f62-b34b-aa523f61dcc1",
+    "8293474a-beab-420b-a27b-6737baef848f",
+    "21e3ce6b-ca2f-4c89-901f-c5f4af533b6b",
+    "d8f2be41-86d2-4651-b38e-6f298b367874"
+  ],
+  "unitIds": [
+    "aec1a56c-f5eb-45a1-898c-aa889fabaa5c",
+    "b3345b9b-703c-43ba-90f7-574ab6073929",
+    "a621775b-77e4-422a-889d-9f099df3ac44",
+    "d062f5ce-7977-421b-a2bb-f013d0cd1f8e",
+    "dd962e51-3b44-433e-84ae-39e61ae6a6a6",
+    "aeaeb109-5973-4ac7-868b-d23e57b5db27",
+    "36c02112-c0c2-4d6b-9b59-d9e4215106fb",
+    "6aa70929-069d-47a0-a89e-dfe63e802ea9",
+    "95be80fe-5d0a-4846-bc34-f4e31755cf3a",
+    "afac4bd7-16b6-49ae-9b23-32ff379982fb"
+  ]
+}

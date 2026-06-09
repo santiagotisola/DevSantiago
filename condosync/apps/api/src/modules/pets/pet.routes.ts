@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { petController } from './pet.controller';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, authorizeCondominium } from '../../middleware/auth';
 
 const router = Router();
 
 router.use(authenticate);
 
 // Listar todos os pets do condomínio
-router.get('/condominium/:condominiumId', petController.list);
+router.get('/condominium/:condominiumId', authorizeCondominium, petController.list);
 
 // Listar pets de uma unidade específica
 router.get('/unit/:unitId', petController.listByUnit);

@@ -96,6 +96,20 @@ export class AssemblyController {
     const results = await assemblyService.getVotingResults(id, req.user!);
     return res.json(results);
   }
+
+  async generateMinutes(req: Request, res: Response) {
+    const { id } = req.params;
+    const actor = req.user!;
+
+    const pdfBuffer = await assemblyService.generateMinutesPdf(id, actor);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="ata-assembleia-${id}.pdf"`,
+    );
+    return res.send(pdfBuffer);
+  }
 }
 
 export const assemblyController = new AssemblyController();

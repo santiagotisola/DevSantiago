@@ -106,6 +106,18 @@ enum NotificationType {
   RESERVATION
   OCCURRENCE
   ASSEMBLY
+  PANIC
+  VISITOR_ARRIVAL
+  PARCEL_RECEIVED
+  MAINTENANCE_UPDATE
+  PAYMENT_DUE
+  PAYMENT_CONFIRMED
+  ANNOUNCEMENT
+  TICKET_REPLY
+  ASSEMBLY_SCHEDULED
+  PANIC_ALERT
+  RESERVATION_STATUS
+  GENERAL
 }
 
 enum AssemblyStatus {
@@ -141,59 +153,67 @@ enum ShiftType {
 // ─────────────────────────────────────────────────────────────
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String
-  name          String
-  phone         String?
-  cpf           String?  @unique
-  avatarUrl     String?
-  role          UserRole @default(RESIDENT)
-  isActive      Boolean  @default(true)
-  emailVerified Boolean  @default(false)
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String?
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  passwordHash         String
+  name                 String
+  phone                String?
+  cpf                  String?   @unique
+  avatarUrl            String?
+  role                 UserRole  @default(RESIDENT)
+  isActive             Boolean   @default(true)
+  emailVerified        Boolean   @default(false)
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String?
   // Códigos de backup (hash sha256, um uso cada). Array Json estilo
   // [{"hash":"...", "usedAt": null}].
   twoFactorBackupCodes Json?
-  lastLoginAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  lastLoginAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   // Relações
-  condominiumUsers   CondominiumUser[]
-  notifications      Notification[]
-  notificationPrefs  NotificationPreference[]
-  sentMessages       ChatMessage[]    @relation("SentMessages")
-  auditLogs          AuditLog[]
-  refreshTokens      RefreshToken[]
-  passwordResets     PasswordReset[]
-  invitationsCreated Invitation[]   @relation("InvitationCreator")
-  invitationsAccepted Invitation[]  @relation("InvitationAcceptedBy")
-  pushSubscriptions  PushSubscription[]
+  condominiumUsers    CondominiumUser[]
+  notifications       Notification[]
+  notificationPrefs   NotificationPreference[]
+  sentMessages        ChatMessage[]            @relation("SentMessages")
+  auditLogs           AuditLog[]
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordReset[]
+  invitationsCreated  Invitation[]             @relation("InvitationCreator")
+  invitationsAccepted Invitation[]             @relation("InvitationAcceptedBy")
+  pushSubscriptions   PushSubscription[]
   webAuthnCredentials WebAuthnCredential[]
-  termsAcceptances   TermsAcceptance[]
-  lostAndFoundItems  LostAndFound[] @relation("CreatedLostAndFound")
-  ticketsCreated     Ticket[]       @relation("TicketCreator")
-  ticketsAssigned    Ticket[]       @relation("TicketAssignee")
-  ticketMessages     TicketMessage[] @relation("TicketMessages")
-  employee           Employee?
+  termsAcceptances    TermsAcceptance[]
+  lostAndFoundItems   LostAndFound[]           @relation("CreatedLostAndFound")
+  ticketsCreated      Ticket[]                 @relation("TicketCreator")
+  ticketsAssigned     Ticket[]                 @relation("TicketAssignee")
+  ticketMessages      TicketMessage[]          @relation("TicketMessages")
+  employee            Employee?
+
+  // NOVO: Marketplace
+  productRequests MarketplaceProductRequest[]
+  chatMessages    MarketplaceChatMessage[]
+  productReviews  MarketplaceProductReview[]
+  favorites       ResidentFavorite[]
+  loyaltyPoints   LoyaltyPoints?
+  purchaseHistory PurchaseHistory[]
 
   @@map("users")
 }
 
 model RefreshToken {
-  id         String   @id @default(uuid())
-  token      String   @unique
+  id         String    @id @default(uuid())
+  token      String    @unique
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
   // Metadata pra tela "Meus dispositivos" (Q2.4). Opcionais pra não
   // quebrar tokens antigos.
   ipAddress  String?
   userAgent  String?
   lastUsedAt DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
   @@map("refresh_tokens")
@@ -212,7 +232,7 @@ model PasswordReset {
 }
 
 model Permission {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   module      String // ex: "portaria", "financeiro", "manutencao"
   action      String // ex: "create", "read", "update", "delete"
   description String?
@@ -224,10 +244,10 @@ model Permission {
 }
 
 model RolePermission {
-  id           String     @id @default(uuid())
-  role         UserRole
-  permission   Permission @relation(fields: [permissionId], references: [id])
-  permissionId String
+  id            String       @id @default(uuid())
+  role          UserRole
+  permission    Permission   @relation(fields: [permissionId], references: [id])
+  permissionId  String
   condominiumId String?
   condominium   Condominium? @relation(fields: [condominiumId], references: [id])
 
@@ -250,6 +270,7 @@ model Condominium {
   phone        String?
   email        String?
   logoUrl      String?
+  heroImageUrl String?
   timezone     String   @default("America/Sao_Paulo")
   isActive     Boolean  @default(true)
   plan         String   @default("basic") // basic, professional, enterprise
@@ -258,39 +279,51 @@ model Condominium {
   updatedAt    DateTime @updatedAt
 
   // Relações
-  units              Unit[]
-  condominiumUsers   CondominiumUser[]
-  employees          Employee[]
-  serviceProviders   ServiceProvider[]
-  commonAreas        CommonArea[]
-  financialAccounts  FinancialAccount[]
-  announcements      Announcement[]
-  occurrences        Occurrence[]
-  rolePermissions    RolePermission[]
-  auditLogs          AuditLog[]
-  maintenanceSchedules MaintenanceSchedule[]
-  contracts          Contract[]
-  polls              Poll[]
-  assemblies         Assembly[]
-  lostAndFoundItems  LostAndFound[]
-  documents          CondominiumDocument[]
-  panicAlerts        PanicAlert[]
-  visitorRecurrences VisitorRecurrence[]
+  units                   Unit[]
+  condominiumUsers        CondominiumUser[]
+  employees               Employee[]
+  serviceProviders        ServiceProvider[]
+  commonAreas             CommonArea[]
+  financialAccounts       FinancialAccount[]
+  announcements           Announcement[]
+  occurrences             Occurrence[]
+  rolePermissions         RolePermission[]
+  auditLogs               AuditLog[]
+  maintenanceSchedules    MaintenanceSchedule[]
+  contracts               Contract[]
+  polls                   Poll[]
+  assemblies              Assembly[]
+  lostAndFoundItems       LostAndFound[]
+  documents               CondominiumDocument[]
+  panicAlerts             PanicAlert[]
+  visitorRecurrences      VisitorRecurrence[]
   // C4 — back-relations adicionadas pela conversão de
   // condominiumId String → FK em 13 modelos.
-  chatConversations  ChatConversation[]
-  financialCategories FinancialCategory[]
-  serviceOrders      ServiceOrder[]
-  finalizedAssemblies FinalizedAssembly[]
-  renovations        Renovation[]
-  stockItems         StockItem[]
-  tickets            Ticket[]
-  photos             Photo[]
-  condominiumContracts CondominiumContract[]
-  fines              Fine[]
-  collectionRules    CollectionRule[]
-  digitalSignageScreens DigitalSignageScreen[]
-  invitations        Invitation[]
+  chatConversations       ChatConversation[]
+  financialCategories     FinancialCategory[]
+  serviceOrders           ServiceOrder[]
+  finalizedAssemblies     FinalizedAssembly[]
+  renovations             Renovation[]
+  stockItems              StockItem[]
+  tickets                 Ticket[]
+  photos                  Photo[]
+  condominiumContracts    CondominiumContract[]
+  fines                   Fine[]
+  collectionRules         CollectionRule[]
+  digitalSignageScreens   DigitalSignageScreen[]
+  invitations             Invitation[]
+  // Marketplace / módulos adicionais (origin/main)
+  marketplacePartners     MarketplacePartner[]            @relation(name: "PartnerToCondominium")
+  marketplaceOffers       MarketplaceOffer[]
+  marketplacePartnerLinks CondominiumMarketplacePartner[]
+  marketplaceProducts     MarketplaceProduct[]
+  marketplaceCategories   MarketplaceCategory[]
+  productRequests         MarketplaceProductRequest[]
+  purchaseHistory         PurchaseHistory[]               @relation("PurchaseHistoryCondominium")
+  movingSchedules         MovingSchedule[]
+  keyControls             KeyControl[]
+  cameras                 Camera[]
+  notifications           Notification[]
 
   @@map("condominiums")
 }
@@ -305,78 +338,80 @@ model CondominiumUser {
   isActive      Boolean     @default(true)
   joinedAt      DateTime    @default(now())
 
-  unit          Unit?       @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  unitId        String?
+  unit   Unit?   @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  unitId String?
 
   @@unique([userId, condominiumId])
   @@map("condominium_users")
 }
 
 model Unit {
-  id            String     @id @default(uuid())
+  id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  identifier    String     // ex: "Casa 01", "Lote 15"
+  identifier    String // ex: "Casa 01", "Lote 15"
   block         String?
-  street        String?    // endereço / rua da unidade
-  floor         String?    // andar
-  type          String?    // tipo: apartamento, casa, loja, etc.
+  street        String? // endereço / rua da unidade
+  floor         String? // andar
+  type          String? // tipo: apartamento, casa, loja, etc.
   area          Float?
   bedrooms      Int?
-  status        UnitStatus @default(OCCUPIED)
-  fraction      Decimal    @default(1.0) @db.Decimal(8,6) // fração ideal para rateio
+  status        UnitStatus  @default(OCCUPIED)
+  fraction      Decimal     @default(1.0) @db.Decimal(8, 6) // fração ideal para rateio
   notes         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   // Relações
-  residents     CondominiumUser[]
-  vehicles      Vehicle[]
-  visitors      Visitor[]         @relation("UnitVisitors")
-  parcels       Parcel[]
-  charges       Charge[]
-  serviceOrders ServiceOrder[]
-  dependents    Dependent[]
-  pets          Pet[]
-  renovations   Renovation[]
+  residents          CondominiumUser[]
+  vehicles           Vehicle[]
+  visitors           Visitor[]           @relation("UnitVisitors")
+  parcels            Parcel[]
+  charges            Charge[]
+  serviceOrders      ServiceOrder[]
+  dependents         Dependent[]
+  pets               Pet[]
+  renovations        Renovation[]
   visitorRecurrences VisitorRecurrence[]
   visitorQRCodes     VisitorQRCode[]
   invitations        Invitation[]
+  movingSchedules    MovingSchedule[]
 
   @@unique([condominiumId, identifier, block])
   @@map("units")
 }
 
 model Dependent {
-  id         String   @id @default(uuid())
-  unit       Unit     @relation(fields: [unitId], references: [id])
-  unitId     String
-  name       String
-  relationship String  // filho, cônjuge, pai, etc.
-  birthDate  DateTime?
-  cpf        String?
-  photoUrl   String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  id           String    @id @default(uuid())
+  unit         Unit      @relation(fields: [unitId], references: [id])
+  unitId       String
+  name         String
+  relationship String // filho, cônjuge, pai, etc.
+  birthDate    DateTime?
+  cpf          String?
+  photoUrl     String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
 
   @@map("dependents")
 }
 
 model Vehicle {
-  id           String      @id @default(uuid())
-  unit         Unit        @relation(fields: [unitId], references: [id])
-  unitId       String
-  plate        String      @unique
-  brand        String
-  model        String
-  color        String
-  year         Int?
-  type         VehicleType @default(CAR)
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id        String      @id @default(uuid())
+  unit      Unit        @relation(fields: [unitId], references: [id])
+  unitId    String
+  plate     String      @unique
+  brand     String
+  model     String
+  color     String
+  year      Int?
+  type      VehicleType @default(CAR)
+  photoUrl  String?
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  accessLogs   VehicleAccessLog[]
+  accessLogs VehicleAccessLog[]
 
   @@map("vehicles")
 }
@@ -387,20 +422,20 @@ model Employee {
   condominiumId String
   name          String
   cpf           String
-  role          String      // porteiro, zelador, jardineiro, etc.
+  role          String // porteiro, zelador, jardineiro, etc.
   phone         String?
   email         String?
   shift         ShiftType
   admissionDate DateTime
-  salaryAmount  Decimal?   @db.Decimal(10,2)
+  salaryAmount  Decimal?    @db.Decimal(10, 2)
   isActive      Boolean     @default(true)
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   // Vínculo opcional com conta de acesso ao sistema
-  user          User?       @relation(fields: [userId], references: [id])
-  userId        String?     @unique
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String? @unique
 
   @@map("employees")
 }
@@ -412,9 +447,10 @@ model ServiceProvider {
   name          String
   cnpj          String?
   cpf           String?
-  serviceType   String      // encanador, eletricista, pintor, etc.
+  serviceType   String // encanador, eletricista, pintor, etc.
   phone         String
   email         String?
+  photoUrl      String?
   isApproved    Boolean     @default(false)
   notes         String?
   createdAt     DateTime    @default(now())
@@ -432,25 +468,25 @@ model ServiceProvider {
 // ─────────────────────────────────────────────────────────────
 
 model Visitor {
-  id                String        @id @default(uuid())
-  unit              Unit          @relation("UnitVisitors", fields: [unitId], references: [id])
-  unitId            String
-  name              String
-  document          String?
-  documentType      String?       // CPF, RG, CNH
-  phone             String?
-  photoUrl          String?
-  company           String?
-  reason            String?
-  preAuthorizedBy   String?       // ID do morador que autorizou
-  status            VisitorStatus @default(PENDING)
-  scheduledAt       DateTime?
-  entryAt           DateTime?
-  exitAt            DateTime?
-  registeredBy      String?       // ID do porteiro
-  notes             String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id              String        @id @default(uuid())
+  unit            Unit          @relation("UnitVisitors", fields: [unitId], references: [id])
+  unitId          String
+  name            String
+  document        String?
+  documentType    String? // CPF, RG, CNH
+  phone           String?
+  photoUrl        String?
+  company         String?
+  reason          String?
+  preAuthorizedBy String? // ID do morador que autorizou
+  status          VisitorStatus @default(PENDING)
+  scheduledAt     DateTime?
+  entryAt         DateTime?
+  exitAt          DateTime?
+  registeredBy    String? // ID do porteiro
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   serviceProvider   ServiceProvider? @relation(fields: [serviceProviderId], references: [id])
   serviceProviderId String?
@@ -459,15 +495,15 @@ model Visitor {
 }
 
 model VehicleAccessLog {
-  id          String   @id @default(uuid())
-  vehicle     Vehicle? @relation(fields: [vehicleId], references: [id])
-  vehicleId   String?
-  plate       String   // mesmo para não cadastrados
-  unitId      String?
-  isResident  Boolean  @default(false)
-  entryAt     DateTime @default(now())
-  exitAt      DateTime?
-  notes       String?
+  id           String    @id @default(uuid())
+  vehicle      Vehicle?  @relation(fields: [vehicleId], references: [id])
+  vehicleId    String?
+  plate        String // mesmo para não cadastrados
+  unitId       String?
+  isResident   Boolean   @default(false)
+  entryAt      DateTime  @default(now())
+  exitAt       DateTime?
+  notes        String?
   registeredBy String?
 
   @@index([entryAt])
@@ -476,28 +512,28 @@ model VehicleAccessLog {
 }
 
 model Parcel {
-  id                  String       @id @default(uuid())
-  unit                Unit         @relation(fields: [unitId], references: [id])
-  unitId              String
-  senderName          String?
-  carrier             String?
-  trackingCode        String?
-  photoUrl            String?
-  storageLocation     String?
+  id                 String       @id @default(uuid())
+  unit               Unit         @relation(fields: [unitId], references: [id])
+  unitId             String
+  senderName         String?
+  carrier            String?
+  trackingCode       String?
+  photoUrl           String?
+  storageLocation    String?
   // Dados do entregador (Lei 11.442/07 + LGPD Art. 7º IX)
-  deliveryPersonName  String?      // Nome completo do entregador
-  deliveryPersonDoc   String?      // CPF ou RG (apenas números)
-  vehiclePlate        String?      // Placa do veículo (RNTRC/ANTT)
+  deliveryPersonName String? // Nome completo do entregador
+  deliveryPersonDoc  String? // CPF ou RG (apenas números)
+  vehiclePlate       String? // Placa do veículo (RNTRC/ANTT)
   // Controle de avaria (Art. 754 Código Civil)
-  hasPackageDamage    Boolean      @default(false)
-  status              ParcelStatus @default(RECEIVED)
-  receivedAt          DateTime     @default(now())
-  notifiedAt          DateTime?
-  pickedUpAt          DateTime?
-  pickedUpBy          String?      // nome de quem retirou
-  pickupSignature     String?      // assinatura digital ou PIN
-  notes               String?
-  registeredBy        String?
+  hasPackageDamage   Boolean      @default(false)
+  status             ParcelStatus @default(RECEIVED)
+  receivedAt         DateTime     @default(now())
+  notifiedAt         DateTime?
+  pickedUpAt         DateTime?
+  pickedUpBy         String? // nome de quem retirou
+  pickupSignature    String? // assinatura digital ou PIN
+  notes              String?
+  registeredBy       String?
 
   @@index([unitId, status, receivedAt])
   @@map("parcels")
@@ -527,18 +563,24 @@ model Announcement {
 }
 
 model Notification {
-  id        String           @id @default(uuid())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  data      Json?
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
+  id            String           @id @default(uuid())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  condominium   Condominium?     @relation(fields: [condominiumId], references: [id])
+  condominiumId String?
+  type          NotificationType
+  title         String
+  message       String
+  data          Json?
+  referenceId   String?
+  referenceType String?
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
 
-  @@index([userId, isRead, createdAt])
+  @@index([userId, isRead])
+  @@index([condominiumId])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -559,15 +601,15 @@ model NotificationPreference {
 }
 
 model ChatConversation {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
   unitId        String?
   subject       String?
   participants  String[] // array de userIds
-  isOpen        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isOpen        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   messages ChatMessage[]
 
@@ -595,7 +637,7 @@ model Poll {
   condominiumId String
   title         String
   description   String?
-  options       Json        // [{id, text, votes}]
+  options       Json // [{id, text, votes}]
   allowMultiple Boolean     @default(false)
   isAnonymous   Boolean     @default(false)
   startsAt      DateTime    @default(now())
@@ -610,34 +652,34 @@ model Poll {
 }
 
 model PollVote {
-  id         String   @id @default(uuid())
-  poll       Poll     @relation(fields: [pollId], references: [id])
-  pollId     String
-  userId     String
-  optionIds  String[] // opções escolhidas
-  votedAt    DateTime @default(now())
+  id        String   @id @default(uuid())
+  poll      Poll     @relation(fields: [pollId], references: [id])
+  pollId    String
+  userId    String
+  optionIds String[] // opções escolhidas
+  votedAt   DateTime @default(now())
 
   @@unique([pollId, userId])
   @@map("poll_votes")
 }
 
 model Occurrence {
-  id            String           @id @default(uuid())
-  condominium   Condominium      @relation(fields: [condominiumId], references: [id])
+  id            String               @id @default(uuid())
+  condominium   Condominium          @relation(fields: [condominiumId], references: [id])
   condominiumId String
   reportedBy    String
   title         String
   description   String
-  category      String           // segurança, barulho, vandalismo, etc.
+  category      String // segurança, barulho, vandalismo, etc.
   location      String?
   photoUrls     String[]
-  status        OccurrenceStatus @default(OPEN)
+  status        OccurrenceStatus     @default(OPEN)
   priority      ServiceOrderPriority @default(MEDIUM)
   resolvedAt    DateTime?
   resolvedBy    String?
   resolution    String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   @@map("occurrences")
 }
@@ -650,7 +692,7 @@ model FinancialAccount {
   id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  name          String      // Conta principal, fundo reserva, etc.
+  name          String // Conta principal, fundo reserva, etc.
   bankName      String?
   agency        String?
   accountNumber String?
@@ -659,20 +701,20 @@ model FinancialAccount {
   // teria sido armadilha: race entre transactions concorrentes
   // faria balance divergir. Source-of-truth: aggregate sob demanda.
   isActive      Boolean     @default(true)
-  
+
   // Gateway config
-  gatewayType   GatewayType @default(NONE)
+  gatewayType      GatewayType @default(NONE)
   // Plaintext legado — ainda lido durante a fase EXPAND da migração
   // de criptografia. Será DROPado em CONTRACT (Sprint seguinte).
-  gatewayKey    String?     // API Key or Token (LEGADO PLAINTEXT)
-  gatewayConfig Json?       // walletId, common settings (LEGADO PLAINTEXT)
+  gatewayKey       String? // API Key or Token (LEGADO PLAINTEXT)
+  gatewayConfig    Json? // walletId, common settings (LEGADO PLAINTEXT)
   // Cifrados via cryptoVault (AES-256-GCM, formato v1.iv.tag.ct).
   // Source-of-truth a partir do CONTRACT.
   gatewayKeyEnc    String?
   gatewayConfigEnc String?
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   transactions FinancialTransaction[]
   charges      Charge[]
@@ -681,14 +723,14 @@ model FinancialAccount {
 }
 
 model FinancialCategory {
-  id          String                   @id @default(uuid())
-  condominium Condominium              @relation(fields: [condominiumId], references: [id])
+  id            String                   @id @default(uuid())
+  condominium   Condominium              @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  name        String
-  type        FinancialTransactionType
-  description String?
-  isActive    Boolean                  @default(true)
-  createdAt   DateTime                 @default(now())
+  name          String
+  type          FinancialTransactionType
+  description   String?
+  isActive      Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
 
   transactions FinancialTransaction[]
   charges      Charge[]
@@ -698,23 +740,23 @@ model FinancialCategory {
 }
 
 model FinancialTransaction {
-  id               String                   @id @default(uuid())
-  account          FinancialAccount         @relation(fields: [accountId], references: [id])
-  accountId        String
-  category         FinancialCategory?       @relation(fields: [categoryId], references: [id])
-  categoryId       String?
-  type             FinancialTransactionType
-  amount           Decimal  @db.Decimal(12,2)
-  description      String
-  dueDate          DateTime
-  paidAt           DateTime?
-  referenceMonth   String?                  // "2025-01"
-  receiptUrl       String?
-  notes            String?
-  createdBy        String
-  chargeId         String?
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
+  id             String                   @id @default(uuid())
+  account        FinancialAccount         @relation(fields: [accountId], references: [id])
+  accountId      String
+  category       FinancialCategory?       @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  type           FinancialTransactionType
+  amount         Decimal                  @db.Decimal(12, 2)
+  description    String
+  dueDate        DateTime
+  paidAt         DateTime?
+  referenceMonth String? // "2025-01"
+  receiptUrl     String?
+  notes          String?
+  createdBy      String
+  chargeId       String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
 
   @@index([accountId, type, paidAt])
   @@index([accountId, referenceMonth, type])
@@ -737,15 +779,15 @@ model FinancialTransaction {
 // movida para processedAt manualmente após investigação ou
 // permanece pendente para alerta operacional.
 model WebhookEvent {
-  id              String   @id @default(uuid())
-  provider        String   // "asaas", "pjbank", etc.
-  externalId      String   // event id do provider, ou paymentId+eventType
+  id              String    @id @default(uuid())
+  provider        String // "asaas", "pjbank", etc.
+  externalId      String // event id do provider, ou paymentId+eventType
   eventType       String
   payload         Json
-  receivedAt      DateTime @default(now())
+  receivedAt      DateTime  @default(now())
   processedAt     DateTime?
   processingError String?
-  attempts        Int      @default(0)
+  attempts        Int       @default(0)
 
   @@unique([provider, externalId])
   @@index([provider, receivedAt])
@@ -754,35 +796,35 @@ model WebhookEvent {
 }
 
 model Charge {
-  id            String            @id @default(uuid())
-  unit          Unit              @relation(fields: [unitId], references: [id])
-  unitId        String
-  account       FinancialAccount  @relation(fields: [accountId], references: [id])
-  accountId     String
-  category      FinancialCategory? @relation(fields: [categoryId], references: [id])
-  categoryId    String?
-  description   String
-  amount        Decimal  @db.Decimal(12,2)
-  dueDate       DateTime
-  paidAt        DateTime?
-  paidAmount    Decimal? @db.Decimal(12,2)
-  status        ChargeStatus      @default(PENDING)
+  id             String             @id @default(uuid())
+  unit           Unit               @relation(fields: [unitId], references: [id])
+  unitId         String
+  account        FinancialAccount   @relation(fields: [accountId], references: [id])
+  accountId      String
+  category       FinancialCategory? @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  description    String
+  amount         Decimal            @db.Decimal(12, 2)
+  dueDate        DateTime
+  paidAt         DateTime?
+  paidAmount     Decimal?           @db.Decimal(12, 2)
+  status         ChargeStatus       @default(PENDING)
   referenceMonth String?
-  
+
   // Gateway metadata
   gatewayId     String?
   gatewayStatus String?
-  pixQrCode     String?     @db.Text
-  pixCopyPaste  String?     @db.Text
-  paymentLink   String?     @db.Text
+  pixQrCode     String? @db.Text
+  pixCopyPaste  String? @db.Text
+  paymentLink   String? @db.Text
 
   boletoUrl     String?
   boletoCode    String?
-  penaltyAmount Decimal           @default(0) @db.Decimal(12,2)
-  interestRate  Decimal           @default(0) @db.Decimal(5,4) // % a.m.
+  penaltyAmount Decimal  @default(0) @db.Decimal(12, 2)
+  interestRate  Decimal  @default(0) @db.Decimal(5, 4) // % a.m.
   createdBy     String
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([gatewayId])
   @@index([unitId, status, dueDate])
@@ -795,34 +837,34 @@ model Charge {
 // ─────────────────────────────────────────────────────────────
 
 model ServiceOrder {
-  id              String               @id @default(uuid())
-  unit            Unit?                @relation(fields: [unitId], references: [id])
-  unitId          String?
-  condominium     Condominium          @relation(fields: [condominiumId], references: [id])
-  condominiumId   String
-  requestedBy     String
-  assignedTo      String?
-  serviceProvider ServiceProvider?     @relation(fields: [serviceProviderId], references: [id])
+  id                String               @id @default(uuid())
+  unit              Unit?                @relation(fields: [unitId], references: [id])
+  unitId            String?
+  condominium       Condominium          @relation(fields: [condominiumId], references: [id])
+  condominiumId     String
+  requestedBy       String
+  assignedTo        String?
+  serviceProvider   ServiceProvider?     @relation(fields: [serviceProviderId], references: [id])
   serviceProviderId String?
-  title           String
-  description     String
-  category        String               // elétrica, hidráulica, limpeza, etc.
-  location        String?
-  priority        ServiceOrderPriority @default(MEDIUM)
-  status          ServiceOrderStatus   @default(OPEN)
-  photoUrls       String[]
-  estimatedCost   Decimal? @db.Decimal(10,2)
-  finalCost       Decimal? @db.Decimal(10,2)
-  scheduledAt     DateTime?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  resolution      String?
-  rating          Int?                 // 1-5
-  feedback        String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  title             String
+  description       String
+  category          String // elétrica, hidráulica, limpeza, etc.
+  location          String?
+  priority          ServiceOrderPriority @default(MEDIUM)
+  status            ServiceOrderStatus   @default(OPEN)
+  photoUrls         String[]
+  estimatedCost     Decimal?             @db.Decimal(10, 2)
+  finalCost         Decimal?             @db.Decimal(10, 2)
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  resolution        String?
+  rating            Int? // 1-5
+  feedback          String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
-  checklistItems    ServiceOrderChecklist[]
+  checklistItems ServiceOrderChecklist[]
 
   @@index([condominiumId, status, createdAt])
   @@map("service_orders")
@@ -848,10 +890,10 @@ model MaintenanceSchedule {
   description   String?
   category      String
   location      String
-  frequency     String      // diário, semanal, mensal, anual
+  frequency     String // diário, semanal, mensal, anual
   nextDueDate   DateTime
   lastDoneDate  DateTime?
-  estimatedCost Decimal? @db.Decimal(10,2)
+  estimatedCost Decimal?    @db.Decimal(10, 2)
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -860,21 +902,21 @@ model MaintenanceSchedule {
 }
 
 model Contract {
-  id              String          @id @default(uuid())
-  condominium     Condominium     @relation(fields: [condominiumId], references: [id])
-  condominiumId   String
-  serviceProvider ServiceProvider @relation(fields: [serviceProviderId], references: [id])
+  id                String          @id @default(uuid())
+  condominium       Condominium     @relation(fields: [condominiumId], references: [id])
+  condominiumId     String
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [id])
   serviceProviderId String
-  title           String
-  description     String?
-  value           Decimal  @db.Decimal(12,2)
-  startDate       DateTime
-  endDate         DateTime?
-  isActive        Boolean         @default(true)
-  documentUrl     String?
-  notes           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  title             String
+  description       String?
+  value             Decimal         @db.Decimal(12, 2)
+  startDate         DateTime
+  endDate           DateTime?
+  isActive          Boolean         @default(true)
+  documentUrl       String?
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@map("contracts")
 }
@@ -884,23 +926,23 @@ model Contract {
 // ─────────────────────────────────────────────────────────────
 
 model CommonArea {
-  id            String      @id @default(uuid())
-  condominium   Condominium @relation(fields: [condominiumId], references: [id])
-  condominiumId String
-  name          String      // Salão de festas, quadra, etc.
-  description   String?
-  capacity      Int?
-  rules         String?
-  photoUrls     String[]
-  isActive      Boolean     @default(true)
-  requiresApproval Boolean  @default(false)
-  maxDaysAdvance Int        @default(30)
-  openTime      String?     // "08:00"
-  closeTime     String?     // "22:00"
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id               String      @id @default(uuid())
+  condominium      Condominium @relation(fields: [condominiumId], references: [id])
+  condominiumId    String
+  name             String // Salão de festas, quadra, etc.
+  description      String?
+  capacity         Int?
+  rules            String?
+  photoUrls        String[]
+  isActive         Boolean     @default(true)
+  requiresApproval Boolean     @default(false)
+  maxDaysAdvance   Int         @default(30)
+  openTime         String? // "08:00"
+  closeTime        String? // "22:00"
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  reservations  Reservation[]
+  reservations   Reservation[]
   blockedPeriods AreaBlockedPeriod[]
 
   @@map("common_areas")
@@ -946,23 +988,23 @@ model AreaBlockedPeriod {
 // ─────────────────────────────────────────────────────────────
 
 model Assembly {
-  id             String         @id @default(uuid())
-  condominium    Condominium    @relation(fields: [condominiumId], references: [id])
-  condominiumId  String
-  title          String
-  description    String?
-  meetingUrl     String?        // Link Zoom/Meet
-  scheduledAt    DateTime
-  startedAt      DateTime?
-  finishedAt     DateTime?
-  minutesUrl     String?        // PDF da ata
-  status         AssemblyStatus @default(SCHEDULED)
-  createdBy      String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id            String         @id @default(uuid())
+  condominium   Condominium    @relation(fields: [condominiumId], references: [id])
+  condominiumId String
+  title         String
+  description   String?
+  meetingUrl    String? // Link Zoom/Meet
+  scheduledAt   DateTime
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  minutesUrl    String? // PDF da ata
+  status        AssemblyStatus @default(SCHEDULED)
+  createdBy     String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  votingItems    AssemblyVotingItem[]
-  attendees      AssemblyAttendee[]
+  votingItems AssemblyVotingItem[]
+  attendees   AssemblyAttendee[]
 
   @@map("assemblies")
 }
@@ -973,9 +1015,9 @@ model AssemblyVotingItem {
   assemblyId  String
   title       String
   description String?
-  options     Json     // [{id, text}]
-  
-  votes       AssemblyVote[]
+  options     Json // [{id, text}]
+
+  votes AssemblyVote[]
 
   @@map("assembly_voting_items")
 }
@@ -985,7 +1027,7 @@ model AssemblyVote {
   votingItem   AssemblyVotingItem @relation(fields: [votingItemId], references: [id], onDelete: Cascade)
   votingItemId String
   userId       String
-  optionId     String             // ID da opção escolhida do JSON
+  optionId     String // ID da opção escolhida do JSON
   votedAt      DateTime           @default(now())
 
   @@unique([votingItemId, userId])
@@ -993,12 +1035,12 @@ model AssemblyVote {
 }
 
 model AssemblyAttendee {
-  id          String   @id @default(uuid())
-  assembly    Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
-  assemblyId  String
-  userId      String
-  joinedAt    DateTime @default(now())
-  leftAt      DateTime?
+  id         String    @id @default(uuid())
+  assembly   Assembly  @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  assemblyId String
+  userId     String
+  joinedAt   DateTime  @default(now())
+  leftAt     DateTime?
 
   @@unique([assemblyId, userId])
   @@map("assembly_attendees")
@@ -1009,32 +1051,33 @@ model AssemblyAttendee {
 // ─────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id            String      @id @default(uuid())
-  user          User?       @relation(fields: [userId], references: [id])
+  id            String       @id @default(uuid())
+  user          User?        @relation(fields: [userId], references: [id])
   userId        String?
   condominium   Condominium? @relation(fields: [condominiumId], references: [id])
   condominiumId String?
-  action        String      // CREATE, UPDATE, DELETE, LOGIN, etc.
-  module        String      // portaria, financeiro, etc.
-  entityType    String?     // Visitor, Parcel, etc.
+  action        String // CREATE, UPDATE, DELETE, LOGIN, etc.
+  module        String // portaria, financeiro, etc.
+  entityType    String? // Visitor, Parcel, etc.
   entityId      String?
   description   String
   metadata      Json?
   ipAddress     String?
   userAgent     String?
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime     @default(now())
 
   @@index([condominiumId, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
 model FinalizedAssembly {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  date        DateTime @default(now())
-  minutesUrl  String?
-  condominium Condominium @relation(fields: [condominiumId], references: [id])
+  id            String      @id @default(uuid())
+  title         String
+  description   String?
+  date          DateTime    @default(now())
+  minutesUrl    String?
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
 
   @@index([condominiumId])
@@ -1042,28 +1085,29 @@ model FinalizedAssembly {
 }
 
 model Pet {
-  id            String      @id @default(uuid())
-  name          String
-  type          String      // Cachorro, Gato, Pássaro, etc.
-  breed         String?
-  size          String?     // Pequeno, Médio, Grande
-  gender        String?     // Macho, Fêmea
-  birthDate     DateTime?
-  color         String?
-  photoUrl      String?
-  weight        Float?
+  id              String    @id @default(uuid())
+  name            String
+  type            String // Cachorro, Gato, Pássaro, etc.
+  breed           String?
+  size            String? // Pequeno, Médio, Grande
+  gender          String? // Macho, Fêmea
+  birthDate       DateTime?
+  color           String?
+  photoUrl        String?
+  weight          Float?
   lastVaccination DateTime?
-  isActive      Boolean     @default(true)
-  notes         String?
-  
-  unit          Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  unitId        String
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  isActive        Boolean   @default(true)
+  notes           String?
+
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("pets")
 }
+
 enum LostAndFoundStatus {
   LOST
   FOUND
@@ -1072,26 +1116,26 @@ enum LostAndFoundStatus {
 }
 
 model LostAndFound {
-  id            String             @id @default(uuid())
-  title         String
-  description   String?
-  category      String             // Eletrônico, Chaves, Vestuário, etc.
-  place         String?            // Onde foi encontrado/perdido
-  status        LostAndFoundStatus @default(FOUND)
-  photoUrl      String?
-  foundDate     DateTime?
-  lostDate      DateTime?
-  returnedAt    DateTime?
-  returnedTo    String?            // Nome de quem retirou
-  
-  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  id          String             @id @default(uuid())
+  title       String
+  description String?
+  category    String // Eletrônico, Chaves, Vestuário, etc.
+  place       String? // Onde foi encontrado/perdido
+  status      LostAndFoundStatus @default(FOUND)
+  photoUrl    String?
+  foundDate   DateTime?
+  lostDate    DateTime?
+  returnedAt  DateTime?
+  returnedTo  String? // Nome de quem retirou
+
+  condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
   condominiumId String
-  
-  createdBy     User               @relation("CreatedLostAndFound", fields: [createdById], references: [id])
-  createdById   String
-  
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+
+  createdBy   User   @relation("CreatedLostAndFound", fields: [createdById], references: [id])
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("lost_and_found")
 }
@@ -1106,13 +1150,13 @@ model CondominiumDocument {
   condominiumId String
   title         String
   description   String?
-  category      String      // ata, convenção, regulamento, boleto, comunicado, outro
-  fileName      String      // nome original do arquivo
-  storedName    String      // nome UUID usado no disco
-  filePath      String      // caminho completo
+  category      String // ata, convenção, regulamento, boleto, comunicado, outro
+  fileName      String // nome original do arquivo
+  storedName    String // nome UUID usado no disco
+  filePath      String // caminho completo
   fileSize      Int
   mimeType      String
-  uploadedBy    String      // userId de quem fez upload
+  uploadedBy    String // userId de quem fez upload
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -1124,23 +1168,23 @@ model CondominiumDocument {
 // ─────────────────────────────────────────────────────────────
 
 model Renovation {
-  id            String           @id @default(uuid())
-  unit          Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  unitId        String
-  condominium   Condominium      @relation(fields: [condominiumId], references: [id])
-  condominiumId String
-  description   String
-  type          String           // pintura, hidráulica, elétrica, estrutural, outro
-  startDate     DateTime
-  endDate       DateTime?
-  status        RenovationStatus @default(PENDING)
-  approvedBy    String?          // userId
-  approvedAt    DateTime?
+  id             String           @id @default(uuid())
+  unit           Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId         String
+  condominium    Condominium      @relation(fields: [condominiumId], references: [id])
+  condominiumId  String
+  description    String
+  type           String // pintura, hidráulica, elétrica, estrutural, outro
+  startDate      DateTime
+  endDate        DateTime?
+  status         RenovationStatus @default(PENDING)
+  approvedBy     String? // userId
+  approvedAt     DateTime?
   rejectedReason String?
-  notes         String?
-  createdBy     String           // userId do morador
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  notes          String?
+  createdBy      String // userId do morador
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   authorizedProviders RenovationProvider[]
 
@@ -1153,7 +1197,7 @@ model RenovationProvider {
   renovationId String
   name         String
   serviceType  String
-  document     String?    // CPF ou CNPJ
+  document     String? // CPF ou CNPJ
   phone        String?
   company      String?
   createdAt    DateTime   @default(now())
@@ -1170,19 +1214,19 @@ enum StockMovementType {
 }
 
 model StockItem {
-  id              String          @id @default(uuid())
-  condominium     Condominium     @relation(fields: [condominiumId], references: [id])
-  condominiumId   String
-  name            String
-  description     String?
-  category        String          // limpeza, manutenção, segurança, escritório, outro
-  unit            String          // unidade de medida: un, kg, L, m, etc.
-  quantity        Float           @default(0)
-  minQuantity     Float           @default(0)  // estoque mínimo para alerta
-  location        String?         // ex: "Almoxarifado", "Depósito 2"
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  movements       StockMovement[]
+  id            String          @id @default(uuid())
+  condominium   Condominium     @relation(fields: [condominiumId], references: [id])
+  condominiumId String
+  name          String
+  description   String?
+  category      String // limpeza, manutenção, segurança, escritório, outro
+  unit          String // unidade de medida: un, kg, L, m, etc.
+  quantity      Float           @default(0)
+  minQuantity   Float           @default(0) // estoque mínimo para alerta
+  location      String? // ex: "Almoxarifado", "Depósito 2"
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  movements     StockMovement[]
 
   @@map("stock_items")
 }
@@ -1256,19 +1300,19 @@ model TicketMessage {
 // ─── Galeria de Fotos ── MEL-10 ───────────────────────────────────────────────
 
 model Photo {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
   title         String
   description   String?
-  category      String   // areas-comuns, eventos, obras, outro
+  category      String // areas-comuns, eventos, obras, outro
   fileName      String
   storedName    String
   filePath      String
   fileSize      Int
   mimeType      String
   uploadedBy    String
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([condominiumId])
   @@map("photos")
@@ -1282,48 +1326,323 @@ enum MarketplaceOfferStatus {
   EXPIRED
 }
 
+enum VisibilityMode {
+  LOCAL // Visível apenas no condomínio que criou
+  GLOBAL // Visível em múltiplos condominiums
+  SELECTIVE // Escolher quais condominiums
+}
+
+enum MarketplaceProductRequestStatus {
+  PENDING // Requisição criada, aguardando resposta
+  QUOTED // Parceiro respondeu com orçamento
+  ACCEPTED // Morador aceitou a oferta
+  REJECTED // Morador rejeitou
+  DELIVERED // Entregue
+  CANCELLED // Cancelado
+}
+
+enum CustomerTier {
+  BRONZE // 0-1000 pontos
+  SILVER // 1001-5000 pontos
+  GOLD // 5001+ pontos
+}
+
 model MarketplacePartner {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
   logoUrl     String?
   website     String?
   phone       String?
   email       String?
-  category    String   // alimentacao, saude, educacao, servicos, lazer, outro
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category    String // alimentacao, saude, educacao, servicos, lazer, outro
 
-  offers      MarketplaceOffer[]
+  // NOVO: Controle de visibilidade global
+  visibilityMode         VisibilityMode @default(LOCAL)
+  createdByCondominiumId String? // Qual condomínio criou (null = sistema)
+
+  // Ativas
+  isActive    Boolean @default(true)
+  rating      Float   @default(0)
+  reviewCount Int     @default(0)
+  isVerified  Boolean @default(false)
+
+  // Para compatibilidade com código antigo - deprecated em v2
+  condominiumId String?
+  condominium   Condominium? @relation(name: "PartnerToCondominium", fields: [condominiumId], references: [id], onDelete: Cascade)
+
+  // Relações
+  condominiums    CondominiumMarketplacePartner[]
+  products        MarketplaceProduct[]
+  offers          MarketplaceOffer[]
+  requests        MarketplaceProductRequest[]
+  reviews         MarketplaceProductReview[]
+  purchaseHistory PurchaseHistory[]               @relation("PurchaseHistoryPartner")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("marketplace_partners")
 }
 
+// NOVO: Tabela de junção para visibilidade em múltiplos condominiums
+model CondominiumMarketplacePartner {
+  id            String             @id @default(uuid())
+  partner       MarketplacePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId     String
+  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+
+  // Informações específicas por filial
+  branchName   String? // ex: "Academia FitLife - Zona Sul"
+  branchPhone  String?
+  branchEmail  String?
+  deliveryZone String? // ex: "Raio 5km"
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([partnerId, condominiumId])
+  @@map("condominium_marketplace_partners")
+}
+
+// NOVO: Produtos do Catálogo
+model MarketplaceProduct {
+  id            String             @id @default(uuid())
+  partner       MarketplacePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId     String
+  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+
+  name         String
+  description  String?
+  price        Decimal @db.Decimal(10, 2)
+  discount     Decimal @default(0) @db.Decimal(5, 2) // percentual
+  finalPrice   Decimal @db.Decimal(10, 2) // preço após desconto
+  shippingCost Decimal @default(0) @db.Decimal(10, 2)
+
+  imageUrl String?
+  category String? // subcategoria do produto
+  stock    Int     @default(-1) // -1 = ilimitado
+
+  rating      Float @default(0)
+  reviewCount Int   @default(0)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  images    MarketplaceProductImage[]
+  requests  MarketplaceProductRequest[]
+  reviews   MarketplaceProductReview[]
+  favorites ResidentFavorite[]
+
+  @@index([partnerId])
+  @@index([condominiumId])
+  @@map("marketplace_products")
+}
+
+// NOVO: Múltiplas imagens por produto
+model MarketplaceProductImage {
+  id           String             @id @default(uuid())
+  product      MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId    String
+  imageUrl     String
+  displayOrder Int                @default(0)
+  createdAt    DateTime           @default(now())
+
+  @@map("marketplace_product_images")
+}
+
+// NOVO: Requisições de Moradores por Produtos
+model MarketplaceProductRequest {
+  id            String             @id @default(uuid())
+  product       MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String
+  partner       MarketplacePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId     String
+  resident      User               @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  residentId    String
+  condominium   Condominium        @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+
+  quantity Int                             @default(1)
+  notes    String?
+  status   MarketplaceProductRequestStatus @default(PENDING)
+
+  // Orçamento do parceiro
+  quotedPrice Decimal?  @db.Decimal(10, 2)
+  quotedAt    DateTime?
+
+  // Timeline
+  requestedAt  DateTime  @default(now())
+  respondedAt  DateTime?
+  acceptedAt   DateTime?
+  deliveryDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  messages MarketplaceChatMessage[]
+
+  @@index([partnerId])
+  @@index([residentId])
+  @@index([condominiumId])
+  @@map("marketplace_product_requests")
+}
+
+// NOVO: Chat em tempo real
+model MarketplaceChatMessage {
+  id        String                    @id @default(uuid())
+  request   MarketplaceProductRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId String
+  sender    User                      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId  String
+
+  message       String
+  isFromPartner Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@map("marketplace_chat_messages")
+}
+
+// NOVO: Avaliações de Produtos
+model MarketplaceProductReview {
+  id         String             @id @default(uuid())
+  product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  partner    MarketplacePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId  String
+  resident   User               @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  residentId String
+
+  rating  Int     @default(5) // 1-5
+  comment String?
+  images  String? // JSON array de URLs
+
+  isVerified Boolean  @default(true) // Morador realmente comprou
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([productId, residentId])
+  @@map("marketplace_product_reviews")
+}
+
+// NOVO: Favoritos do Residente
+model ResidentFavorite {
+  id         String             @id @default(uuid())
+  resident   User               @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  residentId String
+  product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+
+  savedAt DateTime @default(now())
+
+  @@unique([residentId, productId])
+  @@map("resident_favorites")
+}
+
+// NOVO: Sistema de Pontos e Fidelidade
+model LoyaltyPoints {
+  id         String @id @default(uuid())
+  resident   User   @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  residentId String @unique
+
+  points Int          @default(0)
+  tier   CustomerTier @default(BRONZE)
+
+  totalSpent     Decimal @default(0) @db.Decimal(12, 2)
+  totalPurchases Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("loyalty_points")
+}
+
+// NOVO: Histórico de Compras
+model PurchaseHistory {
+  id            String             @id @default(uuid())
+  resident      User               @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  residentId    String
+  partner       MarketplacePartner @relation("PurchaseHistoryPartner", fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId     String
+  condominium   Condominium        @relation("PurchaseHistoryCondominium", fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+
+  productName String
+  quantity    Int
+  price       Decimal @db.Decimal(10, 2)
+  discount    Decimal @db.Decimal(5, 2)
+  finalPrice  Decimal @db.Decimal(10, 2)
+
+  pointsEarned Int @default(0)
+
+  purchasedAt DateTime @default(now())
+
+  @@index([residentId])
+  @@index([partnerId])
+  @@map("purchase_history")
+}
+
+// Atualizando modelo User para adicionar relações novas
+// (veremos isso depois, por enquanto apenas comentado)
+
 model MarketplaceOffer {
-  id          String                 @id @default(uuid())
-  partner     MarketplacePartner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  partnerId   String
-  title       String
-  description String
-  discount    String?
-  couponCode  String?
-  validUntil  DateTime?
-  status      MarketplaceOfferStatus @default(ACTIVE)
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  id            String                 @id @default(uuid())
+  // Opcional: offer pode ser global (gerida por SUPER_ADMIN) ou escopada a um condomínio.
+  condominium   Condominium?           @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String?
+  partner       MarketplacePartner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId     String
+  title         String
+  description   String
+  discount      String?
+  couponCode    String?
+  validUntil    DateTime?
+  status        MarketplaceOfferStatus @default(ACTIVE)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
   @@map("marketplace_offers")
 }
 
-// ─── Botão de Pânico ── MEL-19 ────────────────────────────────────────────────
+// NOVO: Categorias customizáveis por condomínio
+model MarketplaceCategory {
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
 
+  name         String // ex: "Alimentação", "Saúde"
+  label        String? // ex: "Alimentação e Bebidas" (exibição)
+  slug         String // ex: "alimentacao" (identificador único)
+  description  String? // ex: "Produtos e serviços de alimentação"
+  icon         String? // ex: "🍔" ou "utensils" (Lucide icon)
+  color        String? // ex: "#FF6B6B" (cor da categoria)
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([condominiumId, slug])
+  @@index([condominiumId])
+  @@map("marketplace_categories")
+}
+
+// ─── Ofertas ───────────────────────────────────────────────────
+// ─── Botão de Pânico ── MEL-19 ────────────────────────────────────────────────
 model PanicAlert {
   id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
   condominiumId String
-  triggeredBy   String      // userId
-  resolvedBy    String?     // userId
+  triggeredBy   String // userId
+  resolvedBy    String? // userId
   resolvedAt    DateTime?
   notes         String?
   createdAt     DateTime    @default(now())
@@ -1332,7 +1651,6 @@ model PanicAlert {
 }
 
 // ─── Visitantes Recorrentes ────────────────────────────────────────────────────
-
 model VisitorRecurrence {
   id            String      @id @default(uuid())
   condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
@@ -1341,16 +1659,16 @@ model VisitorRecurrence {
   unitId        String
   visitorName   String
   document      String?
-  documentType  String?     // CPF, RG, CNH, PASSPORT
+  documentType  String? // CPF, RG, CNH, PASSPORT
   company       String?
   reason        String?
-  weekDays      String[]    // MON, TUE, WED, THU, FRI, SAT, SUN
-  startTime     String      // HH:MM
-  endTime       String      // HH:MM
+  weekDays      String[] // MON, TUE, WED, THU, FRI, SAT, SUN
+  startTime     String // HH:MM
+  endTime       String // HH:MM
   validFrom     DateTime
   validUntil    DateTime?
   isActive      Boolean     @default(true)
-  createdBy     String      // userId
+  createdBy     String // userId
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -1362,34 +1680,34 @@ model VisitorRecurrence {
 // ─────────────────────────────────────────────────────────────
 
 model VisitorQRCode {
-  id           String         @id @default(uuid())
-  unit         Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  unit         Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
   unitId       String
-  createdBy    String         // userId do morador
+  createdBy    String // userId do morador
   visitorName  String
   visitorDoc   String?
   visitorPhone String?
   reason       String?
   validFrom    DateTime
   validUntil   DateTime
-  maxUses      Int            @default(1)
-  usedCount    Int            @default(0)
-  token        String         @unique @default(uuid())
-  isActive     Boolean        @default(true)
-  createdAt    DateTime       @default(now())
+  maxUses      Int      @default(1)
+  usedCount    Int      @default(0)
+  token        String   @unique @default(uuid())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
-  uses         VisitorQRUse[]
+  uses VisitorQRUse[]
 
   @@map("visitor_qrcodes")
 }
 
 model VisitorQRUse {
-  id         String        @id @default(uuid())
-  qrcode     VisitorQRCode @relation(fields: [qrcodeId], references: [id], onDelete: Cascade)
-  qrcodeId   String
-  visitorId  String?       // Visitor criado ao escanear (opcional)
-  scannedAt  DateTime      @default(now())
-  scannedBy  String        // userId do porteiro
+  id        String        @id @default(uuid())
+  qrcode    VisitorQRCode @relation(fields: [qrcodeId], references: [id], onDelete: Cascade)
+  qrcodeId  String
+  visitorId String? // Visitor criado ao escanear (opcional)
+  scannedAt DateTime      @default(now())
+  scannedBy String // userId do porteiro
 
   @@map("visitor_qrcode_uses")
 }
@@ -1399,23 +1717,23 @@ model VisitorQRUse {
 // ─────────────────────────────────────────────────────────────
 
 model CondominiumContract {
-  id              String   @id @default(uuid())
+  id              String      @id @default(uuid())
   condominium     Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId   String
-  title           String   // "Contrato Elevador Atlas 2026"
-  vendor          String   // nome da empresa contratada
-  contractType    String   // ELEVATOR | INSURANCE | CLEANING | SECURITY | MAINTENANCE | OTHER
+  title           String // "Contrato Elevador Atlas 2026"
+  vendor          String // nome da empresa contratada
+  contractType    String // ELEVATOR | INSURANCE | CLEANING | SECURITY | MAINTENANCE | OTHER
   startDate       DateTime
   endDate         DateTime
-  value           Decimal  @db.Decimal(12,2)
-  adjustmentIndex String?  // INPC | IGPM | IPCA
+  value           Decimal     @db.Decimal(12, 2)
+  adjustmentIndex String? // INPC | IGPM | IPCA
   fileUrl         String?
   notes           String?
-  autoRenew       Boolean  @default(false)
-  alertDaysBefore Int      @default(60) // alertar N dias antes do vencimento
-  status          String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELED
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  autoRenew       Boolean     @default(false)
+  alertDaysBefore Int         @default(60) // alertar N dias antes do vencimento
+  status          String      @default("ACTIVE") // ACTIVE | EXPIRED | CANCELED
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   @@index([condominiumId])
   @@map("condominium_contracts")
@@ -1426,24 +1744,24 @@ model CondominiumContract {
 // ─────────────────────────────────────────────────────────────
 
 model Fine {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   condominium    Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId  String
   unitId         String
-  reportedBy     String   // userId do síndico/admin
+  reportedBy     String // userId do síndico/admin
   description    String
-  regulation     String   // artigo do regimento/convenção
+  regulation     String // artigo do regimento/convenção
   photoUrls      String[]
-  amount         Decimal  @db.Decimal(10,2)
+  amount         Decimal     @db.Decimal(10, 2)
   appealDeadline DateTime // prazo para recurso (padrão 15 dias)
-  appealText     String?  // recurso enviado pelo morador
+  appealText     String? // recurso enviado pelo morador
   appealedAt     DateTime?
-  appealStatus   String?  // ACCEPTED | REJECTED
-  appealResponse String?  // resposta do síndico
-  status         String   @default("PENDING") // PENDING | APPEAL | CONFIRMED | CANCELED | CONVERTED
-  chargeId       String?  // cobrança gerada após confirmação (ASAAS)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  appealStatus   String? // ACCEPTED | REJECTED
+  appealResponse String? // resposta do síndico
+  status         String      @default("PENDING") // PENDING | APPEAL | CONFIRMED | CANCELED | CONVERTED
+  chargeId       String? // cobrança gerada após confirmação (ASAAS)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([condominiumId, status, createdAt])
   @@index([unitId])
@@ -1458,7 +1776,7 @@ model CollectionRule {
   id            String           @id @default(uuid())
   condominium   Condominium      @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  name          String           // "Régua Padrão 2026"
+  name          String // "Régua Padrão 2026"
   isActive      Boolean          @default(true)
   steps         CollectionStep[]
   createdAt     DateTime         @default(now())
@@ -1472,9 +1790,9 @@ model CollectionStep {
   id              String         @id @default(uuid())
   rule            CollectionRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   ruleId          String
-  daysAfterDue    Int            // D+1, D+7, D+30, D+60
-  channels        String[]       // ["email","inapp"]
-  messageTemplate String         // "Olá {{nome}}, sua cota venceu. Valor: R$ {{valor}}"
+  daysAfterDue    Int // D+1, D+7, D+30, D+60
+  channels        String[] // ["email","inapp"]
+  messageTemplate String // "Olá {{nome}}, sua cota venceu. Valor: R$ {{valor}}"
   action          String         @default("notify") // notify | block_amenities
 
   @@map("collection_steps")
@@ -1485,20 +1803,20 @@ model CollectionStep {
 // ─────────────────────────────────────────────────────────────
 
 model DigitalSignageScreen {
-  id            String                @id @default(uuid())
-  condominium   Condominium           @relation(fields: [condominiumId], references: [id])
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
   condominiumId String
-  name          String                // "Elevador Torre A", "Hall Social"
-  location      String                // localização física
-  token         String                @unique @default(uuid())
-  isActive      Boolean               @default(true)
-  slideDuration Int                   @default(8)  // segundos por slide (padrão)
-  primaryColor  String                @default("#1e40af") // cor tema da tela
-  logoUrl       String?               // logo do condomínio na tela
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  name          String // "Elevador Torre A", "Hall Social"
+  location      String // localização física
+  token         String      @unique @default(uuid())
+  isActive      Boolean     @default(true)
+  slideDuration Int         @default(8) // segundos por slide (padrão)
+  primaryColor  String      @default("#1e40af") // cor tema da tela
+  logoUrl       String? // logo do condomínio na tela
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  slides        DigitalSignageSlide[]
+  slides DigitalSignageSlide[]
 
   @@index([condominiumId])
   @@map("digital_signage_screens")
@@ -1508,14 +1826,14 @@ model DigitalSignageSlide {
   id              String               @id @default(uuid())
   screen          DigitalSignageScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
   screenId        String
-  type            String               // TEXT | IMAGE | ANNOUNCEMENT | BIRTHDAY | CLOCK | MARKETPLACE
+  type            String // TEXT | IMAGE | ANNOUNCEMENT | BIRTHDAY | CLOCK | MARKETPLACE
   title           String?
   content         String?
   imageUrl        String?
-  backgroundColor String?              // hex color ex: "#0f172a"
-  textColor       String?              // hex color ex: "#ffffff"
+  backgroundColor String? // hex color ex: "#0f172a"
+  textColor       String? // hex color ex: "#ffffff"
   order           Int                  @default(0)
-  duration        Int?                 // segundos (sobrescreve padrão da tela)
+  duration        Int? // segundos (sobrescreve padrão da tela)
   isActive        Boolean              @default(true)
   validFrom       DateTime?
   validUntil      DateTime?
@@ -1553,28 +1871,28 @@ model Plan {
 // link por email e define a própria senha. Quando aceito, cria User
 // (se não existir pelo email/CPF) e vincula via CondominiumUser.
 model Invitation {
-  id             String      @id @default(uuid())
-  tokenHash      String      @unique // sha256 do token; o token plain só viaja no email
-  email          String
-  name           String?
-  cpf            String?
-  phone          String?
-  role           UserRole
-  condominium    Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
-  condominiumId  String
-  unit           Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  unitId         String?     // obrigatório para RESIDENT
-  invitedById    String
-  invitedBy      User        @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
-  acceptedById   String?
-  acceptedBy     User?       @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
-  expiresAt      DateTime
-  acceptedAt     DateTime?
-  revokedAt      DateTime?
-  lastSentAt     DateTime    @default(now())
-  sendCount      Int         @default(1)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id            String      @id @default(uuid())
+  tokenHash     String      @unique // sha256 do token; o token plain só viaja no email
+  email         String
+  name          String?
+  cpf           String?
+  phone         String?
+  role          UserRole
+  condominium   Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+  condominiumId String
+  unit          Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId        String? // obrigatório para RESIDENT
+  invitedById   String
+  invitedBy     User        @relation("InvitationCreator", fields: [invitedById], references: [id], onDelete: Restrict)
+  acceptedById  String?
+  acceptedBy    User?       @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  revokedAt     DateTime?
+  lastSentAt    DateTime    @default(now())
+  sendCount     Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([email])
   @@index([condominiumId])
@@ -1586,15 +1904,15 @@ model Invitation {
 // PUSH NOTIFICATIONS (Web Push / VAPID)
 // ─────────────────────────────────────────────────────────────
 model PushSubscription {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  endpoint    String   @unique
-  p256dh      String   // chave pública do cliente
-  auth        String   // segredo de autenticação do cliente
-  userAgent   String?
-  lastSeenAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String // chave pública do cliente
+  auth       String // segredo de autenticação do cliente
+  userAgent  String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@map("push_subscriptions")
@@ -1604,16 +1922,16 @@ model PushSubscription {
 // WEBAUTHN / BIOMETRIA (passkeys)
 // ─────────────────────────────────────────────────────────────
 model WebAuthnCredential {
-  id              String   @id @default(uuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  credentialId    String   @unique // base64url do credential id retornado pelo authenticator
-  publicKey       Bytes
-  counter         Int      @default(0)
-  transports      String[] // ex: ["internal", "hybrid"]
-  deviceName      String?  // rótulo amigável definido pelo usuário
-  lastUsedAt      DateTime?
-  createdAt       DateTime @default(now())
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId String    @unique // base64url do credential id retornado pelo authenticator
+  publicKey    Bytes
+  counter      Int       @default(0)
+  transports   String[] // ex: ["internal", "hybrid"]
+  deviceName   String? // rótulo amigável definido pelo usuário
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
 
   @@index([userId])
   @@map("webauthn_credentials")
@@ -1624,11 +1942,11 @@ model WebAuthnCredential {
 // ─────────────────────────────────────────────────────────────
 model TermsVersion {
   id          String   @id @default(uuid())
-  kind        String   // "terms_of_use" | "privacy_policy"
-  version     String   // ex: "1.0.0", "2026-05-12"
-  contentMd   String   // markdown
+  kind        String // "terms_of_use" | "privacy_policy"
+  version     String // ex: "1.0.0", "2026-05-12"
+  contentMd   String // markdown
   effectiveAt DateTime @default(now())
-  createdBy   String?  // userId
+  createdBy   String? // userId
   createdAt   DateTime @default(now())
 
   acceptances TermsAcceptance[]
@@ -1639,16 +1957,121 @@ model TermsVersion {
 }
 
 model TermsAcceptance {
-  id              String        @id @default(uuid())
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  termsVersion    TermsVersion  @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
-  termsVersionId  String
-  acceptedAt      DateTime      @default(now())
-  ipAddress       String?
-  userAgent       String?
+  id             String       @id @default(uuid())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  termsVersion   TermsVersion @relation(fields: [termsVersionId], references: [id], onDelete: Restrict)
+  termsVersionId String
+  acceptedAt     DateTime     @default(now())
+  ipAddress      String?
+  userAgent      String?
 
   @@unique([userId, termsVersionId])
   @@index([userId])
   @@map("terms_acceptances")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AGENDA DE MUDANÇA
+// ─────────────────────────────────────────────────────────────
+
+enum MovingType {
+  MOVE_IN
+  MOVE_OUT
+  LARGE_DELIVERY
+}
+
+enum MovingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELED
+}
+
+model MovingSchedule {
+  id               String       @id @default(uuid())
+  condominium      Condominium  @relation(fields: [condominiumId], references: [id])
+  condominiumId    String
+  unit             Unit         @relation(fields: [unitId], references: [id])
+  unitId           String
+  type             MovingType
+  scheduledDate    DateTime
+  startTime        String // "08:00"
+  endTime          String // "12:00"
+  elevator         String? // "Social", "Serviço"
+  responsibleName  String
+  responsiblePhone String?
+  companyName      String? // Nome da empresa de mudança
+  notes            String?
+  status           MovingStatus @default(PENDING)
+  approvedBy       String?
+  rejectedReason   String?
+  createdBy        String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@map("moving_schedules")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTROLE DE CHAVES
+// ─────────────────────────────────────────────────────────────
+
+enum KeyStatus {
+  AVAILABLE
+  BORROWED
+  LOST
+  MAINTENANCE
+}
+
+model KeyControl {
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
+  condominiumId String
+  keyIdentifier String // "Chave Salão 01", "Portão Garagem B"
+  description   String?
+  location      String? // Onde fica guardada
+  status        KeyStatus   @default(AVAILABLE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  logs KeyControlLog[]
+
+  @@map("key_controls")
+}
+
+model KeyControlLog {
+  id             String     @id @default(uuid())
+  key            KeyControl @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  keyId          String
+  action         String // "BORROW", "RETURN", "LOST", "FOUND"
+  borrowedBy     String? // Nome de quem pegou
+  borrowedByUnit String? // Unidade
+  receivedBy     String? // Porteiro que entregou/recebeu
+  notes          String?
+  createdAt      DateTime   @default(now())
+
+  @@map("key_control_logs")
+}
+
+model Camera {
+  id            String      @id @default(uuid())
+  condominium   Condominium @relation(fields: [condominiumId], references: [id])
+  condominiumId String
+  name          String // "Câmera Entrada Principal"
+  location      String // "Portaria", "Garagem B1"
+  brand         String? // "Intelbras", "Hikvision"
+  model         String? // "VIP 1230"
+  streamUrl     String // URL do stream HLS/RTSP
+  embedUrl      String? // URL para embed iframe (plataformas cloud)
+  snapshotUrl   String? // URL para snapshot/thumbnail
+  isActive      Boolean     @default(true)
+  isRecording   Boolean     @default(false)
+  resolution    String? // "1080p", "4K"
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("cameras")
 }

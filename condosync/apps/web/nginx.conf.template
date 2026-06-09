@@ -39,7 +39,15 @@ server {
         try_files $uri =404;
     }
 
-    # Proxy reverso para a API
+    # ─── Mobile App (/app/) ─────────────────────────────────────────────────────
+    # SPA routing para Mobile — todas as rotas em /app/* entregam /app/index.html
+    location /app/ {
+        alias /usr/share/nginx/html/app/;
+        try_files $uri $uri/ /app/index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # Proxy reverso para a API (para ambas web e mobile)
     # API_URL: http://api:3333 (Docker Compose) ou https://devsantiago-production.up.railway.app (Railway)
     location /api/ {
         proxy_pass         ${API_URL};
@@ -68,7 +76,7 @@ server {
         proxy_send_timeout 3600s;
     }
 
-    # SPA fallback — todas as outras rotas entregam o index.html
+    # Web SPA fallback — todas as outras rotas (não em /app/) entregam o index.html
     location / {
         try_files $uri $uri/ /index.html;
     }

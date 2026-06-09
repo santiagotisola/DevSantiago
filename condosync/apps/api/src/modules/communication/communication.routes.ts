@@ -14,6 +14,7 @@ import {
 import { z } from "zod";
 import { ForbiddenError } from "../../middleware/errorHandler";
 import { io } from "../../server";
+import { notificationInboxService } from "../notifications/notification-inbox.service";
 
 const router = Router();
 router.use(authenticate);
@@ -87,6 +88,16 @@ router.post(
       "announcement:new",
       announcement,
     );
+
+    // Fire-and-forget: notificar todos do condomínio
+    notificationInboxService.broadcastToCondominium(data.condominiumId, {
+      title: '📢 Novo comunicado',
+      body: announcement.title,
+      type: 'ANNOUNCEMENT',
+      referenceId: announcement.id,
+      referenceType: 'Announcement',
+    }).catch(() => {});
+
     res.status(201).json({ success: true, data: { announcement } });
   },
 );

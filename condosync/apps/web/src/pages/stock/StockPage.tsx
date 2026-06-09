@@ -301,6 +301,7 @@ export default function StockPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, category: e.target.value }))
                     }
+                    aria-label="Categoria"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   >
                     {CATEGORIES.map((c) => (
@@ -319,6 +320,8 @@ export default function StockPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, unit: e.target.value }))
                     }
+                    aria-label="Unidade de medida"
+                    placeholder="Ex: un, kg, L"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -337,6 +340,7 @@ export default function StockPage() {
                       }))
                     }
                     disabled={!!editItem}
+                    aria-label={editItem ? 'Quantidade atual' : 'Quantidade inicial'}
                     className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
                   />
                 </div>
@@ -354,6 +358,7 @@ export default function StockPage() {
                         minQuantity: Number(e.target.value),
                       }))
                     }
+                    aria-label="Estoque mínimo"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -379,6 +384,8 @@ export default function StockPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, description: e.target.value }))
                     }
+                    aria-label="Descrição do item"
+                    placeholder="Descrição opcional"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
@@ -461,6 +468,7 @@ export default function StockPage() {
                       quantity: Number(e.target.value),
                     }))
                   }
+                  aria-label={moveForm.type === 'ADJUSTMENT' ? 'Nova quantidade total' : 'Quantidade'}
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
               </div>
@@ -628,12 +636,12 @@ export default function StockPage() {
                         {Math.round((item.quantity / item.minQuantity) * 100)}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${isLow ? "bg-amber-500" : "bg-green-500"}`}
-                        style={{
-                          width: `${Math.min(100, (item.quantity / item.minQuantity) * 100)}%`,
-                        }}
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                      <progress
+                        value={Math.min(100, Math.round((item.quantity / item.minQuantity) * 100))}
+                        max={100}
+                        aria-label={`Nível de estoque: ${Math.round((item.quantity / item.minQuantity) * 100)}%`}
+                        className={`w-full h-1.5 rounded-full appearance-none [&::-webkit-progress-bar]:bg-transparent [&::-moz-progress-bar]:rounded-full ${isLow ? "[&::-webkit-progress-value]:bg-amber-500 [&::-moz-progress-bar]:bg-amber-500" : "[&::-webkit-progress-value]:bg-green-500 [&::-moz-progress-bar]:bg-green-500"}`}
                       />
                     </div>
                   </div>
@@ -668,6 +676,7 @@ export default function StockPage() {
                         deleteMutation.mutate(item.id);
                       }
                     }}
+                    aria-label="Excluir item"
                     className="px-2.5 text-gray-300 hover:text-red-500 border border-gray-200 rounded-lg hover:bg-red-50"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

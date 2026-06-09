@@ -184,6 +184,7 @@ export default function DigitalSignagePage() {
                 type="number"
                 min={3}
                 max={60}
+                aria-label="Duração por slide em segundos"
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={screenForm.slideDuration}
                 onChange={(e) => setScreenForm({ ...screenForm, slideDuration: Number(e.target.value) })}
@@ -193,6 +194,7 @@ export default function DigitalSignagePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Cor primária</label>
               <input
                 type="color"
+                aria-label="Cor primária"
                 className="w-full h-10 border rounded-lg px-1 py-1 cursor-pointer"
                 value={screenForm.primaryColor}
                 onChange={(e) => setScreenForm({ ...screenForm, primaryColor: e.target.value })}
@@ -238,9 +240,10 @@ export default function DigitalSignagePage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: screen.primaryColor }}
+                    <span
+                      className="w-3 h-3 rounded-full inline-block"
+                      data-color={screen.primaryColor}
+                      ref={(el) => { if (el) el.style.backgroundColor = screen.primaryColor; }}
                     />
                     <span className="font-medium text-gray-900 text-sm">{screen.name}</span>
                     {screen.isActive && (
@@ -256,6 +259,7 @@ export default function DigitalSignagePage() {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteScreen(screen.id); }}
+                  aria-label="Excluir tela"
                   className="text-gray-400 hover:text-red-500 p-1"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -314,6 +318,7 @@ export default function DigitalSignagePage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
                       <select
+                        aria-label="Tipo de slide"
                         className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={slideForm.type}
                         onChange={(e) => setSlideForm({ ...slideForm, type: e.target.value })}
@@ -328,6 +333,7 @@ export default function DigitalSignagePage() {
                       <input
                         type="number"
                         min={3}
+                        aria-label="Duração do slide em segundos"
                         className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={slideForm.duration}
                         onChange={(e) => setSlideForm({ ...slideForm, duration: Number(e.target.value) })}
@@ -336,6 +342,8 @@ export default function DigitalSignagePage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Título</label>
                       <input
+                        aria-label="Título do slide"
+                        placeholder="Título"
                         className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={slideForm.title}
                         onChange={(e) => setSlideForm({ ...slideForm, title: e.target.value })}
@@ -344,6 +352,8 @@ export default function DigitalSignagePage() {
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Conteúdo / Mensagem</label>
                       <input
+                        aria-label="Conteúdo do slide"
+                        placeholder="Mensagem ou conteúdo"
                         className="w-full border rounded-lg px-3 py-2 text-sm"
                         value={slideForm.content}
                         onChange={(e) => setSlideForm({ ...slideForm, content: e.target.value })}
@@ -399,7 +409,7 @@ export default function DigitalSignagePage() {
                       >
                         {slide.isActive ? "Ativo" : "Inativo"}
                       </button>
-                      <button onClick={() => deleteSlide(slide.id)} className="text-gray-400 hover:text-red-500">
+                      <button onClick={() => deleteSlide(slide.id)} aria-label="Excluir slide" className="text-gray-400 hover:text-red-500">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>

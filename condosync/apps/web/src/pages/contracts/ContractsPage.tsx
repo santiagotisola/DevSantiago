@@ -141,11 +141,13 @@ export default function ContractsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Empresa / Prestador</label>
               <input className="w-full border rounded-lg px-3 py-2 text-sm" value={form.vendor}
+                aria-label="Empresa ou prestador" placeholder="Ex: Empresa XYZ"
                 onChange={(e) => setForm({ ...form, vendor: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato</label>
               <select className="w-full border rounded-lg px-3 py-2 text-sm" value={form.contractType}
+                aria-label="Tipo de contrato"
                 onChange={(e) => setForm({ ...form, contractType: e.target.value })}>
                 {Object.entries(TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -155,21 +157,25 @@ export default function ContractsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Valor mensal/anual (R$)</label>
               <input type="number" step="0.01" className="w-full border rounded-lg px-3 py-2 text-sm"
+                aria-label="Valor mensal ou anual em reais" placeholder="0.00"
                 value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Início</label>
               <input type="date" className="w-full border rounded-lg px-3 py-2 text-sm"
+                aria-label="Data de início"
                 value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
               <input type="date" className="w-full border rounded-lg px-3 py-2 text-sm"
+                aria-label="Data de vencimento"
                 value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Índice de reajuste</label>
               <select className="w-full border rounded-lg px-3 py-2 text-sm" value={form.adjustmentIndex}
+                aria-label="Índice de reajuste"
                 onChange={(e) => setForm({ ...form, adjustmentIndex: e.target.value })}>
                 <option value="">Nenhum</option>
                 <option value="INPC">INPC</option>
@@ -180,11 +186,13 @@ export default function ContractsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Alertar quantos dias antes?</label>
               <input type="number" min={7} max={180} className="w-full border rounded-lg px-3 py-2 text-sm"
+                aria-label="Dias de alerta antes do vencimento"
                 value={form.alertDaysBefore} onChange={(e) => setForm({ ...form, alertDaysBefore: Number(e.target.value) })} />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
               <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2}
+                aria-label="Notas"
                 value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
           </div>
@@ -256,7 +264,7 @@ export default function ContractsPage() {
                     )}
                   </div>
                 </div>
-                <button onClick={() => cancel(c.id)} className="text-gray-400 hover:text-red-500 p-1">
+                <button onClick={() => cancel(c.id)} aria-label="Cancelar contrato" className="text-gray-400 hover:text-red-500 p-1">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

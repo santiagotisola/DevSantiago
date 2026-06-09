@@ -2,7 +2,7 @@
 import path from 'path';
 import { AuthSession, CREDS, isJwtLikelyValid } from './api';
 
-const BASE = 'http://localhost/api/v1';
+const BASE = 'http://localhost:3333/api/v1';
 
 type Sessions = {
   superAdmin: AuthSession;
@@ -55,10 +55,9 @@ function areCachedTokensUsable(tokens: Sessions): boolean {
 export default async function globalSetup() {
   const outPath = path.resolve(__dirname, '.auth-tokens.json');
 
-  const cached = readCachedTokens(outPath);
-  if (cached && areCachedTokensUsable(cached)) {
-    console.log('\n[globalSetup] Reusing cached access tokens.');
-    return;
+  // Sempre deletar tokens cached para forçar novo login após seed
+  if (fs.existsSync(outPath)) {
+    fs.unlinkSync(outPath);
   }
 
   console.log('\n[globalSetup] Logging in seed users...');

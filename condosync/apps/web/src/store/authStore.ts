@@ -8,6 +8,7 @@ export interface UserInfo {
   role: string;
   phone?: string;
   avatarUrl?: string;
+  twoFactorEnabled?: boolean;
   condominiumUsers?: Array<{
     condominiumId: string;
     role: string;
@@ -83,6 +84,11 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         mustEnable2FA: state.mustEnable2FA,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && !state.selectedCondominiumId && state.user?.condominiumUsers?.[0]?.condominium?.id) {
+          state.selectedCondominiumId = state.user.condominiumUsers[0].condominium.id;
+        }
+      },
     }
   )
 );

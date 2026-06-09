@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
@@ -48,15 +49,30 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendente", color: "bg-amber-100 text-amber-700 border-amber-200" },
   AUTHORIZED: { label: "Autorizado", color: "bg-blue-100 text-blue-700 border-blue-200" },
   DENIED: { label: "Negado", color: "bg-red-100 text-red-700 border-red-200" },
-  INSIDE: { label: "Dentro Agora", color: "bg-green-100 text-green-700 border-green-200" },
+  INSIDE: { label: "No condomínio agora", color: "bg-green-100 text-green-700 border-green-200" },
   LEFT: { label: "Já Saiu", color: "bg-gray-100 text-gray-600 border-gray-200" },
 };
+
+// Função para ordenar unidades numericamente
+function sortUnitsByIdentifier(units: { id: string; identifier: string; block?: string }[]) {
+  return [...units].sort((a, b) => {
+    const numA = parseInt(a.identifier.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.identifier.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+}
 
 export function VisitorsPage() {
   const { selectedCondominiumId, user } = useAuthStore();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get("search") ?? "";
+  const statusFilter = searchParams.get("status") ?? "";
+
+  const setSearch = (value: string) =>
+    setSearchParams((p) => { const n = new URLSearchParams(p); value ? n.set("search", value) : n.delete("search"); return n; }, { replace: true });
+  const setStatusFilter = (value: string) =>
+    setSearchParams((p) => { const n = new URLSearchParams(p); (value && value !== "ALL") ? n.set("status", value) : n.delete("status"); return n; }, { replace: true });
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -544,6 +560,7 @@ export function VisitorsPage() {
                   onChange={(e) =>
                     setForm({ ...form, documentType: e.target.value })
                   }
+                  aria-label="Tipo de documento"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="RG">RG</option>
@@ -587,10 +604,11 @@ export function VisitorsPage() {
                 <select
                   value={form.unitId}
                   onChange={(e) => setForm({ ...form, unitId: e.target.value })}
+                  aria-label="Unidade"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione a unidade...</option>
-                  {(unitsData || []).map((u) => (
+                  {sortUnitsByIdentifier(unitsData || []).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.block ? `Bloco ${u.block} — ` : ""}
                       {u.identifier}
@@ -804,6 +822,7 @@ export function VisitorsPage() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, documentType: e.target.value })
                   }
+                  aria-label="Tipo de documento"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="RG">RG</option>
@@ -854,6 +873,7 @@ export function VisitorsPage() {
                     setEditForm({ ...editForm, notes: e.target.value })
                   }
                   rows={2}
+                  aria-label="Observações"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>

@@ -82,7 +82,7 @@ Acesse [http://localhost:5173](http://localhost:5173)
 
 | Perfil              | E-mail                            | Senha         |
 |---------------------|-----------------------------------|---------------|
-| Super Administrador | admin@condosync.com.br            | Admin@2026    |
+| Super Administrador | atendimentoveredasbosque@gmail.com            | Admin@2026    |
 | Síndico             | sindico@parqueverde.com.br        | Sindico@2026  |
 | Porteiro            | porteiro@parqueverde.com.br       | Porteiro@2026 |
 | Morador 1           | morador1@parqueverde.com.br       | Morador@2026  |

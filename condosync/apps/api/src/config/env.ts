@@ -33,6 +33,9 @@ const envSchema = z
     REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+    // Groq — alternativa gratuita ao OpenAI (console.groq.com)
+    GROQ_API_KEY: z.string().optional(),
+    GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
     ASAAS_WEBHOOK_TOKEN: z.string().optional(),
     FRONTEND_URL: z.string().default('http://localhost:5173'),
     // Resend — e-mail transacional em produção

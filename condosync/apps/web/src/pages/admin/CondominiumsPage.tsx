@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { Building2, Plus, Loader2, Users, Home, UserCog, Pencil, KeyRound, Eye, EyeOff, Search, Power, Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, Package, CheckCircle2, X } from 'lucide-react';
 import { maskPhone, validatePhone, validateEmail } from '../../lib/utils';
+import { CondominiaBrandingForm } from '../../components/CondominiaBrandingForm';
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
@@ -65,6 +66,7 @@ export function CondominiumsPage() {
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({ name: '', address: '', city: '', state: '', zipCode: '', cnpj: '', phone: '', email: '' });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editTab, setEditTab] = useState<'dados' | 'branding'>('dados');
 
   // ── Members / Password ─────────────────────────────────────────
   const [membersTarget, setMembersTarget] = useState<any | null>(null);
@@ -182,6 +184,7 @@ export function CondominiumsPage() {
       setShowEditModal(false);
       setEditTarget(null);
       setEditErrors({});
+      setEditTab('dados');
     },
   });
 
@@ -555,6 +558,7 @@ export function CondominiumsPage() {
                             : value;
                           setForm({ ...form, [key]: nextValue });
                         }}
+                        aria-label={label as string}
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[key] ? 'border-red-400' : ''}`}
                       />
                       {key === 'cnpj' && form.cnpj && !isCnpjComplete(form.cnpj) && (
@@ -686,61 +690,98 @@ export function CondominiumsPage() {
       {/* ── Edit Modal ── */}
       {showEditModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Editar Condomínio</h2>
-            <div className="space-y-3">
-              {[
-                ['Nome *', 'name', 'text'],
-                ['Endereço', 'address', 'text'],
-                ['Cidade', 'city', 'text'],
-                ['Estado (UF)', 'state', 'text'],
-                ['CEP', 'zipCode', 'text'],
-                ['CNPJ', 'cnpj', 'text'],
-                ['Telefone', 'phone', 'text'],
-                ['E-mail', 'email', 'email'],
-              ].map(([label, key, type]) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-sm font-medium">{label}</label>
-                  <input
-                    type={type}
-                    value={(editForm as any)[key]}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const nextValue =
-                        key === 'cnpj' ? formatCnpj(value)
-                        : key === 'phone' ? maskPhone(value)
-                        : value;
-                      setEditForm({ ...editForm, [key]: nextValue });
-                    }}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors[key] ? 'border-red-400' : ''}`}
-                  />
-                  {editErrors[key] && <p className="text-xs text-red-500 mt-0.5">{editErrors[key]}</p>}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowEditModal(false); setEditErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
-                Cancelar
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* ── Tabs ── */}
+            <div className="flex gap-1 border-b">
+              <button
+                onClick={() => setEditTab('dados')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  editTab === 'dados'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Dados do Condomínio
               </button>
               <button
-                onClick={() => {
-                  const errs: Record<string, string> = {};
-                  const phoneErr = validatePhone(editForm.phone);
-                  if (phoneErr) errs.phone = phoneErr;
-                  const emailErr = validateEmail(editForm.email);
-                  if (emailErr) errs.email = emailErr;
-                  if (Object.keys(errs).length) { setEditErrors(errs); return; }
-                  setEditErrors({});
-                  updateMutation.mutate(editForm);
-                }}
-                disabled={!editForm.name || updateMutation.isPending || !isCnpjComplete(editForm.cnpj)}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                onClick={() => setEditTab('branding')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  editTab === 'branding'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
-                {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+                Identidade Visual
               </button>
             </div>
-            {updateMutation.isError && (
-              <p className="text-sm text-red-600">Erro ao atualizar condomínio.</p>
+
+            {/* ── Tab: Dados do Condomínio ── */}
+            {editTab === 'dados' && (
+              <>
+                <h2 className="text-lg font-semibold">Editar Condomínio</h2>
+                <div className="space-y-3">
+                  {[
+                    ['Nome *', 'name', 'text'],
+                    ['Endereço', 'address', 'text'],
+                    ['Cidade', 'city', 'text'],
+                    ['Estado (UF)', 'state', 'text'],
+                    ['CEP', 'zipCode', 'text'],
+                    ['CNPJ', 'cnpj', 'text'],
+                    ['Telefone', 'phone', 'text'],
+                    ['E-mail', 'email', 'email'],
+                  ].map(([label, key, type]) => (
+                    <div key={key} className="space-y-1">
+                      <label className="text-sm font-medium">{label}</label>
+                      <input
+                        type={type}
+                        value={(editForm as any)[key]}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const nextValue =
+                            key === 'cnpj' ? formatCnpj(value)
+                            : key === 'phone' ? maskPhone(value)
+                            : value;
+                          setEditForm({ ...editForm, [key]: nextValue });
+                        }}
+                        aria-label={label as string}
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${editErrors[key] ? 'border-red-400' : ''}`}
+                      />
+                      {editErrors[key] && <p className="text-xs text-red-500 mt-0.5">{editErrors[key]}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setShowEditModal(false); setEditErrors({}); }} className="flex-1 px-4 py-2 border rounded-lg text-sm">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      const errs: Record<string, string> = {};
+                      const phoneErr = validatePhone(editForm.phone);
+                      if (phoneErr) errs.phone = phoneErr;
+                      const emailErr = validateEmail(editForm.email);
+                      if (emailErr) errs.email = emailErr;
+                      if (Object.keys(errs).length) { setEditErrors(errs); return; }
+                      setEditErrors({});
+                      updateMutation.mutate(editForm);
+                    }}
+                    disabled={!editForm.name || updateMutation.isPending || !isCnpjComplete(editForm.cnpj)}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                  >
+                    {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+                {updateMutation.isError && (
+                  <p className="text-sm text-red-600">Erro ao atualizar condomínio.</p>
+                )}
+              </>
+            )}
+
+            {/* ── Tab: Identidade Visual ── */}
+            {editTab === 'branding' && editTarget && (
+              <div className="py-4">
+                <CondominiaBrandingForm condominium={editTarget} />
+              </div>
             )}
           </div>
         </div>
