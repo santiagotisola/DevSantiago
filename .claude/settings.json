@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker version *)",
+      "Bash(echo \"---EXIT:$?---\")",
+      "Read(//c/Program Files/Docker/Docker/**)",
+      "Bash(sc query *)"
+    ]
+  }
+}

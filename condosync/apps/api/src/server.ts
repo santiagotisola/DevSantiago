@@ -148,7 +148,8 @@ import condominiumContractsRoutes from "./modules/condominium-contracts/condomin
 import finesRoutes from "./modules/fines/fines.routes";
 import collectionRulesRoutes from "./modules/collection-rules/collection-rules.routes";
 import digitalSignageRoutes from "./modules/digital-signage/digital-signage.routes";
-import whatsappRoutes from "./modules/whatsapp/whatsapp.routes";
+// WhatsApp: import dinâmico e condicional (baileys é ESM-only e quebra o
+// require() do ts-node-dev). Montado abaixo só quando WHATSAPP_ENABLED=true.
 import pushSubscriptionsRoutes from "./modules/notifications/push-subscriptions.routes";
 import notificationInboxRoutes from "./modules/notifications/notification.routes";
 import adminRoutes from "./modules/admin/admin.routes";
@@ -492,7 +493,11 @@ app.use(`${API}/condominium-contracts`, condominiumContractsRoutes);
 app.use(`${API}/fines`, finesRoutes);
 app.use(`${API}/collection-rules`, collectionRulesRoutes);
 app.use(`${API}/digital-signage`, digitalSignageRoutes);
-app.use(`${API}/whatsapp`, whatsappRoutes);
+if (process.env.WHATSAPP_ENABLED === "true") {
+  import("./modules/whatsapp/whatsapp.routes")
+    .then((m) => app.use(`${API}/whatsapp`, m.default))
+    .catch((err) => console.error("[WhatsApp] Falha ao carregar rotas:", err));
+}
 app.use(`${API}/notifications`, pushSubscriptionsRoutes);
 app.use(`${API}/notifications/inbox`, notificationInboxRoutes);
 app.use(`${API}/admin`, adminRoutes);
