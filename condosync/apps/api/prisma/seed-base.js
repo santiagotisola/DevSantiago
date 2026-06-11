@@ -54,11 +54,11 @@ async function main() {
 
   const superAdminPassword = await bcrypt.hash(password, 12);
   const superAdmin = await prisma.user.upsert({
-    where: { email: "admin@condosync.com.br" },
+    where: { email: "atendimentoveredasbosque@gmail.com" },
     update: {},
     create: {
-      name: "Super Administrador",
-      email: "admin@condosync.com.br",
+      name: "Super Administrator",
+      email: "atendimentoveredasbosque@gmail.com",
       passwordHash: superAdminPassword,
       role: "SUPER_ADMIN",
       emailVerified: true,
@@ -258,7 +258,7 @@ async function main() {
 
   console.log("\n✅ Seed base concluído!");
   console.log("📋 Credenciais:");
-  console.log("   Super Admin: admin@condosync.com.br / Admin@2026");
+  console.log("   Super Admin: atendimentoveredasbosque@gmail.com / Admin@2026");
   console.log("   Síndico:     sindico@parqueverde.com.br / Sindico@2026");
   console.log("   Porteiro:    porteiro@parqueverde.com.br / Porteiro@2026");
   console.log("   Morador:     morador1@parqueverde.com.br / Morador@2026");

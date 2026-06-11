@@ -17,7 +17,7 @@ async function main() {
   // existe na maioria dos casos). Se não existir, gera senha
   // aleatória e LOGA UMA VEZ para o operador transcrever.
   const existing = await prisma.user.findUnique({
-    where: { email: "admin@condosync.com.br" },
+    where: { email: "atendimentoveredasbosque@gmail.com" },
     select: { id: true },
   });
 
@@ -38,8 +38,8 @@ async function main() {
   }
 
   const createData = {
-    name: "Super Admin",
-    email: "admin@condosync.com.br",
+    name: "Super Administrator",
+    email: "atendimentoveredasbosque@gmail.com",
     role: "SUPER_ADMIN",
     isActive: true,
     emailVerified: true,
@@ -55,7 +55,7 @@ async function main() {
     : {};
 
   const superAdmin = await prisma.user.upsert({
-    where: { email: "admin@condosync.com.br" },
+    where: { email: "atendimentoveredasbosque@gmail.com" },
     update: updateData,
     create: createData,
   });

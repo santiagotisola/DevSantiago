@@ -18,6 +18,12 @@ import {
   Palette,
   Wrench,
   Crown,
+  Camera,
+  Key,
+  Truck,
+  MessageCircle,
+  Bell,
+  Rocket,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
@@ -51,6 +57,9 @@ const navItems: NavItem[] = [
       { label: "Visitantes", to: "/portaria/visitantes" },
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
+      { label: "Alertas de Pânico", to: "/portaria/alertas-panico" },
+      { label: "Câmeras", to: "/cameras" },
+      { label: "Controle de Chaves", to: "/controle-chaves" },
       { label: "Prestadores", to: "/prestadores", roles: MANAGEMENT },
     ],
   },
@@ -103,6 +112,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "Manutenção", to: "/manutencao", roles: MANAGEMENT },
       { label: "Chamados", to: "/chamados" },
+      { label: "Agenda de Mudanças", to: "/agenda-mudancas", roles: MANAGEMENT },
     ],
   },
 
@@ -117,6 +127,7 @@ const navItems: NavItem[] = [
       { label: "Ocorrências", to: "/comunicacao/ocorrencias" },
       { label: "Achados e Perdidos", to: "/comunicacao/achados-e-perdidos", roles: RESIDENT_MANAGEMENT },
       { label: "Assembleias", to: "/assembleias", roles: ["COUNCIL_MEMBER", ...MANAGEMENT] },
+      { label: "WhatsApp", to: "/whatsapp", roles: MANAGEMENT },
     ],
   },
 
@@ -133,6 +144,7 @@ const navItems: NavItem[] = [
       { label: "Convites", to: "/convites", roles: MANAGEMENT },
       { label: "Auditoria", to: "/auditoria", roles: MANAGEMENT },
       { label: "Painel do Síndico", to: "/painel-sindico", roles: MANAGEMENT },
+      { label: "Notificações", to: "/notificacoes" },
     ],
   },
 
@@ -146,6 +158,7 @@ const navItems: NavItem[] = [
       { label: "Novo Condomínio (Wizard)", to: "/admin/onboarding" },
       { label: "Planos", to: "/admin/planos" },
       { label: "Marketplace", to: "/marketplace" },
+      { label: "Deploy & Status", to: "/admin/deploy" },
     ],
   },
 
