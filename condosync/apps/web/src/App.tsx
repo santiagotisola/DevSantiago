@@ -44,6 +44,31 @@ const DashboardPage = lazyNamed(
   () => import("./pages/dashboard/DashboardPage") as any,
   "DashboardPage",
 );
+// ─── Features re-fiadas após perda no merge 58831755 ──────────
+const PanicButtonPage = lazy(
+  () => import("./pages/panico/PanicButtonPage"),
+);
+const PanicAlertsPage = lazyNamed(
+  () => import("./pages/portaria/PanicAlertsPage") as any,
+  "PanicAlertsPage",
+);
+const CamerasPage = lazy(() => import("./pages/cameras/CamerasPage"));
+const AgendaMudancasPage = lazy(
+  () => import("./pages/agenda-mudancas/AgendaMudancasPage"),
+);
+const ControleChavesPage = lazy(
+  () => import("./pages/controle-chaves/ControleChavesPage"),
+);
+const WhatsAppAdminPage = lazy(
+  () => import("./pages/whatsapp/WhatsAppAdminPage"),
+);
+const DeployDashboardPage = lazy(
+  () => import("./pages/admin/DeployDashboardPage"),
+);
+const NotificationsPage = lazyNamed(
+  () => import("./pages/notifications/NotificationsPage") as any,
+  "NotificationsPage",
+);
 const VisitorsPage = lazyNamed(
   () => import("./pages/portaria/VisitorsPage") as any,
   "VisitorsPage",
@@ -307,6 +332,72 @@ export default function App() {
             }
           >
             <Route index element={<DashboardPage />} />
+
+            {/* Botão de Pânico — acessível por todos os autenticados */}
+            <Route
+              path="panico"
+              element={
+                <RoleGuard roles={COMMUNITY}>
+                  <PanicButtonPage />
+                </RoleGuard>
+              }
+            />
+            {/* Alertas de Pânico (staff) */}
+            <Route
+              path="portaria/panico"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <PanicAlertsPage />
+                </RoleGuard>
+              }
+            />
+            {/* Monitoramento de Câmeras */}
+            <Route
+              path="cameras"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <CamerasPage />
+                </RoleGuard>
+              }
+            />
+            {/* Agenda de Mudanças */}
+            <Route
+              path="agenda-mudancas"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <AgendaMudancasPage />
+                </RoleGuard>
+              }
+            />
+            {/* Controle de Chaves */}
+            <Route
+              path="controle-chaves"
+              element={
+                <RoleGuard roles={STAFF}>
+                  <ControleChavesPage />
+                </RoleGuard>
+              }
+            />
+            {/* WhatsApp */}
+            <Route
+              path="whatsapp"
+              element={
+                <RoleGuard roles={MANAGEMENT}>
+                  <WhatsAppAdminPage />
+                </RoleGuard>
+              }
+            />
+            {/* Deploy & Sistema (SUPER_ADMIN) */}
+            <Route
+              path="admin/deploy"
+              element={
+                <RoleGuard roles={["SUPER_ADMIN"]}>
+                  <DeployDashboardPage />
+                </RoleGuard>
+              }
+            />
+            {/* Notificações — acessível por todos os autenticados */}
+            <Route path="notificacoes" element={<NotificationsPage />} />
 
             {/* Portaria */}
             <Route
