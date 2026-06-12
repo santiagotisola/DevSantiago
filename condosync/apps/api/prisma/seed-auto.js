@@ -43,13 +43,20 @@ async function main() {
     role: "SUPER_ADMIN",
     isActive: true,
     emailVerified: true,
+    // passwordHash é obrigatório no schema. O Prisma valida o bloco `create`
+    // mesmo quando o registro já existe e somente o `update` é executado —
+    // então ele precisa SEMPRE estar presente, senão a chamada inteira falha
+    // com "Invalid `prisma.user.upsert()` invocation". Quando o admin já
+    // existe e não veio env, usamos um hash aleatório descartável que nunca
+    // é persistido (o upsert cai no caminho `update`).
+    passwordHash: await bcrypt.hash(
+      passwordToUse || crypto.randomBytes(24).toString("base64url"),
+      12,
+    ),
   };
-  if (passwordToUse) {
-    createData.passwordHash = await bcrypt.hash(passwordToUse, 12);
-  }
 
-  // Se admin já existe e env não veio, upsert.update fica vazio (sem
-  // alterar senha). Idempotente.
+  // Só altera a senha do admin existente se SEED_SUPER_ADMIN_PASSWORD veio.
+  // Sem env, update vazio = idempotente (não mexe na senha real).
   const updateData = process.env.SEED_SUPER_ADMIN_PASSWORD
     ? { passwordHash: createData.passwordHash }
     : {};
