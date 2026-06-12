@@ -30,7 +30,10 @@ const createSchema = z.object({
   cnpj: z
     .string()
     .transform((v) => v.replace(/\D/g, ""))
-    .refine((v) => v.length === 0 || v.length === 14, "CNPJ deve conter 14 dígitos")
+    .refine(
+      (v) => v.length === 0 || v.length === 14,
+      "CNPJ deve conter 14 dígitos",
+    )
     .optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -133,7 +136,9 @@ router.post(
     const { name, email, password } = validateRequest(schema, req.body);
 
     // Verifica que o condomínio existe
-    await prisma.condominium.findUniqueOrThrow({ where: { id: req.params.id } });
+    await prisma.condominium.findUniqueOrThrow({
+      where: { id: req.params.id },
+    });
 
     const rounds = Number(process.env.BCRYPT_ROUNDS) || 12;
     const passwordHash = await bcrypt.hash(password, rounds);
@@ -145,7 +150,11 @@ router.post(
         // Se já existe, só atualiza a senha
         user = await tx.user.update({
           where: { id: user.id },
-          data: { passwordHash, role: UserRole.CONDOMINIUM_ADMIN, isActive: true },
+          data: {
+            passwordHash,
+            role: UserRole.CONDOMINIUM_ADMIN,
+            isActive: true,
+          },
         });
       } else {
         user = await tx.user.create({
@@ -154,9 +163,18 @@ router.post(
       }
       // Vincula como CONDOMINIUM_ADMIN do condomínio
       const membership = await tx.condominiumUser.upsert({
-        where: { userId_condominiumId: { userId: user.id, condominiumId: req.params.id } },
+        where: {
+          userId_condominiumId: {
+            userId: user.id,
+            condominiumId: req.params.id,
+          },
+        },
         update: { role: UserRole.CONDOMINIUM_ADMIN, isActive: true },
-        create: { userId: user.id, condominiumId: req.params.id, role: UserRole.CONDOMINIUM_ADMIN },
+        create: {
+          userId: user.id,
+          condominiumId: req.params.id,
+          role: UserRole.CONDOMINIUM_ADMIN,
+        },
       });
       return { user, membership };
     });
@@ -164,7 +182,12 @@ router.post(
     res.status(201).json({
       success: true,
       data: {
-        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
         membership,
       },
     });

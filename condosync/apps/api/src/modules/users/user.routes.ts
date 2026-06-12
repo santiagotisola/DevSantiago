@@ -133,7 +133,9 @@ router.patch(
           userId: actor.userId,
           isActive: true,
           condominium: {
-            condominiumUsers: { some: { userId: req.params.id, isActive: true } },
+            condominiumUsers: {
+              some: { userId: req.params.id, isActive: true },
+            },
           },
         },
         select: { id: true },
@@ -144,7 +146,10 @@ router.patch(
 
     const rounds = Number(process.env.BCRYPT_ROUNDS) || 12;
     const passwordHash = await bcrypt.hash(newPassword, rounds);
-    await prisma.user.update({ where: { id: req.params.id }, data: { passwordHash } });
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { passwordHash },
+    });
     res.json({ success: true, message: "Senha redefinida com sucesso" });
   },
 );
