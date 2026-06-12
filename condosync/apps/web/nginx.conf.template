@@ -76,8 +76,18 @@ server {
         proxy_send_timeout 3600s;
     }
 
+    # Service worker do PWA: nunca cachear (garante o auto-update do app).
+    # Sem isso, /sw.js cai na regra `immutable` de *.js acima.
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        try_files $uri =404;
+    }
+
     # Web SPA fallback — todas as outras rotas (não em /app/) entregam o index.html
     location / {
         try_files $uri $uri/ /index.html;
+        # index.html nunca em cache: novo deploy (novos hashes de assets) é
+        # pego no próximo reload completo, sem precisar de hard refresh.
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 }
