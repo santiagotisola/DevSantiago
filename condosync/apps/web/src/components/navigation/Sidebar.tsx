@@ -18,12 +18,6 @@ import {
   Palette,
   Wrench,
   Crown,
-  Camera,
-  Key,
-  Truck,
-  MessageCircle,
-  Bell,
-  Rocket,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
@@ -57,9 +51,8 @@ const navItems: NavItem[] = [
       { label: "Visitantes", to: "/portaria/visitantes" },
       { label: "Encomendas", to: "/portaria/encomendas" },
       { label: "Veículos", to: "/portaria/veiculos" },
-      { label: "Alertas de Pânico", to: "/portaria/alertas-panico" },
-      { label: "Câmeras", to: "/cameras" },
-      { label: "Controle de Chaves", to: "/controle-chaves" },
+      { label: "🚨 Alertas de Pânico", to: "/portaria/panico" },
+      { label: "📹 Câmeras", to: "/cameras" },
       { label: "Prestadores", to: "/prestadores", roles: MANAGEMENT },
     ],
   },
@@ -112,7 +105,8 @@ const navItems: NavItem[] = [
     children: [
       { label: "Manutenção", to: "/manutencao", roles: MANAGEMENT },
       { label: "Chamados", to: "/chamados" },
-      { label: "Agenda de Mudanças", to: "/agenda-mudancas", roles: MANAGEMENT },
+      { label: "Agenda de Mudanças", to: "/agenda-mudancas", roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"] },
+      { label: "Controle de Chaves", to: "/controle-chaves", roles: ["CONDOMINIUM_ADMIN", "SYNDIC", "DOORMAN", "SUPER_ADMIN"] },
     ],
   },
 
@@ -158,7 +152,7 @@ const navItems: NavItem[] = [
       { label: "Novo Condomínio (Wizard)", to: "/admin/onboarding" },
       { label: "Planos", to: "/admin/planos" },
       { label: "Marketplace", to: "/marketplace" },
-      { label: "Deploy & Status", to: "/admin/deploy" },
+      { label: "Deploy & Sistema", to: "/admin/deploy" },
     ],
   },
 
@@ -171,6 +165,7 @@ const navItems: NavItem[] = [
       { label: "Minhas Obras", to: "/minha-portaria/obras" },
       { label: "Visitantes Recorrentes", to: "/minha-portaria/visitantes-recorrentes" },
       { label: "Minhas Cobranças", to: "/minhas-cobrancas" },
+      { label: "🚨 Botão de Pânico", to: "/panico" },
     ],
   },
 ];

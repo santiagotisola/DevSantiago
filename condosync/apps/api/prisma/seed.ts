@@ -186,7 +186,6 @@ async function main() {
       bankName: 'Banco do Brasil',
       agency: '1234',
       accountNumber: '56789-0',
-      balance: 15000,
     },
   });
 
