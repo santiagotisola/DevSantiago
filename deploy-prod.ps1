@@ -26,7 +26,14 @@ param(
     [string]$IdentityFile = "C:\tmp\condosync_deploy_key"
 )
 
-$ErrorActionPreference = "Stop"
+# "Continue" (não "Stop"): o ssh escreve progresso do git no stderr, que o
+# PowerShell 5.1 transforma em ErrorRecord — com "Stop" isso abortava o deploy
+# no meio. O sucesso/falha é determinado pelo $LASTEXITCODE do ssh (o bash
+# remoto usa `set -euo pipefail`, então erro real retorna exit != 0).
+$ErrorActionPreference = "Continue"
+# UTF-8 sem BOM ao enviar o script para o ssh — senão o PowerShell 5.1
+# prepende um BOM e a 1a linha do bash vira "comando nao encontrado".
+$OutputEncoding = New-Object System.Text.UTF8Encoding $false
 $IP   = "2.24.211.167"
 $USER = "root"
 
@@ -44,8 +51,10 @@ if (Test-Path $IdentityFile) {
 Write-Host ""
 
 # Flag de backup injetada no script remoto.
-$skipBackup = [int]$SkipBackup.IsPresent
-$header = "SKIP_BACKUP=$skipBackup`n"
+# (nome distinto do parametro $SkipBackup — PowerShell e case-insensitive
+# em nomes de variavel, entao reusar o nome colidiria com o [switch].)
+$skipBackupFlag = if ($SkipBackup.IsPresent) { "1" } else { "0" }
+$header = "SKIP_BACKUP=$skipBackupFlag`n"
 
 $body = @'
 set -euo pipefail
@@ -116,7 +125,13 @@ echo "=========================================="
 '@
 
 $remote = $header + $body
-$remote | ssh @sshArgs "$USER@$IP" "bash -s"
+# Normaliza para LF — o arquivo .ps1 e CRLF (Windows); sem isso o bash
+# remoto recebe "\r" e quebra (ex.: "set -euo pipefail\r").
+$remote = $remote -replace "`r`n", "`n" -replace "`r", "`n"
+# Envia via base64 — evita BOM/encoding do pipe nativo do PowerShell 5.1
+# (Encoding.UTF8.GetBytes nao adiciona BOM; base64 e ASCII-safe como arg).
+$b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remote))
+ssh @sshArgs "$USER@$IP" "echo $b64 | base64 -d | bash"
 $code = $LASTEXITCODE
 
 Write-Host ""
