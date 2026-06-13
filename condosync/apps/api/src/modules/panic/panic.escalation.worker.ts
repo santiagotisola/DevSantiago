@@ -5,7 +5,7 @@
  * o alerta se ele ainda estiver ativo (não reconhecido/resolvido).
  * Competitive consumer — sem leader lock (cada job roda uma vez).
  */
-import { Worker, Job } from "bullmq";
+import { Worker, Job, type ConnectionOptions } from "bullmq";
 import { bullConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/prisma";
@@ -97,7 +97,8 @@ export const panicEscalationWorker = new Worker(
       condominiumId: alert.condominiumId,
     });
   },
-  { connection: bullConnection() },
+  // cast só de tipo (skew ioredis×bullmq, igual aos demais workers); runtime ok.
+  { connection: bullConnection() as unknown as ConnectionOptions },
 );
 
 panicEscalationWorker.on("failed", (job, err) => {

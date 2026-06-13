@@ -4,7 +4,7 @@
  * Status é DERIVADO em runtime (sem enum/coluna persistida), com a
  * prioridade: resolvedAt > acknowledgedAt > escalatedAt > ACTIVE.
  */
-import { Queue } from "bullmq";
+import { Queue, type ConnectionOptions } from "bullmq";
 import { bullConnection } from "../../config/redis";
 import { io } from "../../server";
 import { env } from "../../config/env";
@@ -19,7 +19,9 @@ export const PANIC_ESCALATION_QUEUE = "panic-escalation";
 // dependência circular: o worker importa daqui; este arquivo não
 // importa do worker.
 export const panicEscalationQueue = new Queue(PANIC_ESCALATION_QUEUE, {
-  connection: bullConnection(),
+  // cast só de tipo (mesmo skew ioredis×bullmq dos demais workers do repo);
+  // runtime aceita a instância Redis.
+  connection: bullConnection() as unknown as ConnectionOptions,
   defaultJobOptions: { removeOnComplete: true, removeOnFail: 50 },
 });
 
