@@ -101,6 +101,33 @@ const envSchema = z
           'RESEND_API_KEY é obrigatório em produção (convites de morador e reset de senha dependem disso).',
       });
     }
+    // FRONTEND_URL é a base dos links públicos enviados por e-mail (aceite de
+    // convite de morador, reset de senha). Em produção ele NÃO pode cair no
+    // default de desenvolvimento (http://localhost:5173): isso gera e-mails com
+    // links para localhost que não funcionam no dispositivo do morador.
+    // Falhar no boot é mais seguro do que enviar e-mails inúteis silenciosamente.
+    if (data.NODE_ENV === 'production') {
+      let frontendHost: string | null = null;
+      try {
+        frontendHost = new URL(data.FRONTEND_URL).hostname.toLowerCase();
+      } catch {
+        frontendHost = null;
+      }
+      const isLocalhost =
+        frontendHost === 'localhost' ||
+        frontendHost === '127.0.0.1' ||
+        frontendHost === '0.0.0.0' ||
+        frontendHost === '::1' ||
+        frontendHost?.endsWith('.localhost') === true;
+      if (!frontendHost || isLocalhost) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['FRONTEND_URL'],
+          message:
+            'FRONTEND_URL deve ser a URL pública real do app em produção (ex: https://condosync.app) — não pode ser localhost. Links de convite e de reset de senha são gerados a partir dela.',
+        });
+      }
+    }
   });
 
 const parsed = envSchema.safeParse(process.env);

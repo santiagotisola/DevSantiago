@@ -16,6 +16,8 @@ services:
       JWT_EXPIRES_IN: 1h
       JWT_REFRESH_EXPIRES_IN: 7d
       CORS_ORIGINS: ${CORS_ORIGINS}
+      # URL publica do app — base dos links de convite/reset enviados por e-mail.
+      FRONTEND_URL: "${FRONTEND_URL:?FRONTEND_URL obrigatorio - URL publica do app, ex https://condosync.app}"
       BCRYPT_ROUNDS: "12"
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
