@@ -68,6 +68,9 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   const { registerCleanupSchedule, cleanupWorker } = await import(
     "./cleanup.worker"
   );
+  const { panicEscalationWorker } = await import(
+    "../modules/panic/panic.escalation.worker"
+  );
 
   type WorkerLike = {
     close(): Promise<void>;
@@ -88,6 +91,7 @@ export async function registerWorkers(): Promise<WorkerHandles> {
     balanceteWorker,
     webhookWorker,
     cleanupWorker,
+    panicEscalationWorker, // delayed jobs (sem cron/leader lock)
   ].filter(Boolean) as WorkerLike[];
 
   // Pluga métricas Prometheus + Sentry em cada worker.
@@ -164,6 +168,10 @@ export async function registerWorkers(): Promise<WorkerHandles> {
   try {
     const cu = await import("./cleanup.worker");
     queues.push(cu.cleanupQueue);
+  } catch {}
+  try {
+    const p = await import("../modules/panic/panic.service");
+    queues.push(p.panicEscalationQueue);
   } catch {}
 
   const depthCollector = setInterval(async () => {

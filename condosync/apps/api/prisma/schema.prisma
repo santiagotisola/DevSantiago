@@ -1647,6 +1647,18 @@ model PanicAlert {
   notes         String?
   createdAt     DateTime    @default(now())
 
+  // SOS: acknowledge / escalonamento / contexto. Status derivado em
+  // runtime (sem enum): resolvedAt > acknowledgedAt > escalatedAt > ACTIVE.
+  acknowledgedBy String? // userId (staff que assumiu o atendimento)
+  acknowledgedAt DateTime?
+  escalatedAt    DateTime? // setado pelo worker se não reconhecido a tempo
+  unitId         String? // snapshot da unidade do disparador no momento
+  latitude       Float? // best-effort; só com consentimento do browser
+  longitude      Float?
+
+  @@index([condominiumId, createdAt], map: "panic_alerts_condominium_created_at_idx")
+  @@index([condominiumId, triggeredBy, resolvedAt], map: "panic_alerts_condominium_triggered_resolved_idx")
+  @@index([condominiumId, resolvedAt, createdAt], map: "panic_alerts_condominium_resolved_created_idx")
   @@map("panic_alerts")
 }
 

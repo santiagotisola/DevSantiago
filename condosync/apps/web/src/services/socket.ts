@@ -2,6 +2,15 @@ import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
 
+/**
+ * Retorna a conexão de socket atual (ou null se `connectRealtime` ainda
+ * não rodou / foi desconectada). Telas que assinam eventos devem tratar
+ * null sem crash e manter polling de fallback.
+ */
+export function getSocket(): Socket | null {
+  return socket;
+}
+
 function resolveSocketUrl(): string {
   if (typeof window === "undefined") return "http://localhost:3333";
 

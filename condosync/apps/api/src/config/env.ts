@@ -31,6 +31,14 @@ const envSchema = z
     SMTP_FROM: z.string().default('noreply@condosync.com.br'),
     BCRYPT_ROUNDS: z.string().default('12'),
     REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatório'),
+    // Pânico SOS — minutos até escalar um alerta não reconhecido.
+    // Inteiro positivo; default 3. O delay é calculado no scheduleEscalation.
+    PANIC_ESCALATION_MINUTES: z
+      .string()
+      .default('3')
+      .refine((v) => Number.isInteger(Number(v)) && Number(v) > 0, {
+        message: 'PANIC_ESCALATION_MINUTES deve ser um inteiro positivo',
+      }),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().default('gpt-4o-mini'),
     // Groq — alternativa gratuita ao OpenAI (console.groq.com)
