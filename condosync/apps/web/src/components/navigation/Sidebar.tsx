@@ -179,8 +179,14 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
-  const { user, logout, selectedCondominiumId, setSelectedCondominium } =
-    useAuthStore();
+  const {
+    user,
+    logout,
+    selectedCondominiumId,
+    setSelectedCondominium,
+    condominiums,
+    setCondominiums,
+  } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -211,35 +217,35 @@ export function Sidebar({ open, onClose, collapsed = false }: SidebarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  const [condominiums, setCondominiums] = useState<{ id: string; name: string }[]>([]);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
-  // Carrega lista de condomínios uma vez (SUPER_ADMIN) ou seleciona o
-  // primeiro vínculo (demais roles). selectedCondominiumId fica fora
-  // das deps porque a leitura é via setter funcional para evitar loop
-  // quando o setState dispara re-render.
+  // Carrega a fonte única de verdade da lista de condomínios no store.
+  // SUPER_ADMIN: base global (GET /condominiums). Demais roles: vínculos do
+  // usuário. selectedCondominiumId fica fora das deps porque a leitura é via
+  // useAuthStore.getState() para evitar loop quando o setState re-renderiza.
   useEffect(() => {
     if (isSuperAdmin) {
       api
         .get("/condominiums")
         .then((res) => {
-          const list = res.data?.data?.condominiums ?? [];
+          const list: { id: string; name: string }[] =
+            res.data?.data?.condominiums ?? [];
           setCondominiums(list);
           if (list.length > 0) {
-            // Só atribui se ainda não há selecionado — checagem via store
-            // atual (useAuthStore.getState) para não depender do closure.
             const current = useAuthStore.getState().selectedCondominiumId;
             if (!current) setSelectedCondominium(list[0].id);
           }
         })
         .catch(() => {});
     } else {
+      const list = user?.condominiumUsers?.map((cu) => cu.condominium) ?? [];
+      setCondominiums(list);
       const current = useAuthStore.getState().selectedCondominiumId;
-      if (!current && user?.condominiumUsers?.[0]) {
-        setSelectedCondominium(user.condominiumUsers[0].condominium.id);
+      if (!current && list[0]) {
+        setSelectedCondominium(list[0].id);
       }
     }
-  }, [isSuperAdmin, user?.condominiumUsers, setSelectedCondominium]);
+  }, [isSuperAdmin, user?.condominiumUsers, setSelectedCondominium, setCondominiums]);
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>

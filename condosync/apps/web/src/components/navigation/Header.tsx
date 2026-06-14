@@ -10,11 +10,11 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const { user, selectedCondominiumId, setSelectedCondominium } = useAuthStore();
+  const { user, selectedCondominiumId, setSelectedCondominium, condominiums } =
+    useAuthStore();
   const navigate = useNavigate();
   const [showCondominiumMenu, setShowCondominiumMenu] = useState(false);
 
-  const condominiums = user?.condominiumUsers?.map((cu) => cu.condominium) || [];
   const selectedCondominium = condominiums.find((c) => c.id === selectedCondominiumId);
 
   return (
